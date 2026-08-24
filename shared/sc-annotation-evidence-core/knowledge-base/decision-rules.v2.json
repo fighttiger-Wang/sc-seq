@@ -1,0 +1,122 @@
+[
+  {
+    "rule_id": "RULE_001",
+    "scope": "all",
+    "condition": "标准 Marker 面板定义注释规则；项目 Markergene_list 仅为观测证据",
+    "action": "项目数据匹配标准 panel",
+    "notes": "不得把项目 top marker 自动升级为标准",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_002",
+    "scope": "all",
+    "condition": "每个 cluster 输出证据支持的最细身份",
+    "action": "按 parent-child 逐级匹配",
+    "notes": "证据不足回退最近可靠父节点",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_003",
+    "scope": "subcluster",
+    "condition": "一致性仅在同一父群内部要求",
+    "action": "允许不同分支达到不同深度",
+    "notes": "不强制整张 UMAP 同一层级",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_004",
+    "scope": "all",
+    "condition": "身份与状态分开保存",
+    "action": "主显示最多组合一个最高优先级状态",
+    "notes": "格式 <State>_<Identity>",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_005",
+    "scope": "all",
+    "condition": "两个不兼容完整谱系程序共存",
+    "action": "mixed_population/suspected_doublet=true；禁止自动合并",
+    "notes": "需细胞级共表达和 doublet 方法区分",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_006",
+    "scope": "all",
+    "condition": "同谱系身份与状态程序并存",
+    "action": "保留最细身份并组合最高优先级状态",
+    "notes": "例 Exhausted_CD8_Tem",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_007",
+    "scope": "cross_species",
+    "condition": "目标物种 panel 缺失",
+    "action": "允许借用 Human panel 输出正式标签",
+    "notes": "强制 cross_species_inference=true 和来源记录",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_008",
+    "scope": "minimal_evidence",
+    "condition": "正 marker 表中未出现某基因",
+    "action": "视为 unknown",
+    "notes": "只有完整 ratio 表才可把缺失视为 zero",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_009",
+    "scope": "naming",
+    "condition": "重复 cluster 解析为同一标准亚型",
+    "action": "允许重复标准 ID",
+    "notes": "禁止仅为唯一性增加 top-marker 前缀",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_010",
+    "scope": "major",
+    "condition": "混合全细胞数据",
+    "action": "输出粗分类；组织模块可增加必要 major 标签",
+    "notes": "subtype 证据留在 audit，不强行输出",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_011",
+    "scope": "subcluster",
+    "condition": "已知父群内部注释",
+    "action": "输出最细可靠身份并应用状态规则",
+    "notes": "节点级 marker 组合与排除条件",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_012",
+    "scope": "evidence",
+    "condition": "拟新增/修正标准",
+    "action": "至少两篇独立研究或一个权威大型图谱/本体",
+    "notes": "通过后仍需用户批准",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_013",
+    "scope": "T_subcluster",
+    "condition": "CD4/CD8 分支身份与共享状态程序必须分层评分",
+    "action": "先要求 CD4/CD40LG 或 CD8A/CD8B/CD8B1 分支锚点，再判定 naive、memory、effector、regulatory/helper 等身份叶节点；耗竭只写入 State=Exhausted；两分支同时成立则回退 T_cell 并阻止自动合并",
+    "notes": "CD4_Tex/CD8_Tex 仅作旧记录迁移，禁止作为正式 Stable_ID；耗竭、初始、记忆和细胞毒程序不能单独决定 CD4/CD8 分支",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_014",
+    "scope": "subcluster_full_ratio",
+    "condition": "已知父群的亚群注释同时具备全基因平均表达与表达占比",
+    "action": "将父群作为强先验但保留组织相关的跨谱系哨兵 panel；父群证据弱且其他谱系显著占优时正式重分配为杂质群，双程序同时连贯时回退共同父类并阻止自动合并",
+    "notes": "不得用父群硬过滤隐藏 NK、B、髓系、上皮、内皮或基质等污染；NKT 必须具备连贯 TCR 与 NK 双程序",
+    "approval_status": "Approve"
+  },
+  {
+    "rule_id": "RULE_015",
+    "scope": "gdT_subcluster",
+    "condition": "γδT群内存在初始样与IL17/type-17转录程序",
+    "action": "先要求至少两个TRDC/TRGC1/TRGC2分支锚点，再区分Naive_like_gdT与IL17A_gdT；不得把IL17A_gdT命名为CD4_Th17",
+    "notes": "空间/UMAP分离可作为复核线索，但正式标签由γδTCR加TCF7/LEF1/SELL或IL17A/IL23R/ROR程序决定",
+    "approval_status": "Approve"
+  }
+]

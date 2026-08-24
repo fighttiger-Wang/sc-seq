@@ -1,0 +1,177 @@
+[
+  {
+    "legacy_label": "CD4_Tex",
+    "new_standard_id": "CD4_T + state=Exhausted",
+    "migration_type": "identity_state_split",
+    "notes": "若有更细 CD4 身份证据可迁移至对应 CD4 亚型；禁止生成 Exhausted_CD4_Tex",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "CD8_Tex",
+    "new_standard_id": "CD8_T or supported CD8 subtype + state=Exhausted",
+    "migration_type": "identity_state_split",
+    "notes": "优先保留有证据支持的 CD8_Tn/Tcm/Tem/Teff/Trm 身份；禁止生成 Exhausted_CD8_Tex",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "T_cell",
+    "new_standard_id": "T_cell",
+    "migration_type": "direct",
+    "notes": "major 保留",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "B_cell",
+    "new_standard_id": "B_cell",
+    "migration_type": "direct",
+    "notes": "major 保留",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Myeloid_cell",
+    "new_standard_id": "Myeloid_cell",
+    "migration_type": "direct",
+    "notes": "major 保留",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Epithelial_cell",
+    "new_standard_id": "Epithelial_cell or tissue major",
+    "migration_type": "conditional",
+    "notes": "由组织模块决定",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Endothelial_cell",
+    "new_standard_id": "Endothelial_cell",
+    "migration_type": "direct",
+    "notes": "可继续下钻内皮亚型",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Stromal_cell",
+    "new_standard_id": "Stromal_cell or tissue stromal major",
+    "migration_type": "conditional",
+    "notes": "由组织模块拆分",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "T_NK_cell",
+    "new_standard_id": "T_cell / NK_cell / mixed_T_NK",
+    "migration_type": "manual_review",
+    "notes": "废弃全表 composite 标签",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "CD8_IFN_T",
+    "new_standard_id": "IFN_CD8_T",
+    "migration_type": "grammar_change",
+    "notes": "若可识别更细身份则 IFN_CD8_Tem 等",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "CD8_Activated_T",
+    "new_standard_id": "Activated_CD8_T",
+    "migration_type": "grammar_change",
+    "notes": "状态前置",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "CD8_Cycling_T",
+    "new_standard_id": "Cycling_CD8_T",
+    "migration_type": "grammar_change",
+    "notes": "状态前置",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Ccl5_CD8T",
+    "new_standard_id": "CD8_Teff or CD8_Tem",
+    "migration_type": "manual_review",
+    "notes": "取消 feature prefix，按完整程序重判",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Gzmk_CD8T",
+    "new_standard_id": "CD8_Tem",
+    "migration_type": "evidence_review",
+    "notes": "需排除仅激活状态",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Clec9a_cDC1",
+    "new_standard_id": "cDC1",
+    "migration_type": "direct",
+    "notes": "重复 cluster 允许同一标准 ID",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Xcr1_cDC1",
+    "new_standard_id": "cDC1",
+    "migration_type": "direct",
+    "notes": "重复 cluster 允许同一标准 ID",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "IFNG_CD4T",
+    "new_standard_id": "IFN_CD4_T or CD4_Th1",
+    "migration_type": "manual_review",
+    "notes": "IFNG 单基因不能直接定义 Th1",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "M2_like_Macrophage",
+    "new_standard_id": "Macrophage + state/disease_role",
+    "migration_type": "deprecated_identity",
+    "notes": "不作为稳定基础身份",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "TAM",
+    "new_standard_id": "Macrophage + disease_role=TAM",
+    "migration_type": "role_split",
+    "notes": "基础身份与疾病角色分开",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "CAF",
+    "new_standard_id": "Fibroblast + disease_role=CAF",
+    "migration_type": "role_split",
+    "notes": "基础身份与疾病角色分开",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Cycling_cells",
+    "new_standard_id": "Cycling_<resolved_identity>",
+    "migration_type": "state_split",
+    "notes": "必须先恢复谱系身份",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Plasma",
+    "new_standard_id": "Plasma_cell",
+    "migration_type": "rename",
+    "notes": "统一标准 ID",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "GcB",
+    "new_standard_id": "GC_B",
+    "migration_type": "rename",
+    "notes": "统一标准 ID",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Bn",
+    "new_standard_id": "Naive_B",
+    "migration_type": "rename",
+    "notes": "统一标准 ID",
+    "approval_status": "Approve"
+  },
+  {
+    "legacy_label": "Bm",
+    "new_standard_id": "Memory_B",
+    "migration_type": "rename",
+    "notes": "统一标准 ID",
+    "approval_status": "Approve"
+  }
+]

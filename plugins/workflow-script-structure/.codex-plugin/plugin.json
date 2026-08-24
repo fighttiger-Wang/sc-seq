@@ -1,0 +1,48 @@
+{
+  "name": "workflow-script-structure",
+  "version": "0.1.0+codex.20260813094000",
+  "description": "Standardize workflow packages by separating callable code, editable parameters, and submission scripts.",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "shell",
+    "hpc",
+    "singularity",
+    "apptainer",
+    "work.sh",
+    "SIF_PATH",
+    "BIND_PATHS",
+    "\u6d41\u7a0b\u811a\u672c",
+    "\u6295\u9012\u811a\u672c",
+    "\u53c2\u6570\u5206\u79bb"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "07 · \u6d41\u7a0b\u811a\u672c\u7ed3\u6784",
+    "shortDescription": "\u4ee3\u7801\u3001\u53c2\u6570\u3001\u6295\u9012\u811a\u672c\u5206\u79bb\uff1b\u652f\u6301 work.sh \u548c\u5206\u6b65\u6295\u9012",
+    "longDescription": "\u7528\u4e8e\u7f16\u5199\u751f\u4fe1\u3001HPC\u3001Singularity/Apptainer \u6d41\u7a0b\u4ee3\u7801\u5305\u65f6\uff0c\u56fa\u5b9a\u91c7\u7528\u8c03\u7528\u4ee3\u7801\u3001\u53c2\u6570\u6587\u4ef6\u3001\u4efb\u52a1\u6295\u9012\u811a\u672c\u5206\u79bb\u7684\u7ed3\u6784\uff0c\u5e76\u5f00\u653e SIF_PATH \u4e0e BIND_PATHS\u3002",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://openai.com/",
+    "privacyPolicyURL": "https://openai.com/policies/privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/terms-of-use/",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
+    "defaultPrompt": [
+      "\u6309\u6d41\u7a0b\u811a\u672c\u7ed3\u6784\u5199\u4e00\u4e2a\u53ef\u6295\u9012\u4ee3\u7801\u5305",
+      "\u628a\u53c2\u6570\u548c\u6295\u9012\u811a\u672c\u5206\u5f00\u6574\u7406",
+      "\u751f\u6210 work.sh \u6216\u7f16\u53f7\u5206\u6b65\u6295\u9012\u811a\u672c"
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

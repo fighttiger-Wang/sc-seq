@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "store_root": "E:/A002-Codex/工作区/.sc-annotation-knowledge",
+  "outputs_root": "E:/A002-Codex/工作区/outputs",
+  "eligible_skills": {
+    "sc-major-celltype-annotation-auto": "0.2.2",
+    "sc-marker-cluster-annotation-auto": "0.4.1"
+  },
+  "stages": ["observed", "candidate", "supported_candidate", "approved", "deprecated"],
+  "normal_identity": {
+    "candidate_cases": 2,
+    "supported_cases": 3,
+    "approval_cases": 5,
+    "minimum_project_sources": 2,
+    "minimum_literature_sources": 2,
+    "minimum_core_marker_consistency": 0.8
+  },
+  "rare_or_context_specific_identity": {
+    "candidate_cases": 2,
+    "supported_cases": 5,
+    "approval_cases": 8,
+    "minimum_project_sources": 3,
+    "minimum_literature_sources": 3,
+    "minimum_target_species_cases": 3,
+    "minimum_core_marker_consistency": 0.8
+  },
+  "non_identity_node_kinds": [
+    "state",
+    "disease_role_or_state",
+    "developmental_state_identity",
+    "mixed_population",
+    "doublet"
+  ],
+  "scan_excluded_name_patterns": [
+    "^skill_",
+    "^test_",
+    "regression",
+    "validation",
+    "builder_tests",
+    "preflight"
+  ],
+  "publication": {
+    "require_qa_pass": true,
+    "require_complete_literature_metadata": true,
+    "require_internal_historical_regression": true,
+    "retain_all_versions": true,
+    "marker_core_frequency": 0.8,
+    "marker_supportive_frequency": 0.5,
+    "never_hard_delete": true
+  }
+}

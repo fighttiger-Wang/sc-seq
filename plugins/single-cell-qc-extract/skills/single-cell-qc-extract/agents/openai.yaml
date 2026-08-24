@@ -1,0 +1,8 @@
+interface:
+  display_name: "01 · 单细胞质控提取"
+  short_description: "从项目描述和截图中提取单细胞 QC 与细胞注释表。"
+  default_prompt: "Use $single-cell-qc-extract to structure single-cell project QC text and screenshot metrics into a table."
+
+policy:
+  allow_implicit_invocation: true
+

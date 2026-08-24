@@ -1,0 +1,7 @@
+interface:
+  display_name: "10 · skill写作"
+  short_description: "编写可 / 调用的个人 Codex skill 与插件标准流程"
+  default_prompt: "Use $skill-writing to create or update a personal callable Codex skill."
+
+policy:
+  allow_implicit_invocation: true

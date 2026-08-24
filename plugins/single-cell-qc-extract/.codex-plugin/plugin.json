@@ -1,0 +1,46 @@
+{
+  "name": "single-cell-qc-extract",
+  "version": "0.1.0+codex.20260813094000",
+  "description": "Extract single-cell project QC fields from Chinese project descriptions and report screenshots.",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "single-cell",
+    "scrna-seq",
+    "qc",
+    "cell-ranger",
+    "seurat",
+    "cell-type",
+    "\u5355\u7ec6\u80de",
+    "\u8d28\u63a7",
+    "\u7ec6\u80de\u6ce8\u91ca"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "01 · \u5355\u7ec6\u80de\u8d28\u63a7\u63d0\u53d6",
+    "shortDescription": "\u4ece\u9879\u76ee\u63cf\u8ff0\u548c\u622a\u56fe\u4e2d\u63d0\u53d6\u5355\u7ec6\u80de QC \u4e0e\u7ec6\u80de\u6ce8\u91ca\u8868\u3002",
+    "longDescription": "\u7528\u4e8e\u6574\u7406\u5355\u7ec6\u80de\u8f6c\u5f55\u7ec4\u9879\u76ee\u8d28\u63a7\u4fe1\u606f\uff1a\u4ece\u4e2d\u6587\u9879\u76ee\u6807\u9898\u3001\u5206\u6790\u8def\u5f84\u3001\u7ec4\u7ec7\u6765\u6e90\u3001\u6355\u83b7\u7ec6\u80de\u6570\u3001\u5173\u6ce8\u7ec6\u80de\u7c7b\u578b\u548c\u4e0a\u673a\u72b6\u6001\u4e2d\u63d0\u53d6\u9879\u76ee\u5b57\u6bb5\uff0c\u5e76\u4ece Cell Ranger/Seurat/\u7ec6\u80de\u6ce8\u91ca\u622a\u56fe\u4e2d\u63d0\u53d6 Sample\u3001Estimated number\u3001Mean reads per cell\u3001Mean genes per cell\u3001Reads mapped to genome\u3001Sequencing saturation \u548c Cell type\u3002",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://openai.com/",
+    "privacyPolicyURL": "https://openai.com/policies/privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/terms-of-use/",
+    "defaultPrompt": [
+      "\u6574\u7406\u8fd9\u6bb5\u5355\u7ec6\u80de\u9879\u76ee\u8d28\u63a7\u4fe1\u606f\u548c\u622a\u56fe\u8868\u683c",
+      "\u63d0\u53d6 Sample \u8d28\u63a7\u6307\u6807\u548c Cell type",
+      "\u628a LC \u9879\u76ee\u4fe1\u606f\u6574\u7406\u4e3a\u8868\u683c"
+    ],
+    "brandColor": "#0F766E",
+    "screenshots": [],
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png"
+  }
+}

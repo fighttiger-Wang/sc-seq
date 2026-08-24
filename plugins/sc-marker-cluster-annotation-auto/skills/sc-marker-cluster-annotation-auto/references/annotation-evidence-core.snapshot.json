@@ -1,0 +1,16 @@
+{
+  "core_version": "2.12.0",
+  "config_version": "2.12.0",
+  "knowledge_base_version": "2.7.0",
+  "snapshot_contract": "sha256-v1",
+  "canonical_source": "E:\\A002-Codex\\工作区\\local-marketplace\\shared\\sc-annotation-evidence-core",
+  "files": {
+    "annotation_evidence_core.py": "20094ae27a91d4747bb30864485b4d1b12d00bca5199ee15e860ca6356c24174",
+    "knowledge_base.py": "c7d04a2d8fe5bac2394311a0ad3a27a01cb89e96be9a368c344f589bd5e6733f",
+    "annotation-evidence-config.v1.json": "97559f8628719c08dd7a0386b2bee29c08a18bc2058bba361118fd2db93c8378",
+    "evidence-scoring-policy.md": "4a82bd730e1c74f8fb54e818d6588d9481d61f60e7d19dc2d3ba1cebf8d76a88",
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": "e732105fec1403a02071e41ca5f6698bb64d46aedb76e36c75a59e2fc6fb464e",
+    "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
+    "knowledge-base/knowledge-base.manifest.json": "93faa6e933ad29a70666b09e63e8221dae9a87cbe516dc5fb4317d11b2c267b9"
+  }
+}

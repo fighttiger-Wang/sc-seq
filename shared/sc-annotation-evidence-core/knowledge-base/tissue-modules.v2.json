@@ -1,0 +1,110 @@
+[
+  {
+    "module_id": "core_multi_tissue",
+    "module_name": "跨组织核心",
+    "tissues": "multi_tissue",
+    "enabled_roots": "Immune_cell;Epithelial_cell;Endothelial_cell;Stromal_cell;Muscle_cell;Neural_cell;Hematopoietic_nonimmune",
+    "allowed_major_outputs": "T_cell;B_cell;Myeloid_cell;Epithelial_cell;Endothelial_cell;Stromal_cell;NK_cell;Erythroid;Megakaryocyte",
+    "notes": "默认粗分类骨架；允许组织模块增加 major 标签",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "gut",
+    "module_name": "肠道",
+    "tissues": "small_intestine;colon",
+    "enabled_roots": "Intestinal_epithelial",
+    "allowed_major_outputs": "Intestinal_epithelial",
+    "notes": "启用 ISC、TA、分泌祖细胞、吸收/分泌叶节点",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "stomach",
+    "module_name": "胃",
+    "tissues": "stomach",
+    "enabled_roots": "Gastric_epithelial",
+    "allowed_major_outputs": "Gastric_epithelial",
+    "notes": "启用 chief、mucous、parietal、neuroendocrine；SPEM 为病理模块",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "lung",
+    "module_name": "肺和气道",
+    "tissues": "lung;airway",
+    "enabled_roots": "Lung_epithelial;Mesothelial_cell",
+    "allowed_major_outputs": "Lung_epithelial;Mesothelial_cell",
+    "notes": "启用 AT1/AT2/airway epithelial；罕见 ionocyte 需严格门槛",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "liver",
+    "module_name": "肝",
+    "tissues": "liver",
+    "enabled_roots": "Liver_epithelial;Hepatic_stellate_cell;Tissue_resident_macrophage",
+    "allowed_major_outputs": "Hepatocyte;Cholangiocyte;Hepatic_stellate_cell",
+    "notes": "允许 major 阶段独立肝细胞、胆管及星状细胞",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "heart",
+    "module_name": "心脏",
+    "tissues": "heart",
+    "enabled_roots": "Cardiomyocyte;Pericyte;Smooth_muscle_cell;Fibroblast",
+    "allowed_major_outputs": "Cardiomyocyte",
+    "notes": "允许 major 阶段独立心肌细胞",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "skeletal_muscle",
+    "module_name": "骨骼肌",
+    "tissues": "skeletal_muscle",
+    "enabled_roots": "Skeletal_muscle_cell;Fibroblast;Pericyte",
+    "allowed_major_outputs": "Skeletal_muscle_cell",
+    "notes": "允许 major 阶段独立骨骼肌细胞",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "testis",
+    "module_name": "睾丸",
+    "tissues": "testis",
+    "enabled_roots": "Reproductive_germ_cell;Reproductive_somatic;Peritubular_myoid",
+    "allowed_major_outputs": "Reproductive_germ_cell;Sertoli_cell;Leydig_cell;Peritubular_myoid",
+    "notes": "发育阶段作为身份节点；周期状态另存",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "ovary",
+    "module_name": "卵巢",
+    "tissues": "ovary",
+    "enabled_roots": "Reproductive_germ_cell;Reproductive_somatic;Ovarian_surface_epithelial;Ovarian_stromal",
+    "allowed_major_outputs": "Oocyte;Granulosa_cell;Theca_cell;Luteal_cell;Ovarian_surface_epithelial",
+    "notes": "类固醇生成细胞需组合证据",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "bone_marrow",
+    "module_name": "骨髓",
+    "tissues": "bone_marrow",
+    "enabled_roots": "HSC_MPP;B_cell;Myeloid_cell;Erythroid;Megakaryocyte;MSC",
+    "allowed_major_outputs": "HSC_MPP;Erythroid;Megakaryocyte;MSC",
+    "notes": "允许 major 阶段拆分造血干祖、红系、巨核和 MSC",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "nervous",
+    "module_name": "神经系统",
+    "tissues": "central_nervous_system;peripheral_nervous_system",
+    "enabled_roots": "Neural_cell",
+    "allowed_major_outputs": "Neuron;Neural_cell;Schwann_cell",
+    "notes": "major 可拆分神经元/胶质或施旺细胞",
+    "approval_status": "Approve"
+  },
+  {
+    "module_id": "tumor_role",
+    "module_name": "肿瘤疾病角色",
+    "tissues": "tumor",
+    "enabled_roots": "all",
+    "allowed_major_outputs": "none",
+    "notes": "TAM、CAF、malignant、angiogenic 等不进入基础身份树，存 disease_role/state",
+    "approval_status": "Approve"
+  }
+]

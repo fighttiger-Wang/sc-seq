@@ -1,0 +1,7 @@
+interface:
+  display_name: "06 · KEGG流泡图"
+  short_description: "绘制基因-通路带状连接与KEGG富集气泡组合图"
+  default_prompt: "Use $kegg-flow-bubble-plot to create a publication-ready KEGG gene-pathway flow-bubble plot."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,140 @@
+{
+  "name": "workspace-local",
+  "interface": {
+    "displayName": "Personal Shared Skills"
+  },
+  "plugins": [
+    {
+      "name": "single-cell-qc-extract",
+      "source": {
+        "source": "local",
+        "path": "./plugins/single-cell-qc-extract"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "single-cell-qc-image-display",
+      "source": {
+        "source": "local",
+        "path": "./plugins/single-cell-qc-image-display"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "sc-major-celltype-annotation-auto",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sc-major-celltype-annotation-auto"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "sc-marker-cluster-annotation-auto",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sc-marker-cluster-annotation-auto"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "feature-gene-heatmap-violin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/feature-gene-heatmap-violin"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    },
+    {
+      "name": "kegg-flow-bubble-plot",
+      "source": {
+        "source": "local",
+        "path": "./plugins/kegg-flow-bubble-plot"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "workflow-script-structure",
+      "source": {
+        "source": "local",
+        "path": "./plugins/workflow-script-structure"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "workbench",
+      "source": {
+        "source": "local",
+        "path": "./plugins/workbench"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "task-handoff",
+      "source": {
+        "source": "local",
+        "path": "./plugins/task-handoff"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "skill-writing",
+      "source": {
+        "source": "local",
+        "path": "./plugins/skill-writing"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "bioinformatics-results-report",
+      "source": {
+        "source": "local",
+        "path": "./plugins/bioinformatics-results-report"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    }
+  ]
+}

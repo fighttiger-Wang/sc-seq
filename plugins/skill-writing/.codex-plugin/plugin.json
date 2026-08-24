@@ -1,0 +1,25 @@
+{
+  "name": "skill-writing",
+  "version": "0.1.0+codex.20260824152209",
+  "description": "Personal workflow for writing Codex skills as callable personal plugins.",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "10 \u00b7 skill\u5199\u4f5c",
+    "shortDescription": "\u7f16\u5199\u53ef / \u8c03\u7528\u7684\u4e2a\u4eba Codex skill \u4e0e\u63d2\u4ef6\u6807\u51c6\u6d41\u7a0b",
+    "longDescription": "A personal Codex plugin that standardizes skill writing, personal plugin packaging, cachebuster reinstall, and duplicate-source cleanup for reliable slash invocation.",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "\u5e2e\u6211\u521b\u5efa\u4e00\u4e2a\u53ef\u4ee5 / \u8c03\u7528\u7684\u4e2a\u4eba skill\u3002",
+      "\u628a\u8fd9\u4e2a\u6d41\u7a0b\u6574\u7406\u6210 personal plugin skill\u3002",
+      "\u68c0\u67e5\u6211\u7684 skill \u4e3a\u4ec0\u4e48 / \u83dc\u5355\u91cd\u590d\u6216\u65e0\u6cd5\u8c03\u7528\u3002"
+    ]
+  }
+}

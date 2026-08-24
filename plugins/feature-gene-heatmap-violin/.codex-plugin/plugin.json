@@ -1,0 +1,23 @@
+{
+  "name": "feature-gene-heatmap-violin",
+  "version": "0.1.0+codex.20260813094000",
+  "description": "Generate a finalized full-marker single-cell heatmap and selected-gene violin panel.",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "05 · \u7279\u5f81\u57fa\u56e0\u70ed\u56fe\u53ca\u9009\u5b9a\u57fa\u56e0\u5c0f\u63d0\u7434\u56fe",
+    "shortDescription": "\u56fa\u5b9a\u751f\u6210\u5168marker\u70ed\u56fe\u548c\u6307\u5b9a\u57fa\u56e0\u5c0f\u63d0\u7434\u56fe",
+    "longDescription": "\u4eceSeurat\u5bf9\u8c61\u548cmarker\u8868\u4e00\u6b21\u6027\u751f\u6210\u6700\u7ec8\u51fa\u7248\u98ce\u683c\u7279\u5f81\u57fa\u56e0\u70ed\u56fe\u4e0e\u9009\u5b9a\u57fa\u56e0\u5c0f\u63d0\u7434\u56fe\u3002",
+    "developerName": "fight",
+    "category": "Education & Research",
+    "capabilities": [
+      "Single-cell analysis",
+      "Data visualization"
+    ],
+    "defaultPrompt": [
+      "\u7528Seurat\u5bf9\u8c61\u548cmarker\u8868\u7ed8\u5236\u6700\u7ec8\u70ed\u56fe\u4e0e\u6307\u5b9a\u57fa\u56e0\u5c0f\u63d0\u7434\u56fe\u3002"
+    ]
+  }
+}

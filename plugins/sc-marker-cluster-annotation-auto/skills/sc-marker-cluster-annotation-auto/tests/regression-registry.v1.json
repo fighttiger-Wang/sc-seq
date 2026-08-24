@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "policy": "Every registered suite must pass from the same candidate snapshot before formal publication.",
+  "suites": [
+    {
+      "id": "shared_evidence_core",
+      "group": "T_B_myeloid_stromal_mixed_boundaries",
+      "script": "shared/sc-annotation-evidence-core/tests/test_evidence_core.py",
+      "work_subdir": "shared_evidence_core",
+      "expected_assertions": 153,
+      "protects": [
+        "CD4_Tem canonical reuse",
+        "CD4/CD8/gamma-delta arbitration",
+        "B developmental boundaries including Immature_B recombination exit",
+        "plasma absolute exclusions",
+        "state priority",
+        "off-parent contamination",
+        "mixed/doublet merge blocking"
+        ,"myeloid neutrophil/monocyte program gates"
+        ,"DC3/monocyte cell-level boundary validation"
+      ]
+    },
+    {
+      "id": "subcluster_workbook_and_umap",
+      "group": "formal_and_temporary_delivery",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_subcluster_builder_v2.py",
+      "work_subdir": "subcluster_workbook_and_umap",
+      "expected_assertions": 40,
+      "protects": [
+        "strict hierarchy consistency",
+        "all-cluster UMAP audit with repeated-label cross-island gating",
+        "marker/UMAP conflict research gate",
+        "two-column temporary mapping",
+        "unchanged three-sheet workbook",
+        "literature-only UMAP conflict blocking",
+        "disconnected repeated-label automatic-merge blocking"
+      ]
+    }
+  ]
+}

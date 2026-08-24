@@ -1,0 +1,83 @@
+[
+  {
+    "scope": "T_cell",
+    "allowed_states": "Exhausted;Cycling;IFN;Activated;Cytotoxic;Stress",
+    "priority_order": "Exhausted > Cycling > IFN > Activated > Cytotoxic > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "Tex 不作为稳定身份；耗竭与其他状态始终单独记录",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "B_cell",
+    "allowed_states": "Cycling;IFN;Activated;Stress",
+    "priority_order": "Cycling > IFN > Activated > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "Plasma/Plasmablast 属身份，不作为状态",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Myeloid_cell",
+    "allowed_states": "Cycling;IFN;Inflammatory;Immunosuppressive;Lipid_associated;APC;Stress",
+    "priority_order": "Cycling > IFN > Inflammatory > Immunosuppressive > Lipid_associated > APC > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "M1/M2、TAM 不作为基础身份",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Epithelial_cell",
+    "allowed_states": "EMT;Cycling;Regenerative;IFN;Hypoxia;Stress",
+    "priority_order": "EMT > Cycling > Regenerative > IFN > Hypoxia > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "Malignant 为 disease_role；SPEM/repair 需组织模块",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Endothelial_cell",
+    "allowed_states": "Angiogenic;Cycling;IFN;Hypoxia;Activated;Stress",
+    "priority_order": "Angiogenic > Cycling > IFN > Hypoxia > Activated > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "Tip/stalk 是否身份化由组织模块另审",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Stromal_cell",
+    "allowed_states": "Myofibroblastic;Inflammatory;APC;Cycling;IFN;Stress",
+    "priority_order": "Myofibroblastic > Inflammatory > APC > Cycling > IFN > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "CAF 为 disease_role；Myofibroblast 需满足完整程序",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Neural_cell",
+    "allowed_states": "Reactive;Cycling;IFN;Stress",
+    "priority_order": "Reactive > Cycling > IFN > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "反应性胶质状态不替代基础胶质身份",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Muscle_cell",
+    "allowed_states": "Stress;Hypoxia;Cycling",
+    "priority_order": "Stress > Hypoxia > Cycling",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "损伤再生状态另存",
+    "approval_status": "Approve"
+  },
+  {
+    "scope": "Reproductive_germ_cell",
+    "allowed_states": "Cycling;Meiotic_activity;Stress",
+    "priority_order": "Meiotic_activity > Cycling > Stress",
+    "max_display_states": 1,
+    "display_grammar": "<Identity>",
+    "notes": "精子发生阶段仍是身份；减数分裂活性可为状态",
+    "approval_status": "Approve"
+  }
+]

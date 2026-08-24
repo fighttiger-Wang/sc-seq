@@ -1,0 +1,2886 @@
+[
+  {
+    "cell_id": "Cell",
+    "language": "en",
+    "alias": "Cell",
+    "alias_type": "standard_id",
+    "maps_to": "Cell"
+  },
+  {
+    "cell_id": "Cell",
+    "language": "zh",
+    "alias": "细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Cell"
+  },
+  {
+    "cell_id": "Cell",
+    "language": "en",
+    "alias": "cell",
+    "alias_type": "synonym",
+    "maps_to": "Cell"
+  },
+  {
+    "cell_id": "Immune_cell",
+    "language": "en",
+    "alias": "Immune_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Immune_cell"
+  },
+  {
+    "cell_id": "Immune_cell",
+    "language": "zh",
+    "alias": "免疫细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Immune_cell"
+  },
+  {
+    "cell_id": "Immune_cell",
+    "language": "en",
+    "alias": "immune",
+    "alias_type": "synonym",
+    "maps_to": "Immune_cell"
+  },
+  {
+    "cell_id": "Immune_cell",
+    "language": "en",
+    "alias": "leukocyte",
+    "alias_type": "synonym",
+    "maps_to": "Immune_cell"
+  },
+  {
+    "cell_id": "T_NK_lineage",
+    "language": "en",
+    "alias": "T_NK_lineage",
+    "alias_type": "standard_id",
+    "maps_to": "T_NK_lineage"
+  },
+  {
+    "cell_id": "T_NK_lineage",
+    "language": "zh",
+    "alias": "T_NK谱系",
+    "alias_type": "standard_cn",
+    "maps_to": "T_NK_lineage"
+  },
+  {
+    "cell_id": "T_NK_lineage",
+    "language": "en",
+    "alias": "T/NK",
+    "alias_type": "synonym",
+    "maps_to": "T_NK_lineage"
+  },
+  {
+    "cell_id": "T_NK_lineage",
+    "language": "en",
+    "alias": "lymphoid",
+    "alias_type": "synonym",
+    "maps_to": "T_NK_lineage"
+  },
+  {
+    "cell_id": "T_cell",
+    "language": "en",
+    "alias": "T_cell",
+    "alias_type": "standard_id",
+    "maps_to": "T_cell"
+  },
+  {
+    "cell_id": "T_cell",
+    "language": "zh",
+    "alias": "T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "T_cell"
+  },
+  {
+    "cell_id": "T_cell",
+    "language": "en",
+    "alias": "T lymphocyte",
+    "alias_type": "synonym",
+    "maps_to": "T_cell"
+  },
+  {
+    "cell_id": "CD4_T",
+    "language": "en",
+    "alias": "CD4_T",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_T",
+    "language": "zh",
+    "alias": "CD4_T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_T",
+    "language": "en",
+    "alias": "CD4T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_T",
+    "language": "en",
+    "alias": "helper T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_Tn",
+    "language": "en",
+    "alias": "CD4_Tn",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Tn"
+  },
+  {
+    "cell_id": "CD4_Tn",
+    "language": "zh",
+    "alias": "CD4初始T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Tn"
+  },
+  {
+    "cell_id": "CD4_Tn",
+    "language": "en",
+    "alias": "CD4 naive T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Tn"
+  },
+  {
+    "cell_id": "CD4_Tn",
+    "language": "en",
+    "alias": "CD4_Tnaive",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Tn"
+  },
+  {
+    "cell_id": "CD4_Treg",
+    "language": "en",
+    "alias": "CD4_Treg",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Treg"
+  },
+  {
+    "cell_id": "CD4_Treg",
+    "language": "zh",
+    "alias": "调节性CD4_T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Treg"
+  },
+  {
+    "cell_id": "CD4_Treg",
+    "language": "en",
+    "alias": "Treg",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Treg"
+  },
+  {
+    "cell_id": "CD4_Treg",
+    "language": "en",
+    "alias": "regulatory T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Treg"
+  },
+  {
+    "cell_id": "CD4_Tem",
+    "language": "en",
+    "alias": "CD4_Tem",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Tem"
+  },
+  {
+    "cell_id": "CD4_Tem",
+    "language": "zh",
+    "alias": "CD4效应记忆T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Tem"
+  },
+  {
+    "cell_id": "CD4_Tem",
+    "language": "en",
+    "alias": "CD4 effector memory T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Tem"
+  },
+  {
+    "cell_id": "CD4_Tem",
+    "language": "en",
+    "alias": "CD4 EM T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Tem"
+  },
+  {
+    "cell_id": "CD4_Tex",
+    "language": "en",
+    "alias": "CD4_Tex",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_Tex",
+    "language": "zh",
+    "alias": "CD4耗竭T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_Tex",
+    "language": "en",
+    "alias": "exhausted CD4 T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_Tex",
+    "language": "en",
+    "alias": "CD4 exhausted T",
+    "alias_type": "synonym",
+    "maps_to": "CD4_T"
+  },
+  {
+    "cell_id": "CD4_Th1",
+    "language": "en",
+    "alias": "CD4_Th1",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Th1"
+  },
+  {
+    "cell_id": "CD4_Th1",
+    "language": "zh",
+    "alias": "1型辅助T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Th1"
+  },
+  {
+    "cell_id": "CD4_Th1",
+    "language": "en",
+    "alias": "Th1",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Th1"
+  },
+  {
+    "cell_id": "CD4_Th2",
+    "language": "en",
+    "alias": "CD4_Th2",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Th2"
+  },
+  {
+    "cell_id": "CD4_Th2",
+    "language": "zh",
+    "alias": "2型辅助T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Th2"
+  },
+  {
+    "cell_id": "CD4_Th2",
+    "language": "en",
+    "alias": "Th2",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Th2"
+  },
+  {
+    "cell_id": "CD4_Th17",
+    "language": "en",
+    "alias": "CD4_Th17",
+    "alias_type": "standard_id",
+    "maps_to": "CD4_Th17"
+  },
+  {
+    "cell_id": "CD4_Th17",
+    "language": "zh",
+    "alias": "17型辅助T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD4_Th17"
+  },
+  {
+    "cell_id": "CD4_Th17",
+    "language": "en",
+    "alias": "Th17",
+    "alias_type": "synonym",
+    "maps_to": "CD4_Th17"
+  },
+  {
+    "cell_id": "Tfh",
+    "language": "en",
+    "alias": "Tfh",
+    "alias_type": "standard_id",
+    "maps_to": "Tfh"
+  },
+  {
+    "cell_id": "Tfh",
+    "language": "zh",
+    "alias": "滤泡辅助T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Tfh"
+  },
+  {
+    "cell_id": "Tfh",
+    "language": "en",
+    "alias": "TFH",
+    "alias_type": "synonym",
+    "maps_to": "Tfh"
+  },
+  {
+    "cell_id": "Tfh",
+    "language": "en",
+    "alias": "follicular helper",
+    "alias_type": "synonym",
+    "maps_to": "Tfh"
+  },
+  {
+    "cell_id": "Tph",
+    "language": "en",
+    "alias": "Tph",
+    "alias_type": "standard_id",
+    "maps_to": "Tph"
+  },
+  {
+    "cell_id": "Tph",
+    "language": "zh",
+    "alias": "外周辅助T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Tph"
+  },
+  {
+    "cell_id": "Tph",
+    "language": "en",
+    "alias": "peripheral helper T",
+    "alias_type": "synonym",
+    "maps_to": "Tph"
+  },
+  {
+    "cell_id": "Tph",
+    "language": "en",
+    "alias": "TPH",
+    "alias_type": "synonym",
+    "maps_to": "Tph"
+  },
+  {
+    "cell_id": "CD8_T",
+    "language": "en",
+    "alias": "CD8_T",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_T",
+    "language": "zh",
+    "alias": "CD8_T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_T",
+    "language": "en",
+    "alias": "CD8T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_T",
+    "language": "en",
+    "alias": "cytotoxic T lineage",
+    "alias_type": "synonym",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_Tn",
+    "language": "en",
+    "alias": "CD8_Tn",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_Tn"
+  },
+  {
+    "cell_id": "CD8_Tn",
+    "language": "zh",
+    "alias": "CD8初始T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_Tn"
+  },
+  {
+    "cell_id": "CD8_Tn",
+    "language": "en",
+    "alias": "CD8 naive T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Tn"
+  },
+  {
+    "cell_id": "CD8_Tcm",
+    "language": "en",
+    "alias": "CD8_Tcm",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_Tcm"
+  },
+  {
+    "cell_id": "CD8_Tcm",
+    "language": "zh",
+    "alias": "CD8中央记忆T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_Tcm"
+  },
+  {
+    "cell_id": "CD8_Tcm",
+    "language": "en",
+    "alias": "CD8 central memory T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Tcm"
+  },
+  {
+    "cell_id": "CD8_Tem",
+    "language": "en",
+    "alias": "CD8_Tem",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_Tem"
+  },
+  {
+    "cell_id": "CD8_Tem",
+    "language": "zh",
+    "alias": "CD8效应记忆T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_Tem"
+  },
+  {
+    "cell_id": "CD8_Tem",
+    "language": "en",
+    "alias": "CD8 EM T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Tem"
+  },
+  {
+    "cell_id": "CD8_Tem",
+    "language": "en",
+    "alias": "GZMK CD8T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Tem"
+  },
+  {
+    "cell_id": "CD8_Teff",
+    "language": "en",
+    "alias": "CD8_Teff",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_Teff"
+  },
+  {
+    "cell_id": "CD8_Teff",
+    "language": "zh",
+    "alias": "CD8效应T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_Teff"
+  },
+  {
+    "cell_id": "CD8_Teff",
+    "language": "en",
+    "alias": "CTL",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Teff"
+  },
+  {
+    "cell_id": "CD8_Teff",
+    "language": "en",
+    "alias": "effector CD8 T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Teff"
+  },
+  {
+    "cell_id": "CD8_Trm",
+    "language": "en",
+    "alias": "CD8_Trm",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_Trm"
+  },
+  {
+    "cell_id": "CD8_Trm",
+    "language": "zh",
+    "alias": "CD8组织驻留记忆T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_Trm"
+  },
+  {
+    "cell_id": "CD8_Trm",
+    "language": "en",
+    "alias": "CD8 TRM",
+    "alias_type": "synonym",
+    "maps_to": "CD8_Trm"
+  },
+  {
+    "cell_id": "CD8_Tex",
+    "language": "en",
+    "alias": "CD8_Tex",
+    "alias_type": "standard_id",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_Tex",
+    "language": "zh",
+    "alias": "CD8耗竭T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_Tex",
+    "language": "en",
+    "alias": "Tex",
+    "alias_type": "synonym",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "CD8_Tex",
+    "language": "en",
+    "alias": "exhausted CD8 T",
+    "alias_type": "synonym",
+    "maps_to": "CD8_T"
+  },
+  {
+    "cell_id": "MAIT",
+    "language": "en",
+    "alias": "MAIT",
+    "alias_type": "standard_id",
+    "maps_to": "MAIT"
+  },
+  {
+    "cell_id": "MAIT",
+    "language": "zh",
+    "alias": "黏膜相关恒定T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "MAIT"
+  },
+  {
+    "cell_id": "MAIT",
+    "language": "en",
+    "alias": "MAIT cell",
+    "alias_type": "synonym",
+    "maps_to": "MAIT"
+  },
+  {
+    "cell_id": "gdT",
+    "language": "en",
+    "alias": "gdT",
+    "alias_type": "standard_id",
+    "maps_to": "gdT"
+  },
+  {
+    "cell_id": "gdT",
+    "language": "zh",
+    "alias": "γδT细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "gdT"
+  },
+  {
+    "cell_id": "gdT",
+    "language": "en",
+    "alias": "GDT",
+    "alias_type": "synonym",
+    "maps_to": "gdT"
+  },
+  {
+    "cell_id": "gdT",
+    "language": "en",
+    "alias": "gamma delta T",
+    "alias_type": "synonym",
+    "maps_to": "gdT"
+  },
+  {
+    "cell_id": "Naive_like_gdT",
+    "language": "en",
+    "alias": "Naive_like_gdT",
+    "alias_type": "standard_id",
+    "maps_to": "Naive_like_gdT"
+  },
+  {
+    "cell_id": "Naive_like_gdT",
+    "language": "zh",
+    "alias": "初始样γδT细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Naive_like_gdT"
+  },
+  {
+    "cell_id": "Naive_like_gdT",
+    "language": "en",
+    "alias": "Naive gdT",
+    "alias_type": "synonym",
+    "maps_to": "Naive_like_gdT"
+  },
+  {
+    "cell_id": "IL17A_gdT",
+    "language": "en",
+    "alias": "IL17A_gdT",
+    "alias_type": "standard_id",
+    "maps_to": "IL17A_gdT"
+  },
+  {
+    "cell_id": "IL17A_gdT",
+    "language": "zh",
+    "alias": "IL17A型γδT细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "IL17A_gdT"
+  },
+  {
+    "cell_id": "IL17A_gdT",
+    "language": "en",
+    "alias": "gdT17",
+    "alias_type": "synonym",
+    "maps_to": "IL17A_gdT"
+  },
+  {
+    "cell_id": "IL17A_gdT",
+    "language": "en",
+    "alias": "gamma delta T17",
+    "alias_type": "synonym",
+    "maps_to": "IL17A_gdT"
+  },
+  {
+    "cell_id": "NKT",
+    "language": "en",
+    "alias": "NKT",
+    "alias_type": "standard_id",
+    "maps_to": "NKT"
+  },
+  {
+    "cell_id": "NKT",
+    "language": "zh",
+    "alias": "自然杀伤T细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "NKT"
+  },
+  {
+    "cell_id": "NKT",
+    "language": "en",
+    "alias": "NKT cell",
+    "alias_type": "synonym",
+    "maps_to": "NKT"
+  },
+  {
+    "cell_id": "NK_cell",
+    "language": "en",
+    "alias": "NK_cell",
+    "alias_type": "standard_id",
+    "maps_to": "NK_cell"
+  },
+  {
+    "cell_id": "NK_cell",
+    "language": "zh",
+    "alias": "自然杀伤细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "NK_cell"
+  },
+  {
+    "cell_id": "NK_cell",
+    "language": "en",
+    "alias": "NK",
+    "alias_type": "synonym",
+    "maps_to": "NK_cell"
+  },
+  {
+    "cell_id": "CD56bright_NK",
+    "language": "en",
+    "alias": "CD56bright_NK",
+    "alias_type": "standard_id",
+    "maps_to": "CD56bright_NK"
+  },
+  {
+    "cell_id": "CD56bright_NK",
+    "language": "zh",
+    "alias": "CD56高表达NK细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD56bright_NK"
+  },
+  {
+    "cell_id": "CD56bright_NK",
+    "language": "en",
+    "alias": "CD56hi NK",
+    "alias_type": "synonym",
+    "maps_to": "CD56bright_NK"
+  },
+  {
+    "cell_id": "CD56dim_NK",
+    "language": "en",
+    "alias": "CD56dim_NK",
+    "alias_type": "standard_id",
+    "maps_to": "CD56dim_NK"
+  },
+  {
+    "cell_id": "CD56dim_NK",
+    "language": "zh",
+    "alias": "CD56低表达NK细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "CD56dim_NK"
+  },
+  {
+    "cell_id": "CD56dim_NK",
+    "language": "en",
+    "alias": "CD56dim NK",
+    "alias_type": "synonym",
+    "maps_to": "CD56dim_NK"
+  },
+  {
+    "cell_id": "B_cell",
+    "language": "en",
+    "alias": "B_cell",
+    "alias_type": "standard_id",
+    "maps_to": "B_cell"
+  },
+  {
+    "cell_id": "B_cell",
+    "language": "zh",
+    "alias": "B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "B_cell"
+  },
+  {
+    "cell_id": "B_cell",
+    "language": "en",
+    "alias": "B lymphocyte",
+    "alias_type": "synonym",
+    "maps_to": "B_cell"
+  },
+  {
+    "cell_id": "Developing_B",
+    "language": "en",
+    "alias": "Developing_B",
+    "alias_type": "standard_id",
+    "maps_to": "Developing_B"
+  },
+  {
+    "cell_id": "Developing_B",
+    "language": "zh",
+    "alias": "发育中B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Developing_B"
+  },
+  {
+    "cell_id": "Developing_B",
+    "language": "en",
+    "alias": "B-cell precursor",
+    "alias_type": "synonym",
+    "maps_to": "Developing_B"
+  },
+  {
+    "cell_id": "Mature_B",
+    "language": "en",
+    "alias": "Mature_B",
+    "alias_type": "standard_id",
+    "maps_to": "Mature_B"
+  },
+  {
+    "cell_id": "Mature_B",
+    "language": "zh",
+    "alias": "成熟B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Mature_B"
+  },
+  {
+    "cell_id": "Mature_B",
+    "language": "en",
+    "alias": "mature B",
+    "alias_type": "synonym",
+    "maps_to": "Mature_B"
+  },
+  {
+    "cell_id": "Antibody_secreting_B",
+    "language": "en",
+    "alias": "Antibody_secreting_B",
+    "alias_type": "standard_id",
+    "maps_to": "Antibody_secreting_B"
+  },
+  {
+    "cell_id": "Antibody_secreting_B",
+    "language": "zh",
+    "alias": "抗体分泌B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Antibody_secreting_B"
+  },
+  {
+    "cell_id": "Antibody_secreting_B",
+    "language": "en",
+    "alias": "ASC",
+    "alias_type": "synonym",
+    "maps_to": "Antibody_secreting_B"
+  },
+  {
+    "cell_id": "Immature_B",
+    "language": "en",
+    "alias": "Immature_B",
+    "alias_type": "standard_id",
+    "maps_to": "Immature_B"
+  },
+  {
+    "cell_id": "Immature_B",
+    "language": "zh",
+    "alias": "未成熟B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Immature_B"
+  },
+  {
+    "cell_id": "Immature_B",
+    "language": "en",
+    "alias": "immature B",
+    "alias_type": "synonym",
+    "maps_to": "Immature_B"
+  },
+  {
+    "cell_id": "Transitional_B",
+    "language": "en",
+    "alias": "Transitional_B",
+    "alias_type": "standard_id",
+    "maps_to": "Transitional_B"
+  },
+  {
+    "cell_id": "Transitional_B",
+    "language": "zh",
+    "alias": "过渡性B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Transitional_B"
+  },
+  {
+    "cell_id": "Transitional_B",
+    "language": "en",
+    "alias": "transitional B",
+    "alias_type": "synonym",
+    "maps_to": "Transitional_B"
+  },
+  {
+    "cell_id": "Naive_B",
+    "language": "en",
+    "alias": "Naive_B",
+    "alias_type": "standard_id",
+    "maps_to": "Naive_B"
+  },
+  {
+    "cell_id": "Naive_B",
+    "language": "zh",
+    "alias": "初始B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Naive_B"
+  },
+  {
+    "cell_id": "Naive_B",
+    "language": "en",
+    "alias": "Bn",
+    "alias_type": "synonym",
+    "maps_to": "Naive_B"
+  },
+  {
+    "cell_id": "Naive_B",
+    "language": "en",
+    "alias": "naive B",
+    "alias_type": "synonym",
+    "maps_to": "Naive_B"
+  },
+  {
+    "cell_id": "Memory_B",
+    "language": "en",
+    "alias": "Memory_B",
+    "alias_type": "standard_id",
+    "maps_to": "Memory_B"
+  },
+  {
+    "cell_id": "Memory_B",
+    "language": "zh",
+    "alias": "记忆B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Memory_B"
+  },
+  {
+    "cell_id": "Memory_B",
+    "language": "en",
+    "alias": "Bm",
+    "alias_type": "synonym",
+    "maps_to": "Memory_B"
+  },
+  {
+    "cell_id": "Memory_B",
+    "language": "en",
+    "alias": "memory B",
+    "alias_type": "synonym",
+    "maps_to": "Memory_B"
+  },
+  {
+    "cell_id": "GC_B",
+    "language": "en",
+    "alias": "GC_B",
+    "alias_type": "standard_id",
+    "maps_to": "GC_B"
+  },
+  {
+    "cell_id": "GC_B",
+    "language": "zh",
+    "alias": "生发中心B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "GC_B"
+  },
+  {
+    "cell_id": "GC_B",
+    "language": "en",
+    "alias": "GcB",
+    "alias_type": "synonym",
+    "maps_to": "GC_B"
+  },
+  {
+    "cell_id": "GC_B",
+    "language": "en",
+    "alias": "germinal center B",
+    "alias_type": "synonym",
+    "maps_to": "GC_B"
+  },
+  {
+    "cell_id": "Plasmablast",
+    "language": "en",
+    "alias": "Plasmablast",
+    "alias_type": "standard_id",
+    "maps_to": "Plasmablast"
+  },
+  {
+    "cell_id": "Plasmablast",
+    "language": "zh",
+    "alias": "浆母细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Plasmablast"
+  },
+  {
+    "cell_id": "Plasmablast",
+    "language": "en",
+    "alias": "antibody-secreting plasmablast",
+    "alias_type": "synonym",
+    "maps_to": "Plasmablast"
+  },
+  {
+    "cell_id": "Plasma_cell",
+    "language": "en",
+    "alias": "Plasma_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Plasma_cell"
+  },
+  {
+    "cell_id": "Plasma_cell",
+    "language": "zh",
+    "alias": "浆细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Plasma_cell"
+  },
+  {
+    "cell_id": "Plasma_cell",
+    "language": "en",
+    "alias": "Plasma",
+    "alias_type": "synonym",
+    "maps_to": "Plasma_cell"
+  },
+  {
+    "cell_id": "Pro_B",
+    "language": "en",
+    "alias": "Pro_B",
+    "alias_type": "standard_id",
+    "maps_to": "Pro_B"
+  },
+  {
+    "cell_id": "Pro_B",
+    "language": "zh",
+    "alias": "祖B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Pro_B"
+  },
+  {
+    "cell_id": "Pro_B",
+    "language": "en",
+    "alias": "pro B",
+    "alias_type": "synonym",
+    "maps_to": "Pro_B"
+  },
+  {
+    "cell_id": "Pre_B",
+    "language": "en",
+    "alias": "Pre_B",
+    "alias_type": "standard_id",
+    "maps_to": "Pre_B"
+  },
+  {
+    "cell_id": "Pre_B",
+    "language": "zh",
+    "alias": "前B细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Pre_B"
+  },
+  {
+    "cell_id": "Pre_B",
+    "language": "en",
+    "alias": "pre B",
+    "alias_type": "synonym",
+    "maps_to": "Pre_B"
+  },
+  {
+    "cell_id": "Myeloid_cell",
+    "language": "en",
+    "alias": "Myeloid_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Myeloid_cell"
+  },
+  {
+    "cell_id": "Myeloid_cell",
+    "language": "zh",
+    "alias": "髓系细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Myeloid_cell"
+  },
+  {
+    "cell_id": "Myeloid_cell",
+    "language": "en",
+    "alias": "myeloid",
+    "alias_type": "synonym",
+    "maps_to": "Myeloid_cell"
+  },
+  {
+    "cell_id": "Monocyte",
+    "language": "en",
+    "alias": "Monocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Monocyte"
+  },
+  {
+    "cell_id": "Monocyte",
+    "language": "zh",
+    "alias": "单核细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Monocyte"
+  },
+  {
+    "cell_id": "Monocyte",
+    "language": "en",
+    "alias": "Mono",
+    "alias_type": "synonym",
+    "maps_to": "Monocyte"
+  },
+  {
+    "cell_id": "Classical_monocyte",
+    "language": "en",
+    "alias": "Classical_monocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Classical_monocyte"
+  },
+  {
+    "cell_id": "Classical_monocyte",
+    "language": "zh",
+    "alias": "经典单核细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Classical_monocyte"
+  },
+  {
+    "cell_id": "Classical_monocyte",
+    "language": "en",
+    "alias": "CD14 monocyte",
+    "alias_type": "synonym",
+    "maps_to": "Classical_monocyte"
+  },
+  {
+    "cell_id": "Nonclassical_monocyte",
+    "language": "en",
+    "alias": "Nonclassical_monocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Nonclassical_monocyte"
+  },
+  {
+    "cell_id": "Nonclassical_monocyte",
+    "language": "zh",
+    "alias": "非经典单核细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Nonclassical_monocyte"
+  },
+  {
+    "cell_id": "Nonclassical_monocyte",
+    "language": "en",
+    "alias": "FCGR3A monocyte",
+    "alias_type": "synonym",
+    "maps_to": "Nonclassical_monocyte"
+  },
+  {
+    "cell_id": "Macrophage",
+    "language": "en",
+    "alias": "Macrophage",
+    "alias_type": "standard_id",
+    "maps_to": "Macrophage"
+  },
+  {
+    "cell_id": "Macrophage",
+    "language": "zh",
+    "alias": "巨噬细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Macrophage"
+  },
+  {
+    "cell_id": "Macrophage",
+    "language": "en",
+    "alias": "Mac",
+    "alias_type": "synonym",
+    "maps_to": "Macrophage"
+  },
+  {
+    "cell_id": "Tissue_resident_macrophage",
+    "language": "en",
+    "alias": "Tissue_resident_macrophage",
+    "alias_type": "standard_id",
+    "maps_to": "Tissue_resident_macrophage"
+  },
+  {
+    "cell_id": "Tissue_resident_macrophage",
+    "language": "zh",
+    "alias": "组织驻留巨噬细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Tissue_resident_macrophage"
+  },
+  {
+    "cell_id": "Tissue_resident_macrophage",
+    "language": "en",
+    "alias": "resident macrophage",
+    "alias_type": "synonym",
+    "maps_to": "Tissue_resident_macrophage"
+  },
+  {
+    "cell_id": "cDC1",
+    "language": "en",
+    "alias": "cDC1",
+    "alias_type": "standard_id",
+    "maps_to": "cDC1"
+  },
+  {
+    "cell_id": "cDC1",
+    "language": "zh",
+    "alias": "常规1型树突状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "cDC1"
+  },
+  {
+    "cell_id": "cDC1",
+    "language": "en",
+    "alias": "DC1",
+    "alias_type": "synonym",
+    "maps_to": "cDC1"
+  },
+  {
+    "cell_id": "cDC2",
+    "language": "en",
+    "alias": "cDC2",
+    "alias_type": "standard_id",
+    "maps_to": "cDC2"
+  },
+  {
+    "cell_id": "cDC2",
+    "language": "zh",
+    "alias": "常规2型树突状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "cDC2"
+  },
+  {
+    "cell_id": "cDC2",
+    "language": "en",
+    "alias": "DC2",
+    "alias_type": "synonym",
+    "maps_to": "cDC2"
+  },
+  {
+    "cell_id": "pDC",
+    "language": "en",
+    "alias": "pDC",
+    "alias_type": "standard_id",
+    "maps_to": "pDC"
+  },
+  {
+    "cell_id": "pDC",
+    "language": "zh",
+    "alias": "浆细胞样树突状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "pDC"
+  },
+  {
+    "cell_id": "pDC",
+    "language": "en",
+    "alias": "plasmacytoid DC",
+    "alias_type": "synonym",
+    "maps_to": "pDC"
+  },
+  {
+    "cell_id": "Migratory_DC",
+    "language": "en",
+    "alias": "Migratory_DC",
+    "alias_type": "standard_id",
+    "maps_to": "Migratory_DC"
+  },
+  {
+    "cell_id": "Migratory_DC",
+    "language": "zh",
+    "alias": "迁移型树突状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Migratory_DC"
+  },
+  {
+    "cell_id": "Migratory_DC",
+    "language": "en",
+    "alias": "LAMP3_DC",
+    "alias_type": "synonym",
+    "maps_to": "Migratory_DC"
+  },
+  {
+    "cell_id": "Migratory_DC",
+    "language": "en",
+    "alias": "CCR7_DC",
+    "alias_type": "synonym",
+    "maps_to": "Migratory_DC"
+  },
+  {
+    "cell_id": "Neutrophil",
+    "language": "en",
+    "alias": "Neutrophil",
+    "alias_type": "standard_id",
+    "maps_to": "Neutrophil"
+  },
+  {
+    "cell_id": "Neutrophil",
+    "language": "zh",
+    "alias": "中性粒细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Neutrophil"
+  },
+  {
+    "cell_id": "Neutrophil",
+    "language": "en",
+    "alias": "PMN",
+    "alias_type": "synonym",
+    "maps_to": "Neutrophil"
+  },
+  {
+    "cell_id": "Mast_cell",
+    "language": "en",
+    "alias": "Mast_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Mast_cell"
+  },
+  {
+    "cell_id": "Mast_cell",
+    "language": "zh",
+    "alias": "肥大细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Mast_cell"
+  },
+  {
+    "cell_id": "Mast_cell",
+    "language": "en",
+    "alias": "mast",
+    "alias_type": "synonym",
+    "maps_to": "Mast_cell"
+  },
+  {
+    "cell_id": "Epithelial_cell",
+    "language": "en",
+    "alias": "Epithelial_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Epithelial_cell"
+  },
+  {
+    "cell_id": "Epithelial_cell",
+    "language": "zh",
+    "alias": "上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Epithelial_cell"
+  },
+  {
+    "cell_id": "Epithelial_cell",
+    "language": "en",
+    "alias": "epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Epithelial_cell"
+  },
+  {
+    "cell_id": "Intestinal_epithelial",
+    "language": "en",
+    "alias": "Intestinal_epithelial",
+    "alias_type": "standard_id",
+    "maps_to": "Intestinal_epithelial"
+  },
+  {
+    "cell_id": "Intestinal_epithelial",
+    "language": "zh",
+    "alias": "肠上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Intestinal_epithelial"
+  },
+  {
+    "cell_id": "Intestinal_epithelial",
+    "language": "en",
+    "alias": "gut epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Intestinal_epithelial"
+  },
+  {
+    "cell_id": "Intestinal_stem_cell",
+    "language": "en",
+    "alias": "Intestinal_stem_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Intestinal_stem_cell"
+  },
+  {
+    "cell_id": "Intestinal_stem_cell",
+    "language": "zh",
+    "alias": "肠道干细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Intestinal_stem_cell"
+  },
+  {
+    "cell_id": "Intestinal_stem_cell",
+    "language": "en",
+    "alias": "ISC",
+    "alias_type": "synonym",
+    "maps_to": "Intestinal_stem_cell"
+  },
+  {
+    "cell_id": "Intestinal_stem_cell",
+    "language": "en",
+    "alias": "LGR5 stem",
+    "alias_type": "synonym",
+    "maps_to": "Intestinal_stem_cell"
+  },
+  {
+    "cell_id": "TA_cell",
+    "language": "en",
+    "alias": "TA_cell",
+    "alias_type": "standard_id",
+    "maps_to": "TA_cell"
+  },
+  {
+    "cell_id": "TA_cell",
+    "language": "zh",
+    "alias": "短暂扩增细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "TA_cell"
+  },
+  {
+    "cell_id": "TA_cell",
+    "language": "en",
+    "alias": "TA",
+    "alias_type": "synonym",
+    "maps_to": "TA_cell"
+  },
+  {
+    "cell_id": "TA_cell",
+    "language": "en",
+    "alias": "transit-amplifying",
+    "alias_type": "synonym",
+    "maps_to": "TA_cell"
+  },
+  {
+    "cell_id": "Secretory_progenitor",
+    "language": "en",
+    "alias": "Secretory_progenitor",
+    "alias_type": "standard_id",
+    "maps_to": "Secretory_progenitor"
+  },
+  {
+    "cell_id": "Secretory_progenitor",
+    "language": "zh",
+    "alias": "分泌系祖细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Secretory_progenitor"
+  },
+  {
+    "cell_id": "Secretory_progenitor",
+    "language": "en",
+    "alias": "secretory progenitor",
+    "alias_type": "synonym",
+    "maps_to": "Secretory_progenitor"
+  },
+  {
+    "cell_id": "Enterocyte",
+    "language": "en",
+    "alias": "Enterocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Enterocyte"
+  },
+  {
+    "cell_id": "Enterocyte",
+    "language": "zh",
+    "alias": "肠吸收细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Enterocyte"
+  },
+  {
+    "cell_id": "Enterocyte",
+    "language": "en",
+    "alias": "absorptive enterocyte",
+    "alias_type": "synonym",
+    "maps_to": "Enterocyte"
+  },
+  {
+    "cell_id": "Colonocyte",
+    "language": "en",
+    "alias": "Colonocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Colonocyte"
+  },
+  {
+    "cell_id": "Colonocyte",
+    "language": "zh",
+    "alias": "结肠吸收细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Colonocyte"
+  },
+  {
+    "cell_id": "Colonocyte",
+    "language": "en",
+    "alias": "colon absorptive cell",
+    "alias_type": "synonym",
+    "maps_to": "Colonocyte"
+  },
+  {
+    "cell_id": "Goblet_cell",
+    "language": "en",
+    "alias": "Goblet_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Goblet_cell"
+  },
+  {
+    "cell_id": "Goblet_cell",
+    "language": "zh",
+    "alias": "杯状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Goblet_cell"
+  },
+  {
+    "cell_id": "Goblet_cell",
+    "language": "en",
+    "alias": "Goblet",
+    "alias_type": "synonym",
+    "maps_to": "Goblet_cell"
+  },
+  {
+    "cell_id": "Paneth_cell",
+    "language": "en",
+    "alias": "Paneth_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Paneth_cell"
+  },
+  {
+    "cell_id": "Paneth_cell",
+    "language": "zh",
+    "alias": "潘氏细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Paneth_cell"
+  },
+  {
+    "cell_id": "Paneth_cell",
+    "language": "en",
+    "alias": "Paneth",
+    "alias_type": "synonym",
+    "maps_to": "Paneth_cell"
+  },
+  {
+    "cell_id": "Enteroendocrine_cell",
+    "language": "en",
+    "alias": "Enteroendocrine_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Enteroendocrine_cell"
+  },
+  {
+    "cell_id": "Enteroendocrine_cell",
+    "language": "zh",
+    "alias": "肠内分泌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Enteroendocrine_cell"
+  },
+  {
+    "cell_id": "Enteroendocrine_cell",
+    "language": "en",
+    "alias": "EEC",
+    "alias_type": "synonym",
+    "maps_to": "Enteroendocrine_cell"
+  },
+  {
+    "cell_id": "Tuft_cell",
+    "language": "en",
+    "alias": "Tuft_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Tuft_cell"
+  },
+  {
+    "cell_id": "Tuft_cell",
+    "language": "zh",
+    "alias": "簇细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Tuft_cell"
+  },
+  {
+    "cell_id": "Tuft_cell",
+    "language": "en",
+    "alias": "Tuft",
+    "alias_type": "synonym",
+    "maps_to": "Tuft_cell"
+  },
+  {
+    "cell_id": "Regenerative_stem_cell",
+    "language": "en",
+    "alias": "Regenerative_stem_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Regenerative_stem_cell"
+  },
+  {
+    "cell_id": "Regenerative_stem_cell",
+    "language": "zh",
+    "alias": "再生储备干细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Regenerative_stem_cell"
+  },
+  {
+    "cell_id": "Regenerative_stem_cell",
+    "language": "en",
+    "alias": "reserve stem",
+    "alias_type": "synonym",
+    "maps_to": "Regenerative_stem_cell"
+  },
+  {
+    "cell_id": "Regenerative_stem_cell",
+    "language": "en",
+    "alias": "regenerative stem",
+    "alias_type": "synonym",
+    "maps_to": "Regenerative_stem_cell"
+  },
+  {
+    "cell_id": "Gastric_epithelial",
+    "language": "en",
+    "alias": "Gastric_epithelial",
+    "alias_type": "standard_id",
+    "maps_to": "Gastric_epithelial"
+  },
+  {
+    "cell_id": "Gastric_epithelial",
+    "language": "zh",
+    "alias": "胃上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Gastric_epithelial"
+  },
+  {
+    "cell_id": "Gastric_epithelial",
+    "language": "en",
+    "alias": "stomach epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Gastric_epithelial"
+  },
+  {
+    "cell_id": "Chief_cell",
+    "language": "en",
+    "alias": "Chief_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Chief_cell"
+  },
+  {
+    "cell_id": "Chief_cell",
+    "language": "zh",
+    "alias": "胃主细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Chief_cell"
+  },
+  {
+    "cell_id": "Chief_cell",
+    "language": "en",
+    "alias": "zymogenic cell",
+    "alias_type": "synonym",
+    "maps_to": "Chief_cell"
+  },
+  {
+    "cell_id": "Surface_mucous_cell",
+    "language": "en",
+    "alias": "Surface_mucous_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Surface_mucous_cell"
+  },
+  {
+    "cell_id": "Surface_mucous_cell",
+    "language": "zh",
+    "alias": "胃表面黏液细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Surface_mucous_cell"
+  },
+  {
+    "cell_id": "Surface_mucous_cell",
+    "language": "en",
+    "alias": "pit mucous cell",
+    "alias_type": "synonym",
+    "maps_to": "Surface_mucous_cell"
+  },
+  {
+    "cell_id": "Mucous_neck_cell",
+    "language": "en",
+    "alias": "Mucous_neck_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Mucous_neck_cell"
+  },
+  {
+    "cell_id": "Mucous_neck_cell",
+    "language": "zh",
+    "alias": "胃黏液颈细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Mucous_neck_cell"
+  },
+  {
+    "cell_id": "Mucous_neck_cell",
+    "language": "en",
+    "alias": "neck mucous cell",
+    "alias_type": "synonym",
+    "maps_to": "Mucous_neck_cell"
+  },
+  {
+    "cell_id": "Parietal_cell",
+    "language": "en",
+    "alias": "Parietal_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Parietal_cell"
+  },
+  {
+    "cell_id": "Parietal_cell",
+    "language": "zh",
+    "alias": "胃壁细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Parietal_cell"
+  },
+  {
+    "cell_id": "Parietal_cell",
+    "language": "en",
+    "alias": "oxyntic cell",
+    "alias_type": "synonym",
+    "maps_to": "Parietal_cell"
+  },
+  {
+    "cell_id": "Gastric_neuroendocrine",
+    "language": "en",
+    "alias": "Gastric_neuroendocrine",
+    "alias_type": "standard_id",
+    "maps_to": "Gastric_neuroendocrine"
+  },
+  {
+    "cell_id": "Gastric_neuroendocrine",
+    "language": "zh",
+    "alias": "胃神经内分泌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Gastric_neuroendocrine"
+  },
+  {
+    "cell_id": "Gastric_neuroendocrine",
+    "language": "en",
+    "alias": "gastric endocrine",
+    "alias_type": "synonym",
+    "maps_to": "Gastric_neuroendocrine"
+  },
+  {
+    "cell_id": "SPEM",
+    "language": "en",
+    "alias": "SPEM",
+    "alias_type": "standard_id",
+    "maps_to": "SPEM"
+  },
+  {
+    "cell_id": "SPEM",
+    "language": "zh",
+    "alias": "痉挛性多肽表达化生细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "SPEM"
+  },
+  {
+    "cell_id": "SPEM",
+    "language": "en",
+    "alias": "spasmolytic polypeptide-expressing metaplasia",
+    "alias_type": "synonym",
+    "maps_to": "SPEM"
+  },
+  {
+    "cell_id": "Lung_epithelial",
+    "language": "en",
+    "alias": "Lung_epithelial",
+    "alias_type": "standard_id",
+    "maps_to": "Lung_epithelial"
+  },
+  {
+    "cell_id": "Lung_epithelial",
+    "language": "zh",
+    "alias": "肺上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Lung_epithelial"
+  },
+  {
+    "cell_id": "Lung_epithelial",
+    "language": "en",
+    "alias": "lung epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Lung_epithelial"
+  },
+  {
+    "cell_id": "AT1",
+    "language": "en",
+    "alias": "AT1",
+    "alias_type": "standard_id",
+    "maps_to": "AT1"
+  },
+  {
+    "cell_id": "AT1",
+    "language": "zh",
+    "alias": "肺泡1型细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "AT1"
+  },
+  {
+    "cell_id": "AT1",
+    "language": "en",
+    "alias": "alveolar type 1",
+    "alias_type": "synonym",
+    "maps_to": "AT1"
+  },
+  {
+    "cell_id": "AT2",
+    "language": "en",
+    "alias": "AT2",
+    "alias_type": "standard_id",
+    "maps_to": "AT2"
+  },
+  {
+    "cell_id": "AT2",
+    "language": "zh",
+    "alias": "肺泡2型细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "AT2"
+  },
+  {
+    "cell_id": "AT2",
+    "language": "en",
+    "alias": "alveolar type 2",
+    "alias_type": "synonym",
+    "maps_to": "AT2"
+  },
+  {
+    "cell_id": "Basal_cell",
+    "language": "en",
+    "alias": "Basal_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Basal_cell"
+  },
+  {
+    "cell_id": "Basal_cell",
+    "language": "zh",
+    "alias": "基底细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Basal_cell"
+  },
+  {
+    "cell_id": "Basal_cell",
+    "language": "en",
+    "alias": "airway basal",
+    "alias_type": "synonym",
+    "maps_to": "Basal_cell"
+  },
+  {
+    "cell_id": "Ciliated_cell",
+    "language": "en",
+    "alias": "Ciliated_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Ciliated_cell"
+  },
+  {
+    "cell_id": "Ciliated_cell",
+    "language": "zh",
+    "alias": "纤毛上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Ciliated_cell"
+  },
+  {
+    "cell_id": "Ciliated_cell",
+    "language": "en",
+    "alias": "ciliated",
+    "alias_type": "synonym",
+    "maps_to": "Ciliated_cell"
+  },
+  {
+    "cell_id": "Club_cell",
+    "language": "en",
+    "alias": "Club_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Club_cell"
+  },
+  {
+    "cell_id": "Club_cell",
+    "language": "zh",
+    "alias": "俱乐部细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Club_cell"
+  },
+  {
+    "cell_id": "Club_cell",
+    "language": "en",
+    "alias": "Clara cell",
+    "alias_type": "synonym",
+    "maps_to": "Club_cell"
+  },
+  {
+    "cell_id": "Airway_goblet_cell",
+    "language": "en",
+    "alias": "Airway_goblet_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Airway_goblet_cell"
+  },
+  {
+    "cell_id": "Airway_goblet_cell",
+    "language": "zh",
+    "alias": "气道杯状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Airway_goblet_cell"
+  },
+  {
+    "cell_id": "Airway_goblet_cell",
+    "language": "en",
+    "alias": "airway goblet",
+    "alias_type": "synonym",
+    "maps_to": "Airway_goblet_cell"
+  },
+  {
+    "cell_id": "Ionocyte",
+    "language": "en",
+    "alias": "Ionocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Ionocyte"
+  },
+  {
+    "cell_id": "Ionocyte",
+    "language": "zh",
+    "alias": "离子细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Ionocyte"
+  },
+  {
+    "cell_id": "Ionocyte",
+    "language": "en",
+    "alias": "airway ionocyte",
+    "alias_type": "synonym",
+    "maps_to": "Ionocyte"
+  },
+  {
+    "cell_id": "Pulmonary_neuroendocrine",
+    "language": "en",
+    "alias": "Pulmonary_neuroendocrine",
+    "alias_type": "standard_id",
+    "maps_to": "Pulmonary_neuroendocrine"
+  },
+  {
+    "cell_id": "Pulmonary_neuroendocrine",
+    "language": "zh",
+    "alias": "肺神经内分泌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Pulmonary_neuroendocrine"
+  },
+  {
+    "cell_id": "Pulmonary_neuroendocrine",
+    "language": "en",
+    "alias": "PNEC",
+    "alias_type": "synonym",
+    "maps_to": "Pulmonary_neuroendocrine"
+  },
+  {
+    "cell_id": "Liver_epithelial",
+    "language": "en",
+    "alias": "Liver_epithelial",
+    "alias_type": "standard_id",
+    "maps_to": "Liver_epithelial"
+  },
+  {
+    "cell_id": "Liver_epithelial",
+    "language": "zh",
+    "alias": "肝实质上皮谱系",
+    "alias_type": "standard_cn",
+    "maps_to": "Liver_epithelial"
+  },
+  {
+    "cell_id": "Liver_epithelial",
+    "language": "en",
+    "alias": "liver epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Liver_epithelial"
+  },
+  {
+    "cell_id": "Hepatocyte",
+    "language": "en",
+    "alias": "Hepatocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Hepatocyte"
+  },
+  {
+    "cell_id": "Hepatocyte",
+    "language": "zh",
+    "alias": "肝细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Hepatocyte"
+  },
+  {
+    "cell_id": "Hepatocyte",
+    "language": "en",
+    "alias": "hepatic parenchymal cell",
+    "alias_type": "synonym",
+    "maps_to": "Hepatocyte"
+  },
+  {
+    "cell_id": "Cholangiocyte",
+    "language": "en",
+    "alias": "Cholangiocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Cholangiocyte"
+  },
+  {
+    "cell_id": "Cholangiocyte",
+    "language": "zh",
+    "alias": "胆管细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Cholangiocyte"
+  },
+  {
+    "cell_id": "Cholangiocyte",
+    "language": "en",
+    "alias": "bile duct epithelial",
+    "alias_type": "synonym",
+    "maps_to": "Cholangiocyte"
+  },
+  {
+    "cell_id": "Ovarian_surface_epithelial",
+    "language": "en",
+    "alias": "Ovarian_surface_epithelial",
+    "alias_type": "standard_id",
+    "maps_to": "Ovarian_surface_epithelial"
+  },
+  {
+    "cell_id": "Ovarian_surface_epithelial",
+    "language": "zh",
+    "alias": "卵巢表面上皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Ovarian_surface_epithelial"
+  },
+  {
+    "cell_id": "Ovarian_surface_epithelial",
+    "language": "en",
+    "alias": "OSE",
+    "alias_type": "synonym",
+    "maps_to": "Ovarian_surface_epithelial"
+  },
+  {
+    "cell_id": "Endothelial_cell",
+    "language": "en",
+    "alias": "Endothelial_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Endothelial_cell"
+  },
+  {
+    "cell_id": "Endothelial_cell",
+    "language": "zh",
+    "alias": "内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Endothelial_cell"
+  },
+  {
+    "cell_id": "Endothelial_cell",
+    "language": "en",
+    "alias": "vascular endothelial",
+    "alias_type": "synonym",
+    "maps_to": "Endothelial_cell"
+  },
+  {
+    "cell_id": "Blood_endothelial",
+    "language": "en",
+    "alias": "Blood_endothelial",
+    "alias_type": "standard_id",
+    "maps_to": "Blood_endothelial"
+  },
+  {
+    "cell_id": "Blood_endothelial",
+    "language": "zh",
+    "alias": "血管内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Blood_endothelial"
+  },
+  {
+    "cell_id": "Blood_endothelial",
+    "language": "en",
+    "alias": "vascular EC",
+    "alias_type": "synonym",
+    "maps_to": "Blood_endothelial"
+  },
+  {
+    "cell_id": "Arterial_endothelial",
+    "language": "en",
+    "alias": "Arterial_endothelial",
+    "alias_type": "standard_id",
+    "maps_to": "Arterial_endothelial"
+  },
+  {
+    "cell_id": "Arterial_endothelial",
+    "language": "zh",
+    "alias": "动脉内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Arterial_endothelial"
+  },
+  {
+    "cell_id": "Arterial_endothelial",
+    "language": "en",
+    "alias": "arterial EC",
+    "alias_type": "synonym",
+    "maps_to": "Arterial_endothelial"
+  },
+  {
+    "cell_id": "Venous_endothelial",
+    "language": "en",
+    "alias": "Venous_endothelial",
+    "alias_type": "standard_id",
+    "maps_to": "Venous_endothelial"
+  },
+  {
+    "cell_id": "Venous_endothelial",
+    "language": "zh",
+    "alias": "静脉内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Venous_endothelial"
+  },
+  {
+    "cell_id": "Venous_endothelial",
+    "language": "en",
+    "alias": "venous EC",
+    "alias_type": "synonym",
+    "maps_to": "Venous_endothelial"
+  },
+  {
+    "cell_id": "Capillary_endothelial",
+    "language": "en",
+    "alias": "Capillary_endothelial",
+    "alias_type": "standard_id",
+    "maps_to": "Capillary_endothelial"
+  },
+  {
+    "cell_id": "Capillary_endothelial",
+    "language": "zh",
+    "alias": "毛细血管内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Capillary_endothelial"
+  },
+  {
+    "cell_id": "Capillary_endothelial",
+    "language": "en",
+    "alias": "capillary EC",
+    "alias_type": "synonym",
+    "maps_to": "Capillary_endothelial"
+  },
+  {
+    "cell_id": "Lymphatic_endothelial",
+    "language": "en",
+    "alias": "Lymphatic_endothelial",
+    "alias_type": "standard_id",
+    "maps_to": "Lymphatic_endothelial"
+  },
+  {
+    "cell_id": "Lymphatic_endothelial",
+    "language": "zh",
+    "alias": "淋巴管内皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Lymphatic_endothelial"
+  },
+  {
+    "cell_id": "Lymphatic_endothelial",
+    "language": "en",
+    "alias": "lymphatic EC",
+    "alias_type": "synonym",
+    "maps_to": "Lymphatic_endothelial"
+  },
+  {
+    "cell_id": "Stromal_cell",
+    "language": "en",
+    "alias": "Stromal_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Stromal_cell"
+  },
+  {
+    "cell_id": "Stromal_cell",
+    "language": "zh",
+    "alias": "间质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Stromal_cell"
+  },
+  {
+    "cell_id": "Stromal_cell",
+    "language": "en",
+    "alias": "mesenchymal stromal",
+    "alias_type": "synonym",
+    "maps_to": "Stromal_cell"
+  },
+  {
+    "cell_id": "Fibroblast",
+    "language": "en",
+    "alias": "Fibroblast",
+    "alias_type": "standard_id",
+    "maps_to": "Fibroblast"
+  },
+  {
+    "cell_id": "Fibroblast",
+    "language": "zh",
+    "alias": "成纤维细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Fibroblast"
+  },
+  {
+    "cell_id": "Fibroblast",
+    "language": "en",
+    "alias": "Fib",
+    "alias_type": "synonym",
+    "maps_to": "Fibroblast"
+  },
+  {
+    "cell_id": "Pericyte",
+    "language": "en",
+    "alias": "Pericyte",
+    "alias_type": "standard_id",
+    "maps_to": "Pericyte"
+  },
+  {
+    "cell_id": "Pericyte",
+    "language": "zh",
+    "alias": "周细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Pericyte"
+  },
+  {
+    "cell_id": "Pericyte",
+    "language": "en",
+    "alias": "mural pericyte",
+    "alias_type": "synonym",
+    "maps_to": "Pericyte"
+  },
+  {
+    "cell_id": "Smooth_muscle_cell",
+    "language": "en",
+    "alias": "Smooth_muscle_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Smooth_muscle_cell"
+  },
+  {
+    "cell_id": "Smooth_muscle_cell",
+    "language": "zh",
+    "alias": "平滑肌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Smooth_muscle_cell"
+  },
+  {
+    "cell_id": "Smooth_muscle_cell",
+    "language": "en",
+    "alias": "SMC",
+    "alias_type": "synonym",
+    "maps_to": "Smooth_muscle_cell"
+  },
+  {
+    "cell_id": "Smooth_muscle_cell",
+    "language": "en",
+    "alias": "vascular smooth muscle",
+    "alias_type": "synonym",
+    "maps_to": "Smooth_muscle_cell"
+  },
+  {
+    "cell_id": "Myofibroblast",
+    "language": "en",
+    "alias": "Myofibroblast",
+    "alias_type": "standard_id",
+    "maps_to": "Myofibroblast"
+  },
+  {
+    "cell_id": "Myofibroblast",
+    "language": "zh",
+    "alias": "肌成纤维细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Myofibroblast"
+  },
+  {
+    "cell_id": "Myofibroblast",
+    "language": "en",
+    "alias": "myCAF-like",
+    "alias_type": "synonym",
+    "maps_to": "Myofibroblast"
+  },
+  {
+    "cell_id": "Mesothelial_cell",
+    "language": "en",
+    "alias": "Mesothelial_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Mesothelial_cell"
+  },
+  {
+    "cell_id": "Mesothelial_cell",
+    "language": "zh",
+    "alias": "间皮细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Mesothelial_cell"
+  },
+  {
+    "cell_id": "Mesothelial_cell",
+    "language": "en",
+    "alias": "mesothelium",
+    "alias_type": "synonym",
+    "maps_to": "Mesothelial_cell"
+  },
+  {
+    "cell_id": "Hepatic_stellate_cell",
+    "language": "en",
+    "alias": "Hepatic_stellate_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Hepatic_stellate_cell"
+  },
+  {
+    "cell_id": "Hepatic_stellate_cell",
+    "language": "zh",
+    "alias": "肝星状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Hepatic_stellate_cell"
+  },
+  {
+    "cell_id": "Hepatic_stellate_cell",
+    "language": "en",
+    "alias": "HSC stellate",
+    "alias_type": "synonym",
+    "maps_to": "Hepatic_stellate_cell"
+  },
+  {
+    "cell_id": "MSC",
+    "language": "en",
+    "alias": "MSC",
+    "alias_type": "standard_id",
+    "maps_to": "MSC"
+  },
+  {
+    "cell_id": "MSC",
+    "language": "zh",
+    "alias": "间充质基质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "MSC"
+  },
+  {
+    "cell_id": "MSC",
+    "language": "en",
+    "alias": "mesenchymal stromal cell",
+    "alias_type": "synonym",
+    "maps_to": "MSC"
+  },
+  {
+    "cell_id": "Ovarian_stromal",
+    "language": "en",
+    "alias": "Ovarian_stromal",
+    "alias_type": "standard_id",
+    "maps_to": "Ovarian_stromal"
+  },
+  {
+    "cell_id": "Ovarian_stromal",
+    "language": "zh",
+    "alias": "卵巢间质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Ovarian_stromal"
+  },
+  {
+    "cell_id": "Ovarian_stromal",
+    "language": "en",
+    "alias": "ovarian stroma",
+    "alias_type": "synonym",
+    "maps_to": "Ovarian_stromal"
+  },
+  {
+    "cell_id": "Peritubular_myoid",
+    "language": "en",
+    "alias": "Peritubular_myoid",
+    "alias_type": "standard_id",
+    "maps_to": "Peritubular_myoid"
+  },
+  {
+    "cell_id": "Peritubular_myoid",
+    "language": "zh",
+    "alias": "管周肌样细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Peritubular_myoid"
+  },
+  {
+    "cell_id": "Peritubular_myoid",
+    "language": "en",
+    "alias": "PTM",
+    "alias_type": "synonym",
+    "maps_to": "Peritubular_myoid"
+  },
+  {
+    "cell_id": "Muscle_cell",
+    "language": "en",
+    "alias": "Muscle_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Muscle_cell"
+  },
+  {
+    "cell_id": "Muscle_cell",
+    "language": "zh",
+    "alias": "肌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Muscle_cell"
+  },
+  {
+    "cell_id": "Muscle_cell",
+    "language": "en",
+    "alias": "myocyte",
+    "alias_type": "synonym",
+    "maps_to": "Muscle_cell"
+  },
+  {
+    "cell_id": "Cardiomyocyte",
+    "language": "en",
+    "alias": "Cardiomyocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Cardiomyocyte"
+  },
+  {
+    "cell_id": "Cardiomyocyte",
+    "language": "zh",
+    "alias": "心肌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Cardiomyocyte"
+  },
+  {
+    "cell_id": "Cardiomyocyte",
+    "language": "en",
+    "alias": "cardiomyocyte",
+    "alias_type": "synonym",
+    "maps_to": "Cardiomyocyte"
+  },
+  {
+    "cell_id": "Skeletal_muscle_cell",
+    "language": "en",
+    "alias": "Skeletal_muscle_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Skeletal_muscle_cell"
+  },
+  {
+    "cell_id": "Skeletal_muscle_cell",
+    "language": "zh",
+    "alias": "骨骼肌细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Skeletal_muscle_cell"
+  },
+  {
+    "cell_id": "Skeletal_muscle_cell",
+    "language": "en",
+    "alias": "myofiber",
+    "alias_type": "synonym",
+    "maps_to": "Skeletal_muscle_cell"
+  },
+  {
+    "cell_id": "Neural_cell",
+    "language": "en",
+    "alias": "Neural_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Neural_cell"
+  },
+  {
+    "cell_id": "Neural_cell",
+    "language": "zh",
+    "alias": "神经系统细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Neural_cell"
+  },
+  {
+    "cell_id": "Neural_cell",
+    "language": "en",
+    "alias": "neural",
+    "alias_type": "synonym",
+    "maps_to": "Neural_cell"
+  },
+  {
+    "cell_id": "Neuron",
+    "language": "en",
+    "alias": "Neuron",
+    "alias_type": "standard_id",
+    "maps_to": "Neuron"
+  },
+  {
+    "cell_id": "Neuron",
+    "language": "zh",
+    "alias": "神经元",
+    "alias_type": "standard_cn",
+    "maps_to": "Neuron"
+  },
+  {
+    "cell_id": "Neuron",
+    "language": "en",
+    "alias": "neuronal cell",
+    "alias_type": "synonym",
+    "maps_to": "Neuron"
+  },
+  {
+    "cell_id": "Astrocyte",
+    "language": "en",
+    "alias": "Astrocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Astrocyte"
+  },
+  {
+    "cell_id": "Astrocyte",
+    "language": "zh",
+    "alias": "星形胶质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Astrocyte"
+  },
+  {
+    "cell_id": "Astrocyte",
+    "language": "en",
+    "alias": "astroglia",
+    "alias_type": "synonym",
+    "maps_to": "Astrocyte"
+  },
+  {
+    "cell_id": "Oligodendrocyte",
+    "language": "en",
+    "alias": "Oligodendrocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Oligodendrocyte"
+  },
+  {
+    "cell_id": "Oligodendrocyte",
+    "language": "zh",
+    "alias": "少突胶质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Oligodendrocyte"
+  },
+  {
+    "cell_id": "Oligodendrocyte",
+    "language": "en",
+    "alias": "oligo",
+    "alias_type": "synonym",
+    "maps_to": "Oligodendrocyte"
+  },
+  {
+    "cell_id": "OPC",
+    "language": "en",
+    "alias": "OPC",
+    "alias_type": "standard_id",
+    "maps_to": "OPC"
+  },
+  {
+    "cell_id": "OPC",
+    "language": "zh",
+    "alias": "少突胶质前体细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "OPC"
+  },
+  {
+    "cell_id": "OPC",
+    "language": "en",
+    "alias": "OPC",
+    "alias_type": "synonym",
+    "maps_to": "OPC"
+  },
+  {
+    "cell_id": "OPC",
+    "language": "en",
+    "alias": "NG2 glia",
+    "alias_type": "synonym",
+    "maps_to": "OPC"
+  },
+  {
+    "cell_id": "Ependymal_cell",
+    "language": "en",
+    "alias": "Ependymal_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Ependymal_cell"
+  },
+  {
+    "cell_id": "Ependymal_cell",
+    "language": "zh",
+    "alias": "室管膜细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Ependymal_cell"
+  },
+  {
+    "cell_id": "Ependymal_cell",
+    "language": "en",
+    "alias": "ependymocyte",
+    "alias_type": "synonym",
+    "maps_to": "Ependymal_cell"
+  },
+  {
+    "cell_id": "Schwann_cell",
+    "language": "en",
+    "alias": "Schwann_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Schwann_cell"
+  },
+  {
+    "cell_id": "Schwann_cell",
+    "language": "zh",
+    "alias": "施旺细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Schwann_cell"
+  },
+  {
+    "cell_id": "Schwann_cell",
+    "language": "en",
+    "alias": "peripheral glia",
+    "alias_type": "synonym",
+    "maps_to": "Schwann_cell"
+  },
+  {
+    "cell_id": "Hematopoietic_nonimmune",
+    "language": "en",
+    "alias": "Hematopoietic_nonimmune",
+    "alias_type": "standard_id",
+    "maps_to": "Hematopoietic_nonimmune"
+  },
+  {
+    "cell_id": "Hematopoietic_nonimmune",
+    "language": "zh",
+    "alias": "非免疫造血细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Hematopoietic_nonimmune"
+  },
+  {
+    "cell_id": "Hematopoietic_nonimmune",
+    "language": "en",
+    "alias": "blood lineage",
+    "alias_type": "synonym",
+    "maps_to": "Hematopoietic_nonimmune"
+  },
+  {
+    "cell_id": "HSC_MPP",
+    "language": "en",
+    "alias": "HSC_MPP",
+    "alias_type": "standard_id",
+    "maps_to": "HSC_MPP"
+  },
+  {
+    "cell_id": "HSC_MPP",
+    "language": "zh",
+    "alias": "造血干祖细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "HSC_MPP"
+  },
+  {
+    "cell_id": "HSC_MPP",
+    "language": "en",
+    "alias": "HSC",
+    "alias_type": "synonym",
+    "maps_to": "HSC_MPP"
+  },
+  {
+    "cell_id": "HSC_MPP",
+    "language": "en",
+    "alias": "MPP",
+    "alias_type": "synonym",
+    "maps_to": "HSC_MPP"
+  },
+  {
+    "cell_id": "Erythroid",
+    "language": "en",
+    "alias": "Erythroid",
+    "alias_type": "standard_id",
+    "maps_to": "Erythroid"
+  },
+  {
+    "cell_id": "Erythroid",
+    "language": "zh",
+    "alias": "红系细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Erythroid"
+  },
+  {
+    "cell_id": "Erythroid",
+    "language": "en",
+    "alias": "erythroid",
+    "alias_type": "synonym",
+    "maps_to": "Erythroid"
+  },
+  {
+    "cell_id": "Megakaryocyte",
+    "language": "en",
+    "alias": "Megakaryocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Megakaryocyte"
+  },
+  {
+    "cell_id": "Megakaryocyte",
+    "language": "zh",
+    "alias": "巨核细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Megakaryocyte"
+  },
+  {
+    "cell_id": "Megakaryocyte",
+    "language": "en",
+    "alias": "megakaryocyte platelet",
+    "alias_type": "synonym",
+    "maps_to": "Megakaryocyte"
+  },
+  {
+    "cell_id": "Reproductive_germ_cell",
+    "language": "en",
+    "alias": "Reproductive_germ_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Reproductive_germ_cell"
+  },
+  {
+    "cell_id": "Reproductive_germ_cell",
+    "language": "zh",
+    "alias": "生殖细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Reproductive_germ_cell"
+  },
+  {
+    "cell_id": "Reproductive_germ_cell",
+    "language": "en",
+    "alias": "germline",
+    "alias_type": "synonym",
+    "maps_to": "Reproductive_germ_cell"
+  },
+  {
+    "cell_id": "Spermatogonial_stem",
+    "language": "en",
+    "alias": "Spermatogonial_stem",
+    "alias_type": "standard_id",
+    "maps_to": "Spermatogonial_stem"
+  },
+  {
+    "cell_id": "Spermatogonial_stem",
+    "language": "zh",
+    "alias": "精原干细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Spermatogonial_stem"
+  },
+  {
+    "cell_id": "Spermatogonial_stem",
+    "language": "en",
+    "alias": "undifferentiated spermatogonia",
+    "alias_type": "synonym",
+    "maps_to": "Spermatogonial_stem"
+  },
+  {
+    "cell_id": "Differentiating_spermatogonia",
+    "language": "en",
+    "alias": "Differentiating_spermatogonia",
+    "alias_type": "standard_id",
+    "maps_to": "Differentiating_spermatogonia"
+  },
+  {
+    "cell_id": "Differentiating_spermatogonia",
+    "language": "zh",
+    "alias": "分化精原细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Differentiating_spermatogonia"
+  },
+  {
+    "cell_id": "Differentiating_spermatogonia",
+    "language": "en",
+    "alias": "differentiating spermatogonia",
+    "alias_type": "synonym",
+    "maps_to": "Differentiating_spermatogonia"
+  },
+  {
+    "cell_id": "Spermatocyte",
+    "language": "en",
+    "alias": "Spermatocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Spermatocyte"
+  },
+  {
+    "cell_id": "Spermatocyte",
+    "language": "zh",
+    "alias": "精母细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Spermatocyte"
+  },
+  {
+    "cell_id": "Spermatocyte",
+    "language": "en",
+    "alias": "meiotic germ cell",
+    "alias_type": "synonym",
+    "maps_to": "Spermatocyte"
+  },
+  {
+    "cell_id": "Round_spermatid",
+    "language": "en",
+    "alias": "Round_spermatid",
+    "alias_type": "standard_id",
+    "maps_to": "Round_spermatid"
+  },
+  {
+    "cell_id": "Round_spermatid",
+    "language": "zh",
+    "alias": "圆形精子细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Round_spermatid"
+  },
+  {
+    "cell_id": "Round_spermatid",
+    "language": "en",
+    "alias": "round spermatid",
+    "alias_type": "synonym",
+    "maps_to": "Round_spermatid"
+  },
+  {
+    "cell_id": "Elongating_spermatid",
+    "language": "en",
+    "alias": "Elongating_spermatid",
+    "alias_type": "standard_id",
+    "maps_to": "Elongating_spermatid"
+  },
+  {
+    "cell_id": "Elongating_spermatid",
+    "language": "zh",
+    "alias": "长形精子细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Elongating_spermatid"
+  },
+  {
+    "cell_id": "Elongating_spermatid",
+    "language": "en",
+    "alias": "elongated spermatid",
+    "alias_type": "synonym",
+    "maps_to": "Elongating_spermatid"
+  },
+  {
+    "cell_id": "Oocyte",
+    "language": "en",
+    "alias": "Oocyte",
+    "alias_type": "standard_id",
+    "maps_to": "Oocyte"
+  },
+  {
+    "cell_id": "Oocyte",
+    "language": "zh",
+    "alias": "卵母细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Oocyte"
+  },
+  {
+    "cell_id": "Oocyte",
+    "language": "en",
+    "alias": "ovum precursor",
+    "alias_type": "synonym",
+    "maps_to": "Oocyte"
+  },
+  {
+    "cell_id": "Reproductive_somatic",
+    "language": "en",
+    "alias": "Reproductive_somatic",
+    "alias_type": "standard_id",
+    "maps_to": "Reproductive_somatic"
+  },
+  {
+    "cell_id": "Reproductive_somatic",
+    "language": "zh",
+    "alias": "生殖系统体细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Reproductive_somatic"
+  },
+  {
+    "cell_id": "Reproductive_somatic",
+    "language": "en",
+    "alias": "gonadal somatic",
+    "alias_type": "synonym",
+    "maps_to": "Reproductive_somatic"
+  },
+  {
+    "cell_id": "Sertoli_cell",
+    "language": "en",
+    "alias": "Sertoli_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Sertoli_cell"
+  },
+  {
+    "cell_id": "Sertoli_cell",
+    "language": "zh",
+    "alias": "支持细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Sertoli_cell"
+  },
+  {
+    "cell_id": "Sertoli_cell",
+    "language": "en",
+    "alias": "Sertoli",
+    "alias_type": "synonym",
+    "maps_to": "Sertoli_cell"
+  },
+  {
+    "cell_id": "Leydig_cell",
+    "language": "en",
+    "alias": "Leydig_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Leydig_cell"
+  },
+  {
+    "cell_id": "Leydig_cell",
+    "language": "zh",
+    "alias": "睾丸间质细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Leydig_cell"
+  },
+  {
+    "cell_id": "Leydig_cell",
+    "language": "en",
+    "alias": "Leydig",
+    "alias_type": "synonym",
+    "maps_to": "Leydig_cell"
+  },
+  {
+    "cell_id": "Granulosa_cell",
+    "language": "en",
+    "alias": "Granulosa_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Granulosa_cell"
+  },
+  {
+    "cell_id": "Granulosa_cell",
+    "language": "zh",
+    "alias": "颗粒细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Granulosa_cell"
+  },
+  {
+    "cell_id": "Granulosa_cell",
+    "language": "en",
+    "alias": "ovarian granulosa",
+    "alias_type": "synonym",
+    "maps_to": "Granulosa_cell"
+  },
+  {
+    "cell_id": "Theca_cell",
+    "language": "en",
+    "alias": "Theca_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Theca_cell"
+  },
+  {
+    "cell_id": "Theca_cell",
+    "language": "zh",
+    "alias": "卵泡膜细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Theca_cell"
+  },
+  {
+    "cell_id": "Theca_cell",
+    "language": "en",
+    "alias": "ovarian theca",
+    "alias_type": "synonym",
+    "maps_to": "Theca_cell"
+  },
+  {
+    "cell_id": "Luteal_cell",
+    "language": "en",
+    "alias": "Luteal_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Luteal_cell"
+  },
+  {
+    "cell_id": "Luteal_cell",
+    "language": "zh",
+    "alias": "黄体细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Luteal_cell"
+  },
+  {
+    "cell_id": "Luteal_cell",
+    "language": "en",
+    "alias": "corpus luteum cell",
+    "alias_type": "synonym",
+    "maps_to": "Luteal_cell"
+  }
+]

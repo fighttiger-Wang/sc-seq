@@ -1,0 +1,7 @@
+interface:
+  display_name: "03 · 单细胞大类注释（主要谱系）"
+  short_description: "按共享本体、组织模块和分物种 Marker 完成大类注释与审计"
+  default_prompt: "Use $sc-major-celltype-annotation-auto to annotate mixed lineages with the approved multi-tissue ontology, tissue modules, per-cluster T/NK decisions, and one validated workbook."
+
+policy:
+  allow_implicit_invocation: true

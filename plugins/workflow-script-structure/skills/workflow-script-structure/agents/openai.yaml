@@ -1,0 +1,7 @@
+interface:
+  display_name: "07 · 流程脚本结构"
+  short_description: "分离代码参数投递，并强制检查 Linux 换行兼容性"
+  default_prompt: "Use $workflow-script-structure to structure and validate a workflow package, including UTF-8/LF Shell portability checks."
+
+policy:
+  allow_implicit_invocation: true
