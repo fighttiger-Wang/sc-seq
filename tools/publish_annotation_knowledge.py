@@ -155,7 +155,14 @@ def publish(args) -> dict:
     if not args.skip_bundle:
         run([sys.executable, str(root / "tools" / "new_personal_skill_bundle.py"), "--marketplace-root", str(root), "--bundle-name", "personal-codex-skills-current"], cwd=root, env=env)
     if not args.skip_install:
-        command = [sys.executable, str(root / "tools" / "install_personal_skill_marketplace.py"), "--marketplace-root", str(root)]
+        command = [
+            sys.executable,
+            str(root / "tools" / "install_personal_skill_marketplace.py"),
+            "--marketplace-root",
+            str(root),
+            "--workspace-root",
+            str(workspace),
+        ]
         if args.codex_cli:
             command.extend(["--codex-cli", args.codex_cli])
         run(command, cwd=root, env=env)

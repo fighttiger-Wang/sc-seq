@@ -39,8 +39,9 @@ NN · Name
 10. `skill-writing`
 11. `bioinformatics-results-report`
 12. `annotation-knowledge-release`
+13. `personal-skill-marketplace-setup`
 
-Assign later maintained skills the next unused two-digit number, currently `13`. Do not renumber existing skills unless the user explicitly changes the workflow.
+Assign later maintained skills the next unused two-digit number, currently `14`. Do not renumber existing skills unless the user explicitly changes the workflow.
 
 ## Direct Workflow
 

@@ -4,10 +4,19 @@ param(
   [string]$CodexCli,
 
   [Parameter()]
+  [string]$WorkspaceRoot,
+
+  [Parameter()]
+  [string]$CodexHome,
+
+  [Parameter()]
   [switch]$SkipDoctor,
 
   [Parameter()]
-  [switch]$SkipUserEnvironment
+  [switch]$SkipUserEnvironment,
+
+  [Parameter()]
+  [switch]$ReplaceLocationConfig
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +34,15 @@ $arguments = @{
 }
 if (-not [string]::IsNullOrWhiteSpace($CodexCli)) {
   $arguments.CodexCli = $CodexCli
+}
+if (-not [string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+  $arguments.WorkspaceRoot = $WorkspaceRoot
+}
+if (-not [string]::IsNullOrWhiteSpace($CodexHome)) {
+  $arguments.CodexHome = $CodexHome
+}
+if ($ReplaceLocationConfig) {
+  $arguments.ReplaceLocationConfig = $true
 }
 if ($WhatIfPreference) {
   $arguments.WhatIf = $true

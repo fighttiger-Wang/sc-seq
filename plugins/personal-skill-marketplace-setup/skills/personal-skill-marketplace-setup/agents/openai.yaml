@@ -1,0 +1,7 @@
+interface:
+  display_name: "13 · 共享 Skill 下载安装"
+  short_description: "跨平台下载、安装、更新和修复共享 Codex skills"
+  default_prompt: "Use $personal-skill-marketplace-setup to audit, install, update, or repair the shared personal Codex skill marketplace."
+
+policy:
+  allow_implicit_invocation: true

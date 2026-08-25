@@ -20,5 +20,5 @@ function Resolve-WorkspacePython {
   foreach ($candidate in $candidates | Select-Object -Unique) {
     if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
   }
-  throw 'Python 3 could not be located. Install Python 3 or pass its full path.'
+  throw 'Python 3.10 or newer could not be located. Install it or pass its full path.'
 }

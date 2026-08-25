@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 12,
+  "expectedPluginCount": 13,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -42,7 +42,7 @@
     },
     {
       "id": "skill-writing",
-      "version": "0.1.0+codex.20260825114000"
+      "version": "0.1.0+codex.20260825043228"
     },
     {
       "id": "bioinformatics-results-report",
@@ -51,6 +51,10 @@
     {
       "id": "annotation-knowledge-release",
       "version": "0.1.0+codex.20260825115000"
+    },
+    {
+      "id": "personal-skill-marketplace-setup",
+      "version": "0.1.0+codex.20260825043228"
     }
   ],
   "sharedPaths": [

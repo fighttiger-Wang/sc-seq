@@ -85,8 +85,8 @@ class Doctor:
                 ok = (
                     source.get("source") == "local"
                     and source.get("path") == f"./plugins/{plugin_id}"
-                    and policy.get("installation") in {"AVAILABLE", "INSTALLED_BY_DEFAULT", "NOT_AVAILABLE"}
-                    and policy.get("authentication") in {"ON_INSTALL", "ON_USE"}
+                    and policy.get("installation") == "INSTALLED_BY_DEFAULT"
+                    and policy.get("authentication") == "ON_INSTALL"
                     and bool(entry.get("category"))
                 )
                 self.add(f"marketplace entry {plugin_id}", ok, "Source path or policy/category is invalid")
@@ -96,7 +96,7 @@ class Doctor:
             self.add("compatibility plugin set", sorted(compat_ids) == sorted(expected_ids), "Compatibility marketplace plugin ids differ")
 
         pack_versions = {str(item["id"]): str(item.get("version", "")) for item in (pack or {}).get("plugins", [])}
-        for plugin_id in expected_ids:
+        for position, plugin_id in enumerate(expected_ids, start=1):
             plugin_root = self.root / "plugins" / plugin_id
             manifest_path = plugin_root / ".codex-plugin" / "plugin.json"
             skill_root = plugin_root / "skills" / plugin_id
@@ -134,12 +134,27 @@ class Doctor:
                 agent_display = display_match.group(1).strip() if display_match else ""
                 plugin_display = str((manifest.get("interface") or {}).get("displayName", ""))
                 self.add(f"numbered display name {plugin_id}", agent_display == plugin_display and bool(DISPLAY_RE.fullmatch(plugin_display)), f"plugin.json='{plugin_display}'; openai.yaml='{agent_display}'")
+                self.add(f"workflow order {plugin_id}", plugin_display.startswith(f"{position:02d} · "), f"Expected prefix {position:02d} ·")
                 implicit = implicit_match.group(1).lower() == "true" if implicit_match else True
                 self.add(f"implicit invocation {plugin_id}", implicit, "Maintained shared skills must remain in the default skill set")
 
         for relative in (pack or {}).get("sharedPaths", []):
             path = self.root / str(relative)
             self.add(f"shared path {relative}", path.is_dir(), str(path))
+        required_entrypoints = (
+            "Install-PersonalSkillMarketplace.ps1",
+            "Install-PersonalSkillMarketplace.sh",
+            "Setup-PersonalSkillMarketplace.ps1",
+            "Setup-PersonalSkillMarketplace.sh",
+            "Test-PersonalSkillMarketplace.ps1",
+            "Test-PersonalSkillMarketplace.sh",
+            "tools/install_personal_skill_marketplace.py",
+            "tools/resolve-python.sh",
+            "tools/test_marketplace_setup.py",
+            "plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup/scripts/setup.py",
+        )
+        for relative in required_entrypoints:
+            self.add(f"platform entrypoint {relative}", (self.root / relative).is_file(), relative)
         self.check_annotation()
         self.check_forbidden_files()
         for runtime in ("git", "codex", "python3", "python", "Rscript", "pwsh"):

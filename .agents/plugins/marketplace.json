@@ -147,6 +147,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Education & Research"
+    },
+    {
+      "name": "personal-skill-marketplace-setup",
+      "source": {
+        "source": "local",
+        "path": "./plugins/personal-skill-marketplace-setup"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
