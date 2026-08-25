@@ -152,6 +152,7 @@ class Doctor:
             "tools/resolve-python.sh",
             "tools/test_marketplace_setup.py",
             "plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup/scripts/setup.py",
+            ".github/workflows/marketplace-ci.yml",
         )
         for relative in required_entrypoints:
             self.add(f"platform entrypoint {relative}", (self.root / relative).is_file(), relative)

@@ -2,84 +2,59 @@
 
 这是 13 个个人 Codex skill 的可迁移 `workspace-local` marketplace。唯一版本清单是 `skill-pack.json`，规范 marketplace 清单是 `.agents/plugins/marketplace.json`。不要只复制单个 `SKILL.md`；插件还可能依赖脚本、参考资料和共享知识文件。
 
-## 先说明一个限制
+## 全新电脑的两阶段引导
 
-全新电脑在个人 skill 尚未存在时，不能直接调用第 13 个下载安装 skill。这不是提示词能消除的循环依赖。
-
-首次安装需要先通过普通 Codex/Git 操作取得仓库；安装完成后，才可以在新任务直接调用 `personal-skill-marketplace-setup` 完成审计、更新、修复和重装。内置 `skill-installer` 也能先安装第 13 个 skill 的子目录，但会暂时产生 bare skill 与 marketplace plugin 两个来源，因此不是默认推荐路径。
-
-如果希望在全新电脑的一个普通 Codex 任务中完成首次安装，可直接发送下面的启动指令，并把两个占位符改成该电脑上的真实路径：
+全新电脑在个人 Skill 尚未存在时不能直接调用第 13 个管理 Skill。先用 Codex 内置 `skill-installer` 安装它的临时 bare 副本：
 
 ```text
-请把 https://github.com/fighttiger-Wang/sc-seq.git 安装为这台电脑的 workspace-local skills。
-源码目标是 <marketplace-clone-path>，共享工作区是 <workspace-root>；两者都不能与 CODEX_HOME 互相嵌套。
-先只读检查操作系统、Git、Python 3.10+、Codex CLI、目标目录、现有 workspace-local 注册和磁盘空间；
-发现远端错配、非空目标、位置冲突或权限问题就停止说明，不要覆盖。
-确认后 clone main，运行仓库的 Setup-PersonalSkillMarketplace.ps1（Windows）或 .sh（macOS），
-最后核对 skill-pack.json 中全部 13 个插件均为 installed, enabled 且版本一致。
-不要使用 sudo、force、reset，也不要猜 Codex.app 内部路径；codex 不在 PATH 时请我提供完整路径。
+使用内置 skill-installer，从 fighttiger-Wang/sc-seq 的
+plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup
+安装 personal-skill-marketplace-setup。
 ```
 
-这是普通 Codex 引导，不是调用尚未安装的个人 skill，因此没有循环依赖。
+重启 Codex 并新建任务，然后说：
 
-## 新电脑首次安装
-
-先确认 Git、Python 3.10+ 和 Codex CLI 可用，再选择一个稳定、可写、可备份且空间充足的工作区。不要默认使用系统根目录、临时目录、Codex 插件缓存或未经确认的云同步目录。
-
-```bash
-git clone https://github.com/fighttiger-Wang/sc-seq.git <marketplace-clone-path>
-cd <marketplace-clone-path>
+```text
+使用 personal-skill-marketplace-setup 在这台电脑部署我的个人 Skill。
+源码目标是 <marketplace-clone-path>，共享工作区是 <workspace-root>。
 ```
 
-Windows PowerShell：
+`bootstrap` 会核对 Git、Python 3.10+、Codex CLI、GitHub 访问、目录安全、旧配置和磁盘空间；随后 clone `main`、运行 doctor、注册 `workspace-local`、安装并核对 13 个插件，并向所选工作区的 `AGENTS.md` 写入可重复更新的受管理同步块。它不会覆盖受管理块之外的既有说明。
+
+完整 marketplace 验证成功后，临时 bare Skill 会被报告为重复来源。只有用户明确同意时，才用 `--disable-bootstrap-copy` 把它移动到 `$CODEX_HOME/skills.disabled` 下的可恢复备份；不会直接删除。
+
+也可以不安装临时 Skill，直接 clone 仓库后运行：
 
 ```powershell
-.\Setup-PersonalSkillMarketplace.ps1 -Mode audit
-.\Setup-PersonalSkillMarketplace.ps1 -Mode install -WorkspaceRoot '<workspace-root>'
+.\Setup-PersonalSkillMarketplace.ps1 -Mode bootstrap -WorkspaceRoot '<workspace-root>'
 ```
-
-只有当本机执行策略明确阻止该脚本时，才在当前 PowerShell 进程临时执行 `Set-ExecutionPolicy -Scope Process Bypass` 后重试；不要修改机器或用户级策略。
-
-macOS：
 
 ```bash
-chmod +x ./*.sh tools/*.sh
-./Setup-PersonalSkillMarketplace.sh audit
-./Setup-PersonalSkillMarketplace.sh install --workspace-root "$HOME/CodexWorkspace"
+./Setup-PersonalSkillMarketplace.sh bootstrap --workspace-root '<workspace-root>'
 ```
 
-工作区示例只是示例，不是通用最佳位置。Windows 盘符、macOS 用户目录、组织权限、备份策略和磁盘配额都可能不同。如果 `codex` 不在 `PATH`，显式传入：
+安装或更新插件后需要重启 Codex 并新建任务。
 
-```bash
-./Setup-PersonalSkillMarketplace.sh install \
-  --workspace-root "$HOME/CodexWorkspace" \
-  --codex-cli /full/path/to/codex
-```
+## 日常检测、同步和发布
 
-安装器会：
+Bootstrap 写入的受管理规则会要求：每个任务第一次准备使用或修改另一个 `workspace-local` Skill 时，先执行一次 `preflight`。
 
-- 核对 `workspace-local` 是否唯一指向当前源码仓库；
-- 运行跨平台 doctor；
-- 安装并核对 13 个插件的精确版本和 `installed, enabled` 状态；
-- 成功后才写入 `$CODEX_HOME/workspace-local.json`（未设置时为 `~/.codex/workspace-local.json`）；
-- 报告 bare skill 或其他 marketplace 中的重复来源，但不会自动删除。
+- 本地与 `origin/main` commit 相同：立即返回 `up-to-date`，不 pull、不重装。
+- 本地稳定分支落后：只允许 fast-forward，比较新旧 commit，并仅重装直接受影响的插件；共享文件或 marketplace 核心清单变化时保守地重装全部插件。
+- 工作树不干净、分支错误、本地超前或历史分叉：停止，不覆盖。
+- 插件发生更新：返回 `restartRequired: true`，当前任务停止，重启 Codex 后再使用新版 Skill。
 
-安装完成后重启 Codex，并新建任务。
-
-## 以后直接在新任务使用
-
-```text
-使用 personal-skill-marketplace-setup 检查并更新这台电脑上的共享 skills。
-```
+修改 Skill 后先运行 `publish` 生成只读发布计划。Codex 必须向用户确认；确认后才能使用 `--confirm-publish` 创建 `codex/*` 分支、更新受影响插件 cachebuster、同步 `skill-pack.json`、测试、提交并推送。`--create-pr` 需要本机已安装并登录 GitHub CLI；否则结果会返回 GitHub compare URL 供创建 PR。
 
 可用模式：
 
-- `audit`：只读检查，不 clone、不 pull、不安装。
-- `install`：安装已有 clone，或把预期仓库 clone 到明确指定的目标后安装。
-- `update`：要求干净 Git 工作树，只允许 `git pull --ff-only`，随后验证并重装。
-- `repair`：不联网拉取，按当前本地源码重新验证和安装。
-
-第 13 个 skill 会区分直接观察到的事实、尚需目标机器验证的预测，以及工作区/备份/更新策略建议。Windows 通过不等于 macOS 已实机通过。
+- `bootstrap`：新电脑完整部署并安装本机同步触发规则。
+- `preflight`：按需检查稳定更新，无变化时零安装。
+- `publish`：检测并准备发布；外部提交与推送要求显式确认。
+- `audit`：只读检查，不联网更新或安装。
+- `install`：安装已有 clone，不写受管理同步规则。
+- `update`：兼容旧流程，拉取后验证并重装全部插件。
+- `repair`：不联网，按本地源码修复安装。
 
 ## 便携 ZIP
 
