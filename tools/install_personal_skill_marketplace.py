@@ -110,6 +110,17 @@ def plugin_is_enabled(output: str, plugin_id: str, marketplace: str, version: st
     return bool(pattern.search(output))
 
 
+def select_plugins(pack: dict, plugin_ids: list[str] | None) -> tuple[list[dict], list[dict]]:
+    all_plugins = list(pack.get("plugins", []))
+    known_ids = {str(item["id"]) for item in all_plugins}
+    requested_ids = list(dict.fromkeys(plugin_ids or []))
+    unknown_ids = [item for item in requested_ids if item not in known_ids]
+    if unknown_ids:
+        raise RuntimeError(f"Unknown plugin ids requested for installation: {', '.join(unknown_ids)}")
+    selected = all_plugins if not requested_ids else [item for item in all_plugins if item["id"] in requested_ids]
+    return all_plugins, selected
+
+
 def location_config_path(codex_home: Path) -> Path:
     return codex_home / "workspace-local.json"
 
@@ -170,10 +181,12 @@ def install(
     codex_home: Path | None = None,
     replace_location_config: bool = False,
     replace_marketplace_registration: bool = False,
+    plugin_ids: list[str] | None = None,
 ) -> dict:
     resolved_codex_home = (codex_home or Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))).expanduser().resolve()
     root = validate_marketplace_root(root, resolved_codex_home)
     pack = load_json(root / "skill-pack.json")
+    all_plugins, selected_plugins = select_plugins(pack, plugin_ids)
     config_path = location_config_path(resolved_codex_home)
     configured_workspace = None
     if workspace_root is None and config_path.is_file():
@@ -207,13 +220,13 @@ def install(
             raise RuntimeError(
                 f"Marketplace '{pack['name']}' did not resolve uniquely to {root}. Reported roots: {roots or '[none]'}"
             )
-    for plugin in pack.get("plugins", []):
+    for plugin in selected_plugins:
         run([codex, "plugin", "add", f"{plugin['id']}@{pack['name']}"], dry_run=dry_run)
     plugin_list = run([codex, "plugin", "list"], capture=True, dry_run=dry_run, show_output=False)
     if not dry_run:
         missing = [
             item["id"]
-            for item in pack.get("plugins", [])
+            for item in all_plugins
             if not plugin_is_enabled(plugin_list.stdout or "", item["id"], pack["name"], item["version"])
         ]
         if missing:
@@ -224,7 +237,8 @@ def install(
     result = {
         "status": "dry-run" if dry_run else "installed",
         "marketplace": pack["name"],
-        "plugin_count": len(pack.get("plugins", [])),
+        "plugin_count": len(all_plugins),
+        "installed_plugin_ids": [str(item["id"]) for item in selected_plugins],
         "codex_cli": codex,
         "location_config": str(config) if config else None,
     }
@@ -244,6 +258,7 @@ def main() -> None:
     parser.add_argument("--skip-user-config", action="store_true")
     parser.add_argument("--replace-location-config", action="store_true")
     parser.add_argument("--replace-marketplace-registration", action="store_true")
+    parser.add_argument("--plugin-id", action="append", default=[])
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     install(
@@ -256,6 +271,7 @@ def main() -> None:
         args.codex_home,
         args.replace_location_config,
         args.replace_marketplace_registration,
+        args.plugin_id,
     )
 
 

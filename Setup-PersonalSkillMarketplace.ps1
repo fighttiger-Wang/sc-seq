@@ -1,6 +1,6 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-  [ValidateSet('audit', 'install', 'update', 'repair')]
+  [ValidateSet('audit', 'bootstrap', 'install', 'preflight', 'publish', 'update', 'repair')]
   [string]$Mode = 'install',
   [string]$WorkspaceRoot,
   [string]$CodexHome,
@@ -8,7 +8,13 @@ param(
   [string]$Python,
   [string]$Repository = 'https://github.com/fighttiger-Wang/sc-seq.git',
   [string]$Ref,
-  [switch]$Relocate
+  [switch]$Relocate,
+  [switch]$SkipManagedGuidance,
+  [switch]$DisableBootstrapCopy,
+  [switch]$ConfirmPublish,
+  [string]$Branch,
+  [string]$Message,
+  [switch]$CreatePullRequest
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath($PSScriptRoot)
@@ -21,6 +27,12 @@ if ($CodexHome) { $arguments += @('--codex-home', $CodexHome) }
 if ($CodexCli) { $arguments += @('--codex-cli', $CodexCli) }
 if ($Ref) { $arguments += @('--ref', $Ref) }
 if ($Relocate) { $arguments += '--relocate' }
+if ($SkipManagedGuidance) { $arguments += '--skip-managed-guidance' }
+if ($DisableBootstrapCopy) { $arguments += '--disable-bootstrap-copy' }
+if ($ConfirmPublish) { $arguments += '--confirm-publish' }
+if ($Branch) { $arguments += @('--branch', $Branch) }
+if ($Message) { $arguments += @('--message', $Message) }
+if ($CreatePullRequest) { $arguments += '--create-pr' }
 if ($WhatIfPreference) {
   $arguments += '--dry-run'
 } elseif (-not $PSCmdlet.ShouldProcess($root, "$Mode workspace-local marketplace")) {

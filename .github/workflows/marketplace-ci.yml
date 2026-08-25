@@ -1,0 +1,82 @@
+name: Marketplace cross-platform checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - "codex/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        python: ["3.12"]
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check openpyxl
+
+      - name: Compile Python sources
+        run: python -m compileall -q plugins shared tools
+
+      - name: Verify marketplace structure and versions
+        env:
+          CODEX_TEST_TMPDIR: ${{ runner.temp }}
+        run: |
+          python tools/sync_skill_pack_versions.py --check
+          python tools/test_personal_skill_marketplace.py --json
+          python tools/test_marketplace_setup.py
+
+      - name: Run annotation registry tests
+        run: python shared/sc-annotation-case-registry/tests/test_case_registry.py
+
+      - name: Run shared evidence-core regressions
+        run: >-
+          python
+          shared/sc-annotation-evidence-core/tests/test_evidence_core.py
+          --work-dir "${{ runner.temp }}/shared-evidence-core"
+
+      - name: Validate shell syntax and executable bits
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          while IFS= read -r script; do bash -n "$script"; done < <(git ls-files '*.sh')
+          bad="$(git ls-files --stage '*.sh' | awk '$1 != "100755" {print $4}')"
+          if [[ -n "$bad" ]]; then
+            echo "Shell scripts missing executable mode:"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: Validate PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($script in Get-ChildItem -Recurse -Filter *.ps1) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Error "$($script.FullName): $($errors -join '; ')"
+            }
+          }
+          if ($failed) { exit 1 }
