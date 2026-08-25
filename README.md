@@ -1,6 +1,6 @@
 # Personal Shared Skills
 
-这是 13 个个人 Codex skill 的可迁移 `workspace-local` marketplace。唯一版本清单是 `skill-pack.json`，规范 marketplace 清单是 `.agents/plugins/marketplace.json`。不要只复制单个 `SKILL.md`；插件还可能依赖脚本、参考资料和共享知识文件。
+这是 14 个个人 Codex skill 的可迁移 `workspace-local` marketplace。唯一版本清单是 `skill-pack.json`，规范 marketplace 清单是 `.agents/plugins/marketplace.json`。不要只复制单个 `SKILL.md`；插件还可能依赖脚本、参考资料和共享知识文件。
 
 ## 全新电脑的两阶段引导
 
@@ -19,7 +19,7 @@ plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup
 源码目标是 <marketplace-clone-path>，共享工作区是 <workspace-root>。
 ```
 
-`bootstrap` 会核对 Git、Python 3.10+、Codex CLI、GitHub 访问、目录安全、旧配置和磁盘空间；随后 clone `main`、运行 doctor、注册 `workspace-local`、安装并核对 13 个插件，并向所选工作区的 `AGENTS.md` 写入可重复更新的受管理同步块。它不会覆盖受管理块之外的既有说明。
+`bootstrap` 会核对 Git、Python 3.10+、Codex CLI、GitHub 访问、目录安全、旧配置和磁盘空间；随后 clone `main`、运行 doctor、注册 `workspace-local`、安装并核对 14 个插件，并向所选工作区的 `AGENTS.md` 写入可重复更新的受管理同步块。它不会覆盖受管理块之外的既有说明。
 
 完整 marketplace 验证成功后，临时 bare Skill 会被报告为重复来源。只有用户明确同意时，才用 `--disable-bootstrap-copy` 把它移动到 `$CODEX_HOME/skills.disabled` 下的可恢复备份；不会直接删除。
 
@@ -103,7 +103,7 @@ macOS：
 - 私有仓库需要现有 Git 凭据或令牌；脚本不会收集或保存密码。
 - 更新会消耗网络、磁盘和时间；doctor 的运行时警告不等于插件结构失败，但会影响对应工作流执行。
 - 权威源码和共享工作区不得与 `CODEX_HOME` 互相包含；把源码、安装缓存和工作产物混在同一目录树会增加重复来源、误扫描和误清理风险。
-- 安装不是完整事务：位置配置只会在 13 个插件全部通过精确版本核对后写入，但 Codex CLI 若中途失败，已经完成的部分插件变更不会自动回滚，应在排除原因后执行 `repair`。
+- 安装不是完整事务：位置配置只会在 14 个插件全部通过精确版本核对后写入，但 Codex CLI 若中途失败，已经完成的部分插件变更不会自动回滚，应在排除原因后执行 `repair`。
 - 工作树有未提交改动、远端错配、分支异常、非 fast-forward、位置配置冲突或同名 marketplace 路径歧义时，管理器会停止，不会覆盖或强制修复。
 - 只有在确认迁移唯一权威源码后才使用 `--relocate`（PowerShell 为 `-Relocate`）；它会替换保存的位置并重新注册 `workspace-local`，不是普通更新参数。
 - `.agents/plugins/marketplace.json` 是规范清单；`.codex-plugin/marketplace.json` 是兼容副本，两者插件集合必须一致。

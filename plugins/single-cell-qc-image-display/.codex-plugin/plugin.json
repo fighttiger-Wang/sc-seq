@@ -1,14 +1,14 @@
 {
   "name": "single-cell-qc-image-display",
-  "version": "0.1.0+codex.20260825114000",
+  "version": "0.1.0+codex.20260825162147",
   "description": "Render single-cell QC project tables as Excel workbooks and presentation-ready PNG overview images.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "02 \u00b7 \u56fe\u7247\u5c55\u793a\u5355\u7ec6\u80de\u8d28\u63a7\u6570\u636e",
-    "shortDescription": "\u5c06\u5355\u7ec6\u80de\u8d28\u63a7\u5927\u8868\u8f93\u51fa\u4e3a Excel \u548c\u5c55\u793a\u5927\u56fe",
+    "displayName": "02 · 图片展示单细胞质控数据",
+    "shortDescription": "将单细胞质控大表输出为 Excel 和展示大图",
     "longDescription": "A personal Codex skill for turning structured single-cell RNA-seq QC rows into a centralized Excel workbook and a presentation-ready wide PNG image with project summary cards and detailed sample-level rows.",
     "developerName": "fight",
     "category": "Productivity",
@@ -17,9 +17,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "\u628a\u8fd9\u4e9b\u5355\u7ec6\u80de\u8d28\u63a7\u4fe1\u606f\u6574\u7406\u6210 Excel \u548c\u5c55\u793a\u5927\u56fe\u3002",
-      "\u6839\u636e\u9879\u76ee\u53f7\u8865\u5145\u5b57\u6bb5\u540e\u91cd\u65b0\u8f93\u51fa\u5927\u8868\u56fe\u7247\u3002",
-      "\u5c06\u5355\u7ec6\u80de QC \u6837\u672c\u6307\u6807\u505a\u6210\u6c47\u62a5\u7528\u5bbd\u5e45\u56fe\u3002"
+      "把这些单细胞质控信息整理成 Excel 和展示大图。",
+      "根据项目号补充字段后重新输出大表图片。",
+      "将单细胞 QC 样本指标做成汇报用宽幅图。"
     ]
   }
 }

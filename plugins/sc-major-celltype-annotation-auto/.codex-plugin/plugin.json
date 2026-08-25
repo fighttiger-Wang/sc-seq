@@ -1,15 +1,15 @@
 {
   "name": "sc-major-celltype-annotation-auto",
-  "version": "0.3.1+codex.20260825043807",
+  "version": "0.3.1+codex.20260825162147",
   "description": "Approved multi-tissue major-celltype annotation with shared cross-account case learning, staged knowledge promotion, deterministic QA, and delivery.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "03 \u00b7 \u5355\u7ec6\u80de\u5927\u7c7b\u6ce8\u91ca\uff08\u4e3b\u8981\u8c31\u7cfb\uff09",
-    "shortDescription": "\u8de8\u5168\u7ec6\u80de\u6216\u6df7\u5408\u8c31\u7cfb\u81ea\u52a8\u5b8c\u6210\u5927\u7c7b\u6ce8\u91ca\u3001\u5ba1\u8ba1\u4e0e\u539f\u76ee\u5f55\u4ea4\u4ed8",
-    "longDescription": "\u4ece\u5e73\u5747\u8868\u8fbe\u8868\u4e0e Marker Excel \u6216 Seurat \u5bf9\u8c61\u5f00\u59cb\uff0c\u9759\u9ed8\u63a8\u65ad\u53ef\u786e\u5b9a\u7684\u5143\u6570\u636e\u4e0e\u8def\u5f84\uff0c\u6309\u7edf\u4e00\u5927\u7c7b\u5c42\u7ea7\u5b8c\u6210\u8bc1\u636e\u4f18\u5148\u6ce8\u91ca\uff1b\u7ecf\u786e\u5b9a\u6027 QA \u540e\u81ea\u52a8\u5c06\u552f\u4e00\u6700\u7ec8\u5de5\u4f5c\u7c3f\u4ea4\u4ed8\u5230\u539f\u59cb E \u76d8\u8f93\u5165\u76ee\u5f55\u3002",
+    "displayName": "03 · 单细胞大类注释（主要谱系）",
+    "shortDescription": "跨全细胞或混合谱系自动完成大类注释、审计与原目录交付",
+    "longDescription": "从平均表达表与 Marker Excel 或 Seurat 对象开始，静默推断可确定的元数据与路径，按统一大类层级完成证据优先注释；经确定性 QA 后自动将唯一最终工作簿交付到原始 E 盘输入目录。",
     "developerName": "fight",
     "category": "Productivity",
     "capabilities": [

@@ -81,6 +81,12 @@
       "source": { "source": "local", "path": "./plugins/personal-skill-marketplace-setup" },
       "policy": { "installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL" },
       "category": "Productivity"
+    },
+    {
+      "name": "bioinformatics-results-report-classic",
+      "source": { "source": "local", "path": "./plugins/bioinformatics-results-report-classic" },
+      "policy": { "installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL" },
+      "category": "Education & Research"
     }
   ]
 }

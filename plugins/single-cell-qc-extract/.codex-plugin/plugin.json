@@ -1,6 +1,6 @@
 {
   "name": "single-cell-qc-extract",
-  "version": "0.1.0+codex.20260813094000",
+  "version": "0.1.0+codex.20260825162147",
   "description": "Extract single-cell project QC fields from Chinese project descriptions and report screenshots.",
   "author": {
     "name": "fight"
@@ -15,15 +15,15 @@
     "cell-ranger",
     "seurat",
     "cell-type",
-    "\u5355\u7ec6\u80de",
-    "\u8d28\u63a7",
-    "\u7ec6\u80de\u6ce8\u91ca"
+    "单细胞",
+    "质控",
+    "细胞注释"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "01 · \u5355\u7ec6\u80de\u8d28\u63a7\u63d0\u53d6",
-    "shortDescription": "\u4ece\u9879\u76ee\u63cf\u8ff0\u548c\u622a\u56fe\u4e2d\u63d0\u53d6\u5355\u7ec6\u80de QC \u4e0e\u7ec6\u80de\u6ce8\u91ca\u8868\u3002",
-    "longDescription": "\u7528\u4e8e\u6574\u7406\u5355\u7ec6\u80de\u8f6c\u5f55\u7ec4\u9879\u76ee\u8d28\u63a7\u4fe1\u606f\uff1a\u4ece\u4e2d\u6587\u9879\u76ee\u6807\u9898\u3001\u5206\u6790\u8def\u5f84\u3001\u7ec4\u7ec7\u6765\u6e90\u3001\u6355\u83b7\u7ec6\u80de\u6570\u3001\u5173\u6ce8\u7ec6\u80de\u7c7b\u578b\u548c\u4e0a\u673a\u72b6\u6001\u4e2d\u63d0\u53d6\u9879\u76ee\u5b57\u6bb5\uff0c\u5e76\u4ece Cell Ranger/Seurat/\u7ec6\u80de\u6ce8\u91ca\u622a\u56fe\u4e2d\u63d0\u53d6 Sample\u3001Estimated number\u3001Mean reads per cell\u3001Mean genes per cell\u3001Reads mapped to genome\u3001Sequencing saturation \u548c Cell type\u3002",
+    "displayName": "01 · 单细胞质控提取",
+    "shortDescription": "从项目描述和截图中提取单细胞 QC 与细胞注释表。",
+    "longDescription": "用于整理单细胞转录组项目质控信息：从中文项目标题、分析路径、组织来源、捕获细胞数、关注细胞类型和上机状态中提取项目字段，并从 Cell Ranger/Seurat/细胞注释截图中提取 Sample、Estimated number、Mean reads per cell、Mean genes per cell、Reads mapped to genome、Sequencing saturation 和 Cell type。",
     "developerName": "fight",
     "category": "Productivity",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://openai.com/policies/privacy-policy/",
     "termsOfServiceURL": "https://openai.com/policies/terms-of-use/",
     "defaultPrompt": [
-      "\u6574\u7406\u8fd9\u6bb5\u5355\u7ec6\u80de\u9879\u76ee\u8d28\u63a7\u4fe1\u606f\u548c\u622a\u56fe\u8868\u683c",
-      "\u63d0\u53d6 Sample \u8d28\u63a7\u6307\u6807\u548c Cell type",
-      "\u628a LC \u9879\u76ee\u4fe1\u606f\u6574\u7406\u4e3a\u8868\u683c"
+      "整理这段单细胞项目质控信息和截图表格",
+      "提取 Sample 质控指标和 Cell type",
+      "把 LC 项目信息整理为表格"
     ],
     "brandColor": "#0F766E",
     "screenshots": [],

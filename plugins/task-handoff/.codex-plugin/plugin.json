@@ -1,15 +1,15 @@
 {
   "name": "task-handoff",
-  "version": "0.2.1+codex.20260825115000",
+  "version": "0.2.1+codex.20260825162147",
   "description": "Maintain centralized cross-session continuity records for named projects, software, codebases, and skills.",
   "author": {
     "name": "Personal"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "09 \u00b7 \u4efb\u52a1\u4ea4\u63a5",
-    "shortDescription": "\u81ea\u52a8\u7eed\u63a5\u5e76\u7ef4\u62a4\u4e2d\u592e\u4ea4\u63a5\u8bb0\u5f55",
-    "longDescription": "\u8bc6\u522b\u547d\u540d\u9879\u76ee\u3001\u8f6f\u4ef6\u3001\u4ee3\u7801\u5e93\u548c skill\uff0c\u5728\u7eed\u63a5\u65f6\u81ea\u52a8\u8bfb\u53d6\u4e2d\u592e\u8bb0\u5f55\uff0c\u5e76\u5728\u5b8c\u6210\u3001\u5931\u8d25\u3001\u963b\u585e\u6216\u6682\u505c\u524d\u5b89\u5168\u66f4\u65b0\u6700\u65b0\u72b6\u6001\u4e0e\u6700\u8fd1 30 \u6b21\u5386\u53f2\u3002",
+    "displayName": "09 · 任务交接",
+    "shortDescription": "自动续接并维护中央交接记录",
+    "longDescription": "识别命名项目、软件、代码库和 skill，在续接时自动读取中央记录，并在完成、失败、阻塞或暂停前安全更新最新状态与最近 30 次历史。",
     "developerName": "Personal",
     "category": "Productivity",
     "capabilities": [
@@ -19,6 +19,6 @@
       "Legacy handoff migration",
       "History and rollback"
     ],
-    "defaultPrompt": "\u4f7f\u7528 $task-handoff \u7eed\u63a5\u6216\u66f4\u65b0\u547d\u540d\u9879\u76ee\u3001\u8f6f\u4ef6\u3001\u4ee3\u7801\u5e93\u6216 skill \u7684\u4e2d\u592e\u4ea4\u63a5\u8bb0\u5f55\u3002"
+    "defaultPrompt": "使用 $task-handoff 续接或更新命名项目、软件、代码库或 skill 的中央交接记录。"
   }
 }
