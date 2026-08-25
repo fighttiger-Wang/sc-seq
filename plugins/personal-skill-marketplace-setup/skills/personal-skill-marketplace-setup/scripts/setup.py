@@ -151,6 +151,22 @@ def affected_plugins(root: Path, paths: list[str]) -> list[str]:
     return plugin_ids if reinstall_all else [plugin_id for plugin_id in plugin_ids if plugin_id in found]
 
 
+def changed_plugin_ids(paths: list[str]) -> list[str]:
+    return sorted(
+        {
+            Path(relative).parts[1]
+            for relative in paths
+            if len(Path(relative).parts) >= 2 and Path(relative).parts[0] == "plugins"
+        }
+    )
+
+
+def unregistered_changed_plugins(root: Path, paths: list[str]) -> list[str]:
+    pack = load_json(root / "skill-pack.json")
+    registered = {str(item["id"]) for item in pack.get("plugins", [])}
+    return [plugin_id for plugin_id in changed_plugin_ids(paths) if plugin_id not in registered]
+
+
 def managed_guidance_block() -> str:
     return "\n".join(
         (
@@ -161,6 +177,7 @@ def managed_guidance_block() -> str:
             "- Do not run that preflight recursively when the active Skill is `personal-skill-marketplace-setup` itself.",
             "- If preflight reports that plugins were updated or `restartRequired` is true, stop the current workflow and ask the user to restart Codex and open a new task before using the updated Skill.",
             "- If preflight reports `up-to-date`, do not repeat the network check again in the same task.",
+            "- Create or update maintained plugins through `$skill-writing`. A new plugin must be present in `skill-pack.json` and both marketplace manifests before publication.",
             "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills and ask whether to publish. Never commit or push without the user's explicit confirmation.",
             GUIDANCE_END,
         )
@@ -584,17 +601,28 @@ def publish_changes(args, root: Path) -> dict:
     paths = changed_worktree_paths(git, root)
     if not paths:
         raise RuntimeError("No uncommitted marketplace changes were found")
+    unregistered = unregistered_changed_plugins(root, paths)
     affected = affected_plugins(root, paths)
     plan = {
-        "status": "confirmation-required" if not args.confirm_publish else "publishing",
+        "status": "registration-required" if unregistered else "confirmation-required" if not args.confirm_publish else "publishing",
         "stableRef": stable_ref,
         "currentBranch": facts["branch"],
         "changedPaths": paths,
         "affectedPlugins": affected,
+        "unregisteredPlugins": unregistered,
+        "requiredRegistrationFiles": [
+            "skill-pack.json",
+            ".agents/plugins/marketplace.json",
+            ".codex-plugin/marketplace.json",
+        ],
         "tests": ["marketplace doctor", "setup unit tests", "version manifest check", "annotation regressions when affected"],
     }
     if not args.confirm_publish:
         return plan
+    if unregistered:
+        raise RuntimeError(
+            "New plugin directories are not fully registered for publication: " + ", ".join(unregistered)
+        )
     if not affected:
         raise RuntimeError("No plugin-affecting changes were found; publish manually if this is an intentional documentation-only change")
 
@@ -621,24 +649,29 @@ def publish_changes(args, root: Path) -> dict:
     run([git, "commit", "-m", message], cwd=root, dry_run=args.dry_run)
     run([git, "push", "-u", "origin", branch], cwd=root, dry_run=args.dry_run)
     pr = None
+    pr_status = "not-requested"
     if args.create_pr:
         gh = shutil.which("gh")
-        if not gh:
-            raise FileNotFoundError("GitHub CLI was not found; the branch was pushed but the pull request was not created")
-        completed = run(
-            [gh, "pr", "create", "--base", stable_ref, "--head", branch, "--fill"],
-            cwd=root,
-            capture=True,
-            dry_run=args.dry_run,
-        )
-        pr = completed.stdout.strip() if completed.stdout else None
+        if gh:
+            completed = run(
+                [gh, "pr", "create", "--base", stable_ref, "--head", branch, "--fill"],
+                cwd=root,
+                capture=True,
+                dry_run=args.dry_run,
+            )
+            pr = completed.stdout.strip() if completed.stdout else None
+            pr_status = "created" if pr else "requested"
+        else:
+            pr_status = "compare-url-required"
+    compare_url = repository_compare_url(args.repo_url, stable_ref, branch)
     return {
         **plan,
-        "status": "published",
+        "status": "published" if pr_status != "compare-url-required" else "published-pr-required",
         "branch": branch,
         "versions": versions,
         "pullRequest": pr,
-        "compareUrl": repository_compare_url(args.repo_url, stable_ref, branch),
+        "pullRequestStatus": pr_status,
+        "compareUrl": compare_url,
     }
 
 

@@ -1,15 +1,15 @@
 {
   "name": "personal-skill-marketplace-setup",
-  "version": "0.1.0+codex.20260825090752",
+  "version": "0.1.0+codex.20260825145617",
   "description": "Bootstrap, audit, preflight, install, publish, update, and repair the shared personal Codex skill marketplace across Windows and macOS.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "13 \u00b7 \u5171\u4eab Skill \u4e0b\u8f7d\u5b89\u88c5",
-    "shortDescription": "\u65b0\u7535\u8111\u90e8\u7f72\u3001\u6309\u9700\u540c\u6b65\u5e76\u53d1\u5e03\u5171\u4eab Codex skills",
-    "longDescription": "\u5728 Windows \u4e0e macOS \u4e0a\u5f15\u5bfc\u90e8\u7f72 workspace-local marketplace\uff0c\u6309\u4efb\u52a1\u68c0\u67e5\u7a33\u5b9a\u66f4\u65b0\uff0c\u5b89\u88c5\u53d7\u5f71\u54cd\u63d2\u4ef6\uff0c\u5e76\u5728\u786e\u8ba4\u540e\u901a\u8fc7\u5f00\u53d1\u5206\u652f\u3001\u6d4b\u8bd5\u548c Pull Request \u53d1\u5e03 Skill \u4fee\u6539\u3002",
+    "displayName": "13 · 共享 Skill 下载安装",
+    "shortDescription": "新电脑部署、按需同步并发布共享 Codex skills",
+    "longDescription": "在 Windows 与 macOS 上引导部署 workspace-local marketplace，按任务检查稳定更新，安装受影响插件，并在确认后通过开发分支、测试和 Pull Request 发布 Skill 修改。",
     "developerName": "fight",
     "category": "Productivity",
     "capabilities": [
@@ -18,9 +18,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "\u5728\u8fd9\u53f0\u65b0\u7535\u8111\u90e8\u7f72\u6211\u7684\u5171\u4eab Codex skills\u3002",
-      "\u4f7f\u7528\u5171\u4eab Skill \u524d\u68c0\u67e5\u662f\u5426\u6709\u7a33\u5b9a\u66f4\u65b0\u3002",
-      "\u68c0\u67e5\u5e76\u51c6\u5907\u53d1\u5e03\u672c\u6b21 Skill \u4fee\u6539\u3002"
+      "在这台新电脑部署我的共享 Codex skills。",
+      "使用共享 Skill 前检查是否有稳定更新。",
+      "检查并准备发布本次 Skill 修改。"
     ]
   }
 }

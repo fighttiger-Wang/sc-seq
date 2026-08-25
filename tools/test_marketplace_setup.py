@@ -100,6 +100,38 @@ class MarketplaceSetupTests(unittest.TestCase):
         pack = INSTALLER.load_json(ROOT / "skill-pack.json")
         self.assertEqual(shared, [item["id"] for item in pack["plugins"]])
 
+    def test_new_plugin_directory_requires_marketplace_registration(self) -> None:
+        paths = [
+            "plugins/new-cross-platform-skill/.codex-plugin/plugin.json",
+            "plugins/new-cross-platform-skill/skills/new-cross-platform-skill/SKILL.md",
+        ]
+        self.assertEqual(MANAGER.changed_plugin_ids(paths), ["new-cross-platform-skill"])
+        self.assertEqual(MANAGER.unregistered_changed_plugins(ROOT, paths), ["new-cross-platform-skill"])
+        self.assertEqual(
+            MANAGER.unregistered_changed_plugins(
+                ROOT,
+                ["plugins/skill-writing/skills/skill-writing/SKILL.md"],
+            ),
+            [],
+        )
+
+    def test_github_compare_url_is_available_without_github_cli(self) -> None:
+        self.assertEqual(
+            MANAGER.repository_compare_url(
+                "https://github.com/fighttiger-Wang/sc-seq.git",
+                "main",
+                "codex/new-skill",
+            ),
+            "https://github.com/fighttiger-wang/sc-seq/compare/main...codex/new-skill?expand=1",
+        )
+        self.assertIsNone(
+            MANAGER.repository_compare_url(
+                "https://example.invalid/fighttiger-Wang/sc-seq.git",
+                "main",
+                "codex/new-skill",
+            )
+        )
+
     def test_managed_guidance_preserves_existing_content_and_is_idempotent(self) -> None:
         with temporary_directory("marketplace-guidance-") as temporary:
             workspace = Path(temporary)

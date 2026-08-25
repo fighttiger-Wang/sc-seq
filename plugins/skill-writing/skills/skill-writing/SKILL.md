@@ -1,6 +1,6 @@
 ---
 name: skill-writing
-description: Create or update shared local Codex skills that remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write a skill, package a slash-callable skill, migrate a personal plugin, maintain the shared skill marketplace, debug account-switch invocation, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
+description: Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
 ---
 
 # Skill Writing
@@ -8,6 +8,8 @@ description: Create or update shared local Codex skills that remain callable acr
 ## Operating Rule
 
 Build user-facing callable skills as plugins in the shared local marketplace, not as `@personal` plugins and not as bare skills. Resolve its root from `CODEX_SHARED_MARKETPLACE_ROOT`; when working in a checked-out source package, use the nearest ancestor containing `skill-pack.json`. Its configured name is `workspace-local`, and its source plugin directory is `<shared-marketplace-root>\plugins`.
+
+Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode once for the task. If it installs an update, stop and ask the user to restart Codex and open a new task before continuing. Never edit an installed plugin cache as source.
 
 Codex/OpenAI accounts can be switched and the package can be cloned to Windows or macOS. The plugin source remains in the configured shared marketplace while account-specific Codex registration can change. Keep exactly one active source for every maintained skill: `workspace-local`. Do not use `~/.codex/plugins/cache` as a source because it is only an installed cache.
 
@@ -49,7 +51,10 @@ Assign later maintained skills the next unused two-digit number, currently `14`.
 2. Pick one normalized internal id for both plugin and skill.
 3. Check the shared marketplace source and existing `workspace-local` plugin before writing.
 4. Update an existing shared plugin in place. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched as a recovery copy.
-5. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and register the plugin in `<shared-marketplace-root>\.agents\plugins\marketplace.json`.
+5. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
+   - `skill-pack.json`, including its manifest version and the incremented `expectedPluginCount`;
+   - `.agents/plugins/marketplace.json`;
+   - `.codex-plugin/marketplace.json`.
 6. Set the marketplace installation policy to `INSTALLED_BY_DEFAULT` and authentication policy to `ON_INSTALL`.
 7. Create the skill under `<plugin>/skills/<id>/`.
 8. Write only necessary files:
@@ -59,10 +64,13 @@ Assign later maintained skills the next unused two-digit number, currently `14`.
    - optional `references/`, `scripts/`, or `assets/` only when they directly support execution
 9. Set the same `NN · Name` display name in both `plugin.json` and `agents/openai.yaml`.
 10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^\d{2} · .+$`; reject `路` or a missing/wrong separator.
-11. Validate the skill and plugin.
-12. Update the plugin cachebuster.
-13. Run the platform entrypoint to add the marketplace and install every maintained plugin: `tools/Sync-SharedCodexSkills.ps1` on Windows or `tools/Sync-SharedCodexSkills.sh` on macOS/Linux.
-14. Tell the user to open a new Codex thread/window before testing `/`, because the current session may keep the old skill list in memory.
+11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
+12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan; for an unregistered new plugin, finish the three registries before proceeding.
+13. Ask the user for explicit publication confirmation. Only then invoke confirmed publish, which updates cachebusters, synchronizes `skill-pack.json`, tests, commits, and pushes a `codex/*` branch. Create a PR when GitHub CLI/API access is available; otherwise return the compare URL.
+14. Treat the PR as the release gate. `main` is the stable source used by other computers; do not merge automatically or report a merge without remote evidence.
+15. After the PR is merged, other computers receive it through `preflight`. If plugins are installed or changed, tell the user to restart Codex and open a new task before testing `/`.
+
+Read [shared-git-lifecycle.md](references/shared-git-lifecycle.md) when creating, updating, publishing, merging, or synchronizing a maintained Skill.
 
 ## File Requirements
 
@@ -105,11 +113,11 @@ Run the equivalent of:
 ```bash
 python3 <installed-skill-creator>/scripts/quick_validate.py <plugin>/skills/<id>
 python3 <installed-plugin-creator>/scripts/validate_plugin.py <plugin>
-python3 <installed-plugin-creator>/scripts/update_plugin_cachebuster.py <plugin>
-<shared-marketplace-root>/tools/Sync-SharedCodexSkills.sh
+python3 <shared-marketplace-root>/tools/test_personal_skill_marketplace.py --marketplace-root <shared-marketplace-root>
+python3 <personal-skill-marketplace-setup>/scripts/setup.py publish
 ```
 
-After synchronization, verify every maintained plugin is enabled under `workspace-local`. Windows may use the existing `CodexSharedSkillsSync` scheduler. On macOS, rerun `Install-PersonalSkillMarketplace.sh` after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
+The first `publish` call is read-only. Do not update cachebusters, commit, push, create a PR, or merge until the user explicitly confirms publication. After a merged update is synchronized, verify every maintained plugin is enabled under `workspace-local`. On macOS, rerun the marketplace installer after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
 
 ## Cross-platform requirements
 
@@ -137,4 +145,4 @@ Do not delete the backup unless the user explicitly asks. After cleanup, remind 
 
 ## Update Existing Plugins
 
-When modifying an already installed shared plugin, update the shared source, run validation, update the cachebuster, run the synchronization script, and ask the user to test in a new session.
+When modifying an already installed shared plugin, run task-level preflight, update the authoritative shared source, validate it, and request a read-only publish plan. After explicit confirmation, publish through a `codex/*` branch and PR. Do not update another computer from the development branch; merge the reviewed PR into `main`, run preflight on that computer, and test in a new session.
