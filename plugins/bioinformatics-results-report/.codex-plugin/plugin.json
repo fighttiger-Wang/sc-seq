@@ -1,6 +1,6 @@
 {
   "name": "bioinformatics-results-report",
-  "version": "0.1.0+codex.20260824152209",
+  "version": "0.1.0+codex.20260825114000",
   "description": "Interpret completed bioinformatics result folders and generate a literature-grounded, self-contained HTML report.",
   "author": {
     "name": "fight"

@@ -4,7 +4,10 @@ param(
   [string]$CodexCli,
 
   [Parameter()]
-  [switch]$SkipDoctor
+  [switch]$SkipDoctor,
+
+  [Parameter()]
+  [switch]$SkipUserEnvironment
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +21,7 @@ if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
 $arguments = @{
   MarketplaceRoot = $marketplaceRoot
   SkipDoctor = $SkipDoctor
+  SkipUserEnvironment = $SkipUserEnvironment
 }
 if (-not [string]::IsNullOrWhiteSpace($CodexCli)) {
   $arguments.CodexCli = $CodexCli

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 11,
+  "expectedPluginCount": 12,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -10,23 +10,23 @@
     },
     {
       "id": "single-cell-qc-image-display",
-      "version": "0.1.0+codex.20260813094000"
+      "version": "0.1.0+codex.20260825114000"
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.3.1+codex.20260825024715"
+      "version": "0.3.1+codex.20260825114000"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.6.0+codex.20260825024715"
+      "version": "0.6.0+codex.20260825114000"
     },
     {
       "id": "feature-gene-heatmap-violin",
-      "version": "0.1.0+codex.20260813094000"
+      "version": "0.1.0+codex.20260825114000"
     },
     {
       "id": "kegg-flow-bubble-plot",
-      "version": "0.1.0+codex.20260813094000"
+      "version": "0.1.0+codex.20260825114000"
     },
     {
       "id": "workflow-script-structure",
@@ -38,15 +38,19 @@
     },
     {
       "id": "task-handoff",
-      "version": "0.2.1+codex.20260824154154"
+      "version": "0.2.1+codex.20260825115000"
     },
     {
       "id": "skill-writing",
-      "version": "0.1.0+codex.20260824152209"
+      "version": "0.1.0+codex.20260825114000"
     },
     {
       "id": "bioinformatics-results-report",
-      "version": "0.1.0+codex.20260824152209"
+      "version": "0.1.0+codex.20260825114000"
+    },
+    {
+      "id": "annotation-knowledge-release",
+      "version": "0.1.0+codex.20260825115000"
     }
   ],
   "sharedPaths": [

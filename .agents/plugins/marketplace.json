@@ -135,6 +135,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Education & Research"
+    },
+    {
+      "name": "annotation-knowledge-release",
+      "source": {
+        "source": "local",
+        "path": "./plugins/annotation-knowledge-release"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
     }
   ]
 }

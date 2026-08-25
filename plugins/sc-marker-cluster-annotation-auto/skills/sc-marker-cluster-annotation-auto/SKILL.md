@@ -85,16 +85,16 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 
 Accept paired Excel files or a Seurat object. Preserve raw inputs and full marker order. Missing genes are unknown in positive-marker-only mode and zero only in a verified full ratio table.
 
-```powershell
-<python> scripts/prepare_annotation.py `
-  --avg <cell_avg_exp.xlsx> --markers <Markergene_list.xlsx> `
-  [--ratios <full-gene-cluster-ratio.tsv>] `
-  [--gene-map <source-to-canonical.tsv>] `
-    [--cell-evidence <per-cluster-validation.json>] `
-  [--umap <umap.png>] `
-  --workspace-root <E-workspace-root> --output-dir <run-dir> `
-  --species <species> --tissue <tissue> `
-  --annotation-level subcluster --parent-population <parent> `
+```bash
+python3 scripts/prepare_annotation.py \
+  --avg <cell_avg_exp.xlsx> --markers <Markergene_list.xlsx> \
+  [--ratios <full-gene-cluster-ratio.tsv>] \
+  [--gene-map <source-to-canonical.tsv>] \
+  [--cell-evidence <per-cluster-validation.json>] \
+  [--umap <umap.png>] \
+  --workspace-root <workspace-root> --output-dir <run-dir> \
+  --species <species> --tissue <tissue> \
+  --annotation-level subcluster --parent-population <parent> \
   --parent-kind <auto|lineage|state|mixed|unknown>
 ```
 
@@ -141,21 +141,21 @@ Run this pass before workbook construction whenever any cluster has `branch_iden
 
 Before formal publication/regression completes, build the temporary two-column mapping when requested:
 
-```powershell
-<python> scripts/build_interim_mapping.py `
-  --records <run>/annotation_records.json --evidence <run>/annotation_evidence_pack.json `
-  [--umap-audit <run>/umap_review.json] `
-  --workspace-root <E-workspace-root> --output <run>/temporary_cluster_mapping.tsv
+```bash
+python3 scripts/build_interim_mapping.py \
+  --records <run>/annotation_records.json --evidence <run>/annotation_evidence_pack.json \
+  [--umap-audit <run>/umap_review.json] \
+  --workspace-root <workspace-root> --output <run>/temporary_cluster_mapping.tsv
 ```
 
 If UMAP was supplied, the temporary mapping requires all-cluster review. Without UMAP, the temporary mapping is allowed but formal delivery remains blocked.
 
-```powershell
-<python> scripts/build_annotation_workbook.py `
-  --records <run>/annotation_records.json `
-  --evidence <run>/annotation_evidence_pack.json `
-  --umap-audit <run>/umap_review.json `
-  --workspace-root <E-workspace-root> `
+```bash
+python3 scripts/build_annotation_workbook.py \
+  --records <run>/annotation_records.json \
+  --evidence <run>/annotation_evidence_pack.json \
+  --umap-audit <run>/umap_review.json \
+  --workspace-root <workspace-root> \
   --output <run>/<parent_population>_亚群注释结果.xlsx
 ```
 

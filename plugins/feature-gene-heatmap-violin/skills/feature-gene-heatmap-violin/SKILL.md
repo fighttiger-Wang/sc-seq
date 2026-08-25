@@ -18,20 +18,20 @@ Use the bundled script to generate exactly one final heatmap and one final violi
 
 ## Workflow
 
-1. Keep original inputs read-only. Stage copies under an E-drive working directory using short ASCII filenames when source paths contain Chinese characters.
+1. Keep original inputs read-only. On Windows, stage copies under an E-drive working directory when required by local policy. On macOS/Linux, use a user-approved writable workspace. Prefer short ASCII staging names only when the local R runtime cannot handle the original path.
 2. Inspect the Seurat object and marker-table columns before running.
 3. Run `scripts/plot_feature_gene_heatmap_violin.R` once with explicit arguments.
 4. Verify both PNG files visually. Confirm that labels, color blocks, guide lines, legend, and violin colors render correctly.
 5. Return only the final output directory and the two final figures unless the user asks for implementation details.
 
-```powershell
-Rscript scripts/plot_feature_gene_heatmap_violin.R `
-  --seurat input/Plot.rData `
-  --markers input/all_marker_gene.xlsx `
-  --output Result `
-  --cluster-column seurat_clusters `
-  --celltype-column "" `
-  --reference-celltype Pro_B `
+```bash
+Rscript scripts/plot_feature_gene_heatmap_violin.R \
+  --seurat input/Plot.rData \
+  --markers input/all_marker_gene.xlsx \
+  --output Result \
+  --cluster-column seurat_clusters \
+  --celltype-column "" \
+  --reference-celltype Pro_B \
   --violin-genes PAX5,EBF1,IL7R,RAG1,RAG2,DNTT
 ```
 

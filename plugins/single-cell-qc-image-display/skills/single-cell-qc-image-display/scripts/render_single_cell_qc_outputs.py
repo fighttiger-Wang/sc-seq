@@ -194,6 +194,11 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.Im
         "C:/Windows/Fonts/simhei.ttf",
         "C:/Windows/Fonts/simsun.ttc",
         "C:/Windows/Fonts/arial.ttf",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Medium.ttc",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     ]
     for candidate in candidates:
         if Path(candidate).exists():

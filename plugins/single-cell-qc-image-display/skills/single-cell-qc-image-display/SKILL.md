@@ -58,8 +58,8 @@ For full input JSON details, read `references/input-schema.md`.
 
 Use the bundled script when possible:
 
-```powershell
-<python> scripts/render_single_cell_qc_outputs.py input.json --output-dir outputs/single-cell-qc-table --basename single-cell-qc-projects
+```bash
+python3 scripts/render_single_cell_qc_outputs.py input.json --output-dir outputs/single-cell-qc-table --basename single-cell-qc-projects
 ```
 
 The script requires `Pillow` and `openpyxl`. In Codex desktop, prefer the bundled Python runtime if available.

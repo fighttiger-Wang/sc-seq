@@ -13,12 +13,12 @@ Accept a tab-delimited KEGG enrichment table containing `Pathway_Name`, `IDs`, `
 
 ## Run workflow
 
-1. Verify the current and output directories are on the E drive.
+1. Verify the current and output directories are in the user-approved writable workspace. Enforce the E-drive rule only on Windows hosts that use that local policy.
 2. Copy the source enrichment table into the user-scoped output folder without modifying it.
 3. On Windows, if R cannot read or write a non-ASCII path, stage the input and outputs in an ASCII-only E-drive directory, run there, then copy final artifacts back.
 4. Run:
 
-```powershell
+```bash
 Rscript scripts/plot_kegg_flow_bubble.R <input.tsv> <output_dir> 6 20 "<comparison title>" <prefix>
 ```
 

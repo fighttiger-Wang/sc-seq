@@ -5,4 +5,4 @@ interface:
   default_prompt: "Use $bioinformatics-results-report to interpret this bioinformatics results folder and generate a self-contained HTML report."
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

@@ -145,9 +145,9 @@ Tables are escaped and horizontally scrollable. Keep the main report concise; do
 
 ## Rendering
 
-```powershell
+```bash
 python scripts/render_report.py report-spec.json --template assets/report-shell.html
-python scripts/validate_report.py E:\result\项目名_生信结果解读报告_v001.html
+python scripts/validate_report.py /path/to/result/项目名_生信结果解读报告_v001.html
 ```
 
 Use the bundled workspace Python when system Python is unavailable. The renderer requires Pillow for image optimization and uses `pdftoppm` for PDF pages when available.

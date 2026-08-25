@@ -7,15 +7,13 @@ description: Maintain centralized, cross-session continuity records for named pr
 
 Maintain the centralized store at `<shared-workspace-root>\.codex-handoff`. Resolve the workspace from `CODEX_SHARED_WORKSPACE_ROOT`; when running from the source marketplace, it is the parent directory of the marketplace. Do not create new project-root `HANDOFF.md` files.
 
-Use the bundled script:
+Use the bundled Python script on Windows, macOS, and Linux:
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-$script = Join-Path '<selected-task-handoff-skill-directory>' 'scripts\handoff-store.ps1'
-& $script <command> <arguments>
+```bash
+python scripts/handoff_store.py <command> <arguments>
 ```
 
-Use the actual directory containing this selected `SKILL.md`; never reconstruct a user-profile cache path or assume a fixed drive layout.
+On Windows, the existing `handoff-store.ps1` remains a compatibility entrypoint. Prefer Python for new automation so the same commands work after cloning to macOS. Use the actual directory containing this selected `SKILL.md`; never reconstruct a user-profile cache path or assume a fixed drive layout. The installer writes `~/.codex/workspace-local.json`, which the Python entrypoint uses when environment variables are unavailable.
 
 Read [store-format.md](references/store-format.md) before migration, merge, rollback, repair, or direct store editing.
 
@@ -25,8 +23,8 @@ Read [store-format.md](references/store-format.md) before migration, merge, roll
 2. Detect continuation intent such as continue, resume, iterate, another problem, or pick up previous work.
 3. Resolve the object using its explicit name first, then aliases, skill ID, and absolute path anchors:
 
-```powershell
-& $script resolve -Query '<name-or-path>'
+```bash
+python scripts/handoff_store.py resolve --query '<name-or-path>'
 ```
 
 4. If resolution returns multiple candidates or no candidate while similar objects exist, stop and ask the user. Never guess.
@@ -66,8 +64,8 @@ Only include goals, material changes, verification evidence, unresolved issues, 
 
 For an existing object:
 
-```powershell
-& $script commit -Id '<id>' -ContentPath '<draft.md>' -ExpectedRevision <loaded-revision> -Status '<status>'
+```bash
+python scripts/handoff_store.py commit --id '<id>' --content-path '<draft.md>' --expected-revision <loaded-revision> --status '<status>'
 ```
 
 For a new object, register first with canonical name, type, aliases, and absolute anchors, then commit with expected revision `0`.

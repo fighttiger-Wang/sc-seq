@@ -1,13 +1,13 @@
 {
   "name": "single-cell-qc-image-display",
-  "version": "0.1.0+codex.20260813094000",
+  "version": "0.1.0+codex.20260825114000",
   "description": "Render single-cell QC project tables as Excel workbooks and presentation-ready PNG overview images.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "02 · \u56fe\u7247\u5c55\u793a\u5355\u7ec6\u80de\u8d28\u63a7\u6570\u636e",
+    "displayName": "02 \u00b7 \u56fe\u7247\u5c55\u793a\u5355\u7ec6\u80de\u8d28\u63a7\u6570\u636e",
     "shortDescription": "\u5c06\u5355\u7ec6\u80de\u8d28\u63a7\u5927\u8868\u8f93\u51fa\u4e3a Excel \u548c\u5c55\u793a\u5927\u56fe",
     "longDescription": "A personal Codex skill for turning structured single-cell RNA-seq QC rows into a centralized Excel workbook and a presentation-ready wide PNG image with project summary cards and detailed sample-level rows.",
     "developerName": "fight",

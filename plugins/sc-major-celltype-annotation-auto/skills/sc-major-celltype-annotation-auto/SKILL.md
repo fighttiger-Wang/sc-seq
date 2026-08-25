@@ -56,14 +56,14 @@ Treat the knowledge base, evidence core, configuration, and snapshot hashes as o
 
 Accept paired tables or a Seurat object. Preserve raw inputs. Missing genes are unknown in positive-marker-only mode and zero only in a verified full ratio table.
 
-```powershell
-<python> scripts/prepare_annotation_auto.py `
-  --avg <average.xlsx|tsv|csv> --markers <Markergene_list.xlsx> `
-  [--ratios <full-gene-cluster-ratio.tsv>] `
-  [--gene-map <source-to-canonical.tsv>] `
-  [--cell-evidence <per-cluster-validation.json>] `
-  --workspace-root <E-workspace-root> --output-dir <run-dir> `
-  --species <confirmed> --tissue <confirmed> `
+```bash
+python3 scripts/prepare_annotation_auto.py \
+  --avg <average.xlsx|tsv|csv> --markers <Markergene_list.xlsx> \
+  [--ratios <full-gene-cluster-ratio.tsv>] \
+  [--gene-map <source-to-canonical.tsv>] \
+  [--cell-evidence <per-cluster-validation.json>] \
+  --workspace-root <workspace-root> --output-dir <run-dir> \
+  --species <confirmed> --tissue <confirmed> \
   --annotation-level major --parent-population <confirmed> --parent-kind <mixed|lineage|state>
 ```
 
@@ -94,11 +94,11 @@ For every external candidate, retain structured `literature_details` containing 
 
 ## 7. Build and deliver
 
-```powershell
-<python> scripts/build_annotation_workbook.py `
-  --records <run>/annotation_records.json `
-  --evidence <run>/annotation_evidence_pack.json `
-  --workspace-root <E-workspace-root> `
+```bash
+python3 scripts/build_annotation_workbook.py \
+  --records <run>/annotation_records.json \
+  --evidence <run>/annotation_evidence_pack.json \
+  --workspace-root <workspace-root> \
   --output <run>/大类细胞注释结果.xlsx
 ```
 

@@ -1,0 +1,7 @@
+interface:
+  display_name: "12 · 注释知识库发布"
+  short_description: "更新、验证并推送大类/亚类注释知识库"
+  default_prompt: "Use $annotation-knowledge-release to release the approved annotation knowledge base and push the verified update to GitHub."
+
+policy:
+  allow_implicit_invocation: true

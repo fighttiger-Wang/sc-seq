@@ -32,7 +32,7 @@ def discover_workspace_root():
         if (parent / "skill-pack.json").is_file():
             return parent.parent
     raise RuntimeError(
-        "Shared workspace could not be resolved. Run Install-PersonalSkillMarketplace.ps1 "
+        "Shared workspace could not be resolved. Run Install-PersonalSkillMarketplace.ps1/.sh "
         "or set CODEX_SHARED_WORKSPACE_ROOT."
     )
 
