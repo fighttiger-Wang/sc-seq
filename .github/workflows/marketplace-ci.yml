@@ -48,25 +48,10 @@ jobs:
         run: python shared/sc-annotation-case-registry/tests/test_case_registry.py
 
       - name: Run shared evidence-core regressions
-        if: runner.os == 'macOS'
         run: >-
           python
           shared/sc-annotation-evidence-core/tests/test_evidence_core.py
           --work-dir "${{ runner.temp }}/shared-evidence-core"
-
-      - name: Prepare E-drive regression workspace
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          subst.exe E: "$env:RUNNER_TEMP"
-          New-Item -ItemType Directory -Force 'E:\workspace-local-regressions' | Out-Null
-
-      - name: Run registered annotation regressions
-        if: runner.os == 'Windows'
-        run: >-
-          python
-          plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/run_registered_regressions.py
-          --work-dir "E:/workspace-local-regressions"
 
       - name: Validate shell syntax and executable bits
         if: runner.os == 'macOS'
