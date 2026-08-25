@@ -33,7 +33,8 @@ def load(path: Path):
 
 def atomic_json(path: Path, value) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
     os.replace(temporary, path)
 
 

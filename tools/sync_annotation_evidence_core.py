@@ -100,10 +100,8 @@ def synchronize(check: bool = False) -> list[dict]:
             if actual_manifest != expected_manifest:
                 raise RuntimeError(f"Snapshot manifest mismatch: {manifest_path}")
         else:
-            manifest_path.write_text(
-                json.dumps(expected_manifest, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            with manifest_path.open("w", encoding="utf-8", newline="\n") as handle:
+                handle.write(json.dumps(expected_manifest, ensure_ascii=False, indent=2) + "\n")
         results.append({
             "status": "verified" if check else "synced",
             "target": str(target),

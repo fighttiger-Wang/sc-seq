@@ -1,6 +1,6 @@
 {
   "name": "sc-marker-cluster-annotation-auto",
-  "version": "0.6.0+codex.20260825114000",
+  "version": "0.6.0+codex.20260825043807",
   "description": "Accelerated evidence-first subcluster annotation with shared cross-account case learning, staged automatic knowledge promotion, full regression, strict hierarchy consistency, and deterministic QA.",
   "author": {
     "name": "fight"

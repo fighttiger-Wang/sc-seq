@@ -99,7 +99,7 @@ ZIP 不包含缓存、日志、密钥、SQLite、`tmp/`、`outputs/` 或 `__pyca
 
 ## 注释知识库发布
 
-大类和亚类注释共用 `shared/sc-annotation-evidence-core` 作为唯一规范源。两个插件内的 core、配置和知识库是生成快照，不应独立编辑。活跃 `annotation_cases.sqlite3`、WAL、SHM、客户路径和案例历史不得进入 Git 或 ZIP。
+大类和亚类注释共用 `shared/sc-annotation-evidence-core` 作为唯一规范源。两个插件内的 core、配置和知识库是生成快照，不应独立编辑。活跃 `annotation_cases.sqlite3`、WAL、SHM、客户路径和案例历史不得进入 Git 或 ZIP。知识库及其快照的 SHA-256 按原始字节计算，因此发布工具强制写入 LF；不要让平台换行转换重新生成 manifest。
 
 Windows：
 

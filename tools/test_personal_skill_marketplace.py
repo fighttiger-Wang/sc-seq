@@ -184,11 +184,15 @@ class Doctor:
             ok = bool(core_match) and version.get("core_version") == core_match.group(1) and version.get("config_version") == config.get("config_version") and version.get("knowledge_base_version") == knowledge.get("knowledge_base_version") == manifest.get("knowledge_base_version")
             self.add("annotation canonical versions", ok, json.dumps(version, ensure_ascii=False))
             hash_errors = []
+            newline_errors = []
             for filename, expected in (manifest.get("sha256") or {}).items():
                 path = evidence / "knowledge-base" / filename
                 if not path.is_file() or sha256(path) != expected:
                     hash_errors.append(filename)
+                elif b"\r\n" in path.read_bytes():
+                    newline_errors.append(filename)
             self.add("annotation knowledge hashes", not hash_errors, ", ".join(hash_errors))
+            self.add("annotation knowledge LF newlines", not newline_errors, ", ".join(newline_errors))
             mappings = {
                 "annotation_evidence_core.py": ("scripts", "annotation_evidence_core.py"),
                 "knowledge_base.py": ("scripts", "knowledge_base.py"),
@@ -204,13 +208,17 @@ class Doctor:
                 metadata_ok = all(snapshot.get(key) == version.get(key) for key in ("core_version", "config_version", "knowledge_base_version", "snapshot_contract")) and snapshot.get("canonical_source") == "shared/sc-annotation-evidence-core"
                 self.add(f"annotation snapshot metadata {plugin_id}", metadata_ok, json.dumps(snapshot, ensure_ascii=False))
                 errors = []
+                snapshot_newline_errors = []
                 for source_name, (folder, destination_name) in mappings.items():
                     source = evidence / source_name
                     destination = skill / folder / destination_name
                     source_hash = sha256(source) if source.is_file() else ""
                     if not destination.is_file() or sha256(destination) != source_hash or (snapshot.get("files") or {}).get(source_name) != source_hash:
                         errors.append(source_name)
+                    elif source.suffix.lower() in {".json", ".md", ".py"} and (b"\r\n" in source.read_bytes() or b"\r\n" in destination.read_bytes()):
+                        snapshot_newline_errors.append(source_name)
                 self.add(f"annotation snapshot files {plugin_id}", not errors, ", ".join(errors))
+                self.add(f"annotation snapshot LF newlines {plugin_id}", not snapshot_newline_errors, ", ".join(snapshot_newline_errors))
         except Exception as exc:
             self.add("annotation evidence validation", False, str(exc))
 
