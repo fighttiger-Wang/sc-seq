@@ -1,5 +1,5 @@
 {
-  "config_version": "2.9.0",
+  "config_version": "2.12.1",
   "thresholds": {
     "minimum_detection_floor": 0.05,
     "primary_detection_floor": 0.20,
@@ -42,6 +42,15 @@
   },
   "negative_conflict_relative_reference_min_fraction": 0.50,
   "identity_branch_gates": [
+    {
+      "rule_id": "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR",
+      "ancestors": ["MAIT"],
+      "required_anchors": ["TRAV1-2"],
+      "minimum_required_anchors": 1,
+      "anchor_detection_floor": 0.10,
+      "relative_reference_min_fraction": 0.50,
+      "minimum_relative_anchors": 1
+    },
     {
       "rule_id": "REQUIRE_GAMMA_DELTA_TCR_ANCHORS",
       "ancestors": ["gdT"],
@@ -141,7 +150,77 @@
       "minimum_core_review": 3
     }
   ],
+  "absolute_program_rules": [
+    {
+      "rule_id": "NAIVE_B_ABSOLUTE_PROGRAM_FOR_REPEATED_CANONICAL_CLUSTERS",
+      "label": "Naive_B",
+      "core_anchors": ["IGHM", "IGHD", "TCL1A"],
+      "minimum_core_anchors": 2,
+      "core_detection_floor": 0.25,
+      "supportive_anchors": ["FCER2", "IL4R", "HVCN1", "FCRL1"],
+      "minimum_supportive_anchors": 1,
+      "supportive_detection_floor": 0.10,
+      "parent_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "CD74", "HLA-DRA"],
+      "minimum_parent_anchors": 3,
+      "parent_detection_floor": 0.10,
+      "forbidden_programs": [
+        {
+          "program": "active_early_B_recombination",
+          "anchors": ["RAG1", "RAG2", "DNTT", "VPREB1", "VPREB1A", "IGLL1"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        },
+        {
+          "program": "terminal_antibody_secretion",
+          "anchors": ["PRDM1", "SDC1", "DERL3"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        }
+      ]
+    },
+    {
+      "rule_id": "IMMATURE_B_SURFACE_IGM_WITH_REDUCED_RECOMBINATION",
+      "label": "Immature_B",
+      "core_anchors": ["IGHM", "CD24", "CD38", "TCL1A", "VPREB3"],
+      "minimum_core_anchors": 4,
+      "core_detection_floor": 0.30,
+      "supportive_anchors": ["ROR1", "FCRL1", "IL4R"],
+      "minimum_supportive_anchors": 1,
+      "supportive_detection_floor": 0.10,
+      "parent_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "CD74", "HLA-DRA"],
+      "minimum_parent_anchors": 3,
+      "parent_detection_floor": 0.10,
+      "forbidden_programs": [
+        {
+          "program": "dataset_dominant_active_early_B_recombination",
+          "anchors": ["RAG1", "RAG2", "DNTT", "VPREB1", "VPREB1A", "IGLL1"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10,
+          "minimum_dataset_fraction": 0.50
+        },
+        {
+          "program": "terminal_antibody_secretion",
+          "anchors": ["PRDM1", "SDC1", "DERL3"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        }
+      ]
+    }
+  ],
   "sibling_projection_rules": [
+    {
+      "rule_id": "PREFER_TRANSITIONAL_B_WHEN_MATURATION_BRIDGE_PROGRAM_IS_COMPARABLE",
+      "preferred": "Transitional_B",
+      "over": "Naive_B",
+      "minimum_score_ratio": 0.95,
+      "minimum_core_review": 2,
+      "required_anchors": ["CD24", "CD38", "IGHM"],
+      "minimum_required_anchors": 3,
+      "anchor_detection_floor": 0.50,
+      "forbidden_anchors": ["RAG1", "RAG2", "DNTT"],
+      "forbidden_detection_floor": 0.10,
+      "maximum_forbidden_anchors": 0
+    },
     {
       "rule_id": "PREFER_PRE_B_WHEN_PRE_B_RECEPTOR_PROGRAM_IS_COMPARABLE",
       "preferred": "Pre_B",
@@ -154,6 +233,20 @@
       "forbidden_anchors": ["MS4A1"],
       "forbidden_detection_floor": 0.20,
       "maximum_forbidden_anchors": 0
+    },
+    {
+      "rule_id": "PREFER_IMMATURE_B_AT_SURFACE_IGM_RECOMBINATION_EXIT",
+      "preferred": "Immature_B",
+      "over": "Pre_B",
+      "minimum_score_ratio": 0.0,
+      "minimum_core_review": 0,
+      "require_absolute_program_gate": true,
+      "required_anchors": ["IGHM", "CD24", "CD38", "TCL1A", "VPREB3"],
+      "minimum_required_anchors": 4,
+      "anchor_detection_floor": 0.30,
+      "forbidden_anchors": ["PRDM1", "SDC1", "DERL3"],
+      "forbidden_detection_floor": 0.10,
+      "maximum_forbidden_anchors": 1
     }
   ],
   "sublineage_conflict_rules": [
@@ -194,6 +287,54 @@
       "anchor_detection_floor": 0.20
     }
   ],
+  "myeloid_boundary_rules": {
+    "neutrophil_vs_monocyte": {
+      "rule_id": "MYELOID_NEUTROPHIL_VS_MONOCYTE_PROGRAM_GATE",
+      "monocyte_program": {
+        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "LST1": 0.20, "TYROBP": 0.20},
+        "minimum_markers": 4
+      },
+      "neutrophil_commitment": {
+        "markers": {"CSF3R": 0.20, "FCGR3B": 0.10},
+        "minimum_markers": 2
+      },
+      "neutrophil_program_alternatives": [
+        {
+          "program_id": "mature_neutrophil",
+          "required_markers": {},
+          "markers": {"FCGR3B": 0.30, "CXCR2": 0.10, "PGLYRP1": 0.10, "LTF": 0.10, "CAMP": 0.10, "CD177": 0.10},
+          "minimum_markers": 2
+        },
+        {
+          "program_id": "early_granule_neutrophil",
+          "required_markers": {},
+          "markers": {"MPO": 0.10, "ELANE": 0.10, "PRTN3": 0.10, "AZU1": 0.10, "DEFA1": 0.10, "DEFA3": 0.10, "DEFA4": 0.10, "MS4A3": 0.10, "CEBPE": 0.10},
+          "minimum_markers": 2
+        },
+        {
+          "program_id": "activated_inflammatory_neutrophil",
+          "required_markers": {"FCGR3B": 0.10},
+          "markers": {"PI3": 0.10, "SLPI": 0.10, "CXCL8": 0.10},
+          "minimum_markers": 2
+        }
+      ]
+    },
+    "dc3_vs_monocyte": {
+      "rule_id": "MYELOID_DC3_VS_MONOCYTE_COEXPRESSION_GATE",
+      "apc_program": {
+        "markers": {"HLA-DRA": 0.20, "HLA-DPA1": 0.20, "HLA-DPB1": 0.20, "CD74": 0.20},
+        "minimum_markers": 3
+      },
+      "dc_specific_program": {
+        "markers": {"CD1C": 0.10, "CLEC10A": 0.10, "FCER1A": 0.10},
+        "minimum_markers": 2
+      },
+      "monocyte_program": {
+        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "FCGR3A": 0.20, "LST1": 0.20},
+        "minimum_markers": 3
+      }
+    }
+  },
   "identity_panels": {
     "B_cell": {
       "core": ["CD79A", "CD79B", "EBF1", "PAX5", "MS4A1", "FCMR"],

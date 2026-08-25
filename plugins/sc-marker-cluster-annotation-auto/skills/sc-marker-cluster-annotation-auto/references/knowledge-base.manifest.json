@@ -1,7 +1,8 @@
 {
   "schema_version": "2.0.0",
-  "approved_at": "2026-08-16",
-  "source_workbook": "E:/A002-Codex/工作区/outputs/cell_annotation_standard_review/cell_annotation_standard_evidence_review.xlsx",
+  "approved_at": "2026-08-25",
+  "source": "shared/sc-annotation-evidence-core/knowledge-base",
+  "source_workbook": "cell_annotation_standard_evidence_review.xlsx",
   "counts": {
     "ontology_nodes": 131,
     "alias_records": 412,
@@ -13,15 +14,15 @@
     "legacy_migrations": 25
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "e732105fec1403a02071e41ca5f6698bb64d46aedb76e36c75a59e2fc6fb464e",
-    "ontology.v2.json": "34a6148209a36f1177c7f961a6b23ad3c41e8ab7c122fdbd0361335f2548204e",
-    "aliases.v2.json": "ec9918caa909dc008324e63df8fd991117447b96e1c27addb899411415dca744",
-    "marker-panels.v2.json": "00eb3809ca5e0e21f20eba06e4c285c636de802db31a4aeabb707457bc27dace",
-    "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
-    "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
-    "decision-rules.v2.json": "55efef88f90bf4bd2fe0784535d4e3b3db1e4b365892552d11259cb94535ab72",
-    "evidence-sources.v2.json": "04ea3106bc37f9c8e16ecd224dd7d53c263aa9e8aaaf33f8d1fd6d2863832f6c",
-    "legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1"
+    "cell-annotation-knowledge-base.v2.json": "e372470ba97f2d17862b71f02c8a35d4d7aadaee339d2d152dc32e305a0e2251",
+    "ontology.v2.json": "149fdb9c498e2d05ffd191a8f83618e22fb7519da5b3f25737d124035eeb5e2e",
+    "aliases.v2.json": "6762182facca8acac4d44af5850d5d5a7f398eaf3979343330ea8bb50d511532",
+    "marker-panels.v2.json": "578dad46b71b871469e56ede28c7fd3d1a535c14620b8aa70fb34fa73cdfc251",
+    "tissue-modules.v2.json": "3da74ba0b213576f117a6184b4b05ed280142a877a346c14333d0f5486e7a111",
+    "state-rules.v2.json": "2d83ae6bcfedac460bde1044ffc0bd3230debc4d75d1d185fc0ec9b232f65d50",
+    "decision-rules.v2.json": "3da87c507799909008934064999bacc642922c6eaffb0aea38da70c78b36dce9",
+    "evidence-sources.v2.json": "0e3dbd06566e62e9b0bf1c989911a82faf0d79428f384a0619dfa2146fc1cd35",
+    "legacy-migration.v2.json": "83a145f6f5141dd51a52ca25462bfa2004125eea82b7ed61948815f5b9348abc"
   },
-  "knowledge_base_version": "2.7.0"
+  "knowledge_base_version": "2.7.1"
 }

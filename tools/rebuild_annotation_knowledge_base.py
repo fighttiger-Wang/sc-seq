@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Rebuild the canonical annotation knowledge-base bundle and integrity manifest."""
+"""Rebuild the canonical annotation knowledge-base bundle and manifest."""
+
+from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 
@@ -12,7 +15,6 @@ KB = SHARED / "knowledge-base"
 MONOLITH = KB / "cell-annotation-knowledge-base.v2.json"
 MANIFEST = KB / "knowledge-base.manifest.json"
 VERSION = SHARED / "VERSION.json"
-
 SECTIONS = {
     "ontology": "ontology.v2.json",
     "aliases": "aliases.v2.json",
@@ -25,11 +27,17 @@ SECTIONS = {
 }
 
 
-def load(path):
+def load(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def sha256(path):
+def atomic_json(path: Path, value) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -37,35 +45,46 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def main():
+def rebuild() -> dict:
     version = load(VERSION)
     bundle = load(MONOLITH)
     bundle["schema_version"] = "2.0.0"
     bundle["knowledge_base_version"] = version["knowledge_base_version"]
-    bundle["approved_at"] = "2026-08-16"
     for section, filename in SECTIONS.items():
-        bundle[section] = load(KB / filename)
-    MONOLITH.write_text(json.dumps(bundle, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        value = load(KB / filename)
+        if not isinstance(value, list):
+            raise ValueError(f"Knowledge-base section must be a JSON array: {filename}")
+        bundle[section] = value
+    atomic_json(MONOLITH, bundle)
 
     files = ["cell-annotation-knowledge-base.v2.json", *SECTIONS.values()]
     hashes = {filename: sha256(KB / filename) for filename in files}
-    manifest = load(MANIFEST)
-    manifest["schema_version"] = "2.0.0"
-    manifest["knowledge_base_version"] = version["knowledge_base_version"]
-    manifest["approved_at"] = "2026-08-16"
-    manifest["counts"] = {
-        "ontology_nodes": len(bundle["ontology"]),
-        "alias_records": len(bundle["aliases"]),
-        "marker_panels": len(bundle["marker_panels"]),
-        "tissue_modules": len(bundle["tissue_modules"]),
-        "state_rules": len(bundle["state_rules"]),
-        "decision_rules": len(bundle["decision_rules"]),
-        "evidence_sources": len(bundle["evidence_sources"]),
-        "legacy_migrations": len(bundle["legacy_migration"]),
+    previous_manifest = load(MANIFEST) if MANIFEST.is_file() else {}
+    source_workbook = str(previous_manifest.get("source_workbook") or "").replace("\\", "/")
+    manifest = {
+        "schema_version": "2.0.0",
+        "approved_at": bundle.get("approved_at", previous_manifest.get("approved_at", "")),
+        "source": "shared/sc-annotation-evidence-core/knowledge-base",
+        "source_workbook": Path(source_workbook).name if source_workbook else "",
+        "counts": {
+            "ontology_nodes": len(bundle["ontology"]),
+            "alias_records": len(bundle["aliases"]),
+            "marker_panels": len(bundle["marker_panels"]),
+            "tissue_modules": len(bundle["tissue_modules"]),
+            "state_rules": len(bundle["state_rules"]),
+            "decision_rules": len(bundle["decision_rules"]),
+            "evidence_sources": len(bundle["evidence_sources"]),
+            "legacy_migrations": len(bundle["legacy_migration"]),
+        },
+        "sha256": hashes,
+        "knowledge_base_version": version["knowledge_base_version"],
     }
-    manifest["sha256"] = hashes
-    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"status": "rebuilt", "version": version, "counts": manifest["counts"], "sha256": hashes}, ensure_ascii=False))
+    atomic_json(MANIFEST, manifest)
+    return {"status": "rebuilt", "version": version, "counts": manifest["counts"], "sha256": hashes}
+
+
+def main() -> None:
+    print(json.dumps(rebuild(), ensure_ascii=False))
 
 
 if __name__ == "__main__":

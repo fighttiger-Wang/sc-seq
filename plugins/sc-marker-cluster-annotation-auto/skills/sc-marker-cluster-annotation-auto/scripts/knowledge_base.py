@@ -205,12 +205,19 @@ def build_runtime_config(kb, species="Human", tissue="", annotation_level="subcl
         # contaminants.  Keep every tissue-relevant off-parent panel as an
         # audit sentinel when full expression ratios are available.  Retain
         # noncanonical-tissue panels only inside the confirmed parent branch.
-        if not tissue_scope_match and (not restrict_to_parent or not within_parent_scope):
+        if (
+            not tissue_scope_match
+            and cell_id not in allowed_major
+            and (not restrict_to_parent or not within_parent_scope)
+        ):
             continue
         if annotation_level == "major" and active_roots:
             # Keep core immune/vascular/stromal lineages and tissue-module descendants.
             if not any(root in lineage for root in active_roots) and not any(
-                root in lineage for root in ("Immune_cell", "Endothelial_cell", "Stromal_cell", "Epithelial_cell")
+                root in lineage for root in (
+                    "Immune_cell", "Endothelial_cell", "Stromal_cell",
+                    "Epithelial_cell", "Hematopoietic_nonimmune",
+                )
             ):
                 continue
         core = _marker_genes(row.get("core_markers"))

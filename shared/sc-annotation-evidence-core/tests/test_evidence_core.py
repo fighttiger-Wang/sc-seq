@@ -503,7 +503,7 @@ def main():
 
     version = json.loads((ROOT / "VERSION.json").read_text(encoding="utf-8"))
     runtime_config = json.loads((ROOT / "annotation-evidence-config.v1.json").read_text(encoding="utf-8"))
-    assert runtime_config["config_version"] == version["config_version"] == "2.12.0"
+    assert runtime_config["config_version"] == version["config_version"]
 
     b_runtime = build_runtime_config(
         kb,

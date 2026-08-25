@@ -1,7 +1,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
   [Parameter()]
-  [string]$MarketplaceRoot = $PSScriptRoot,
+  [string]$MarketplaceRoot,
 
   [Parameter()]
   [string]$CodexCli,
@@ -75,7 +75,8 @@ function Invoke-Codex {
   return $output
 }
 
-$root = [System.IO.Path]::GetFullPath($MarketplaceRoot)
+$effectiveMarketplaceRoot = if ([string]::IsNullOrWhiteSpace($MarketplaceRoot)) { $PSScriptRoot } else { $MarketplaceRoot }
+$root = [System.IO.Path]::GetFullPath($effectiveMarketplaceRoot)
 $doctorPath = Join-Path $root 'Test-PersonalSkillMarketplace.ps1'
 $packPath = Join-Path $root 'skill-pack.json'
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
   "standard_name": "human-multitissue-cell-annotation-standard",
-  "approved_at": "2026-08-16",
+  "approved_at": "2026-08-25",
   "approval_scope": "all proposed changes, disputed policies, ontology nodes, marker panels, tissue modules, state rules, decision rules, and legacy migrations",
   "evidence_gate": "two independent studies or one authoritative large atlas/ontology",
   "ontology": [
@@ -9515,6 +9515,9 @@
     }
   ],
   "identity_boundary_rules": {
+    "MAIT": {
+      "coherence_policy": "branch_gate_plus_detection"
+    },
     "DNT": {
       "coherence_policy": "branch_gate_plus_detection"
     },
@@ -9535,5 +9538,5 @@
       "maximum_absolute_negative_hits": 1
     }
   },
-  "knowledge_base_version": "2.7.0"
+  "knowledge_base_version": "2.7.1"
 }

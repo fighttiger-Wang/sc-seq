@@ -14,8 +14,8 @@ Read this reference before paired-table or Seurat execution.
 ## Approved E-drive runtime
 
 - Resolve a real Python executable before invoking any bundled script.
-- Prefer E:\A002-Codex\runtime-cache\codex-primary-runtime\dependencies\python\python.exe when it exists; verify it with Test-Path and a short sys.executable check.
-- Treat C:\Users\*\AppData\Local\Microsoft\WindowsApps\python.exe as a possible alias, not as a usable runtime. Do not install or download a replacement during the workflow.
+- Prefer the bundled Codex Python discovered from `CODEX_HOME` or the current user's Codex runtime cache when it exists; verify it with `Test-Path` and a short `sys.executable` check.
+- Treat a `WindowsApps` Python entry as a possible alias, not as a usable runtime. Do not install or download a replacement during the workflow.
 - Keep the resolved executable in a task-local variable and use it consistently for preflight, workbook building, QA, and delivery.
 
 ## Scoped project-context discovery

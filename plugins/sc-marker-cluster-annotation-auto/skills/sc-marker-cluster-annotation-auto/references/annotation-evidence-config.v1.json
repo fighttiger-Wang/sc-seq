@@ -1,5 +1,5 @@
 {
-  "config_version": "2.12.0",
+  "config_version": "2.12.1",
   "thresholds": {
     "minimum_detection_floor": 0.05,
     "primary_detection_floor": 0.20,
@@ -42,6 +42,15 @@
   },
   "negative_conflict_relative_reference_min_fraction": 0.50,
   "identity_branch_gates": [
+    {
+      "rule_id": "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR",
+      "ancestors": ["MAIT"],
+      "required_anchors": ["TRAV1-2"],
+      "minimum_required_anchors": 1,
+      "anchor_detection_floor": 0.10,
+      "relative_reference_min_fraction": 0.50,
+      "minimum_relative_anchors": 1
+    },
     {
       "rule_id": "REQUIRE_GAMMA_DELTA_TCR_ANCHORS",
       "ancestors": ["gdT"],

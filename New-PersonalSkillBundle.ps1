@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
   [Parameter()]
-  [string]$MarketplaceRoot = $PSScriptRoot,
+  [string]$MarketplaceRoot,
 
   [Parameter()]
-  [string]$OutputDirectory = (Join-Path $PSScriptRoot 'outputs'),
+  [string]$OutputDirectory,
 
   [Parameter()]
   [string]$BundleName
@@ -13,8 +13,10 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$root = [System.IO.Path]::GetFullPath($MarketplaceRoot).TrimEnd('\')
-$outputRoot = [System.IO.Path]::GetFullPath($OutputDirectory)
+$effectiveMarketplaceRoot = if ([string]::IsNullOrWhiteSpace($MarketplaceRoot)) { $PSScriptRoot } else { $MarketplaceRoot }
+$root = [System.IO.Path]::GetFullPath($effectiveMarketplaceRoot).TrimEnd('\')
+$effectiveOutputDirectory = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { Join-Path $root 'outputs' } else { $OutputDirectory }
+$outputRoot = [System.IO.Path]::GetFullPath($effectiveOutputDirectory)
 $doctorPath = Join-Path $root 'Test-PersonalSkillMarketplace.ps1'
 
 & $doctorPath -MarketplaceRoot $root

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "store_root": "E:/A002-Codex/工作区/.sc-annotation-knowledge",
-  "outputs_root": "E:/A002-Codex/工作区/outputs",
+  "store_root": "<shared-workspace-root>/.sc-annotation-knowledge",
+  "outputs_root": "<shared-workspace-root>/outputs",
   "eligible_skills": {
     "sc-major-celltype-annotation-auto": "0.2.2",
     "sc-marker-cluster-annotation-auto": "0.4.1"

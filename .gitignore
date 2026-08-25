@@ -12,3 +12,7 @@ Thumbs.db
 secrets/
 *.key
 *.pem
+.sc-annotation-knowledge/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [Parameter()]
-  [string]$MarketplaceRoot = $PSScriptRoot,
+  [string]$MarketplaceRoot,
 
   [Parameter()]
   [switch]$Json
@@ -59,7 +59,8 @@ function Read-JsonFile {
   }
 }
 
-$root = [System.IO.Path]::GetFullPath($MarketplaceRoot)
+$effectiveMarketplaceRoot = if ([string]::IsNullOrWhiteSpace($MarketplaceRoot)) { $PSScriptRoot } else { $MarketplaceRoot }
+$root = [System.IO.Path]::GetFullPath($effectiveMarketplaceRoot)
 $packPath = Join-Path $root 'skill-pack.json'
 $marketplacePath = Join-Path $root '.agents\plugins\marketplace.json'
 $compatibilityPath = Join-Path $root '.codex-plugin\marketplace.json'
@@ -147,9 +148,86 @@ foreach ($sharedPath in @($pack.sharedPaths)) {
   Add-Check -Name "shared path $sharedPath" -Passed (Test-Path -LiteralPath $resolvedSharedPath -PathType Container) -Detail $resolvedSharedPath
 }
 
+$evidenceRoot = Join-Path $root 'shared\sc-annotation-evidence-core'
+$evidenceVersion = Read-JsonFile -Path (Join-Path $evidenceRoot 'VERSION.json') -Label 'annotation evidence version'
+$evidenceConfig = Read-JsonFile -Path (Join-Path $evidenceRoot 'annotation-evidence-config.v1.json') -Label 'annotation evidence config'
+$knowledgeRoot = Join-Path $evidenceRoot 'knowledge-base'
+$knowledgeBase = Read-JsonFile -Path (Join-Path $knowledgeRoot 'cell-annotation-knowledge-base.v2.json') -Label 'annotation knowledge base'
+$knowledgeManifest = Read-JsonFile -Path (Join-Path $knowledgeRoot 'knowledge-base.manifest.json') -Label 'annotation knowledge manifest'
+
+if ($null -ne $evidenceVersion -and $null -ne $evidenceConfig -and $null -ne $knowledgeBase -and $null -ne $knowledgeManifest) {
+  $coreText = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $evidenceRoot 'annotation_evidence_core.py')
+  $coreMatch = [regex]::Match($coreText, '(?m)^CORE_VERSION\s*=\s*["'']([^"'']+)["'']')
+  $versionOk = (
+    $coreMatch.Success -and
+    [string]$evidenceVersion.core_version -eq [string]$coreMatch.Groups[1].Value -and
+    [string]$evidenceVersion.config_version -eq [string]$evidenceConfig.config_version -and
+    [string]$evidenceVersion.knowledge_base_version -eq [string]$knowledgeBase.knowledge_base_version -and
+    [string]$evidenceVersion.knowledge_base_version -eq [string]$knowledgeManifest.knowledge_base_version
+  )
+  Add-Check -Name 'annotation canonical versions' -Passed $versionOk -Detail "VERSION core=$($evidenceVersion.core_version), config=$($evidenceVersion.config_version), kb=$($evidenceVersion.knowledge_base_version); config=$($evidenceConfig.config_version); kb=$($knowledgeBase.knowledge_base_version); manifest=$($knowledgeManifest.knowledge_base_version)"
+
+  $manifestHashErrors = [System.Collections.Generic.List[string]]::new()
+  foreach ($property in @($knowledgeManifest.sha256.PSObject.Properties)) {
+    $path = Join-Path $knowledgeRoot ([string]$property.Name -replace '/', '\')
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+      $manifestHashErrors.Add("missing:$($property.Name)")
+      continue
+    }
+    $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -ne ([string]$property.Value).ToLowerInvariant()) {
+      $manifestHashErrors.Add("hash:$($property.Name)")
+    }
+  }
+  Add-Check -Name 'annotation knowledge hashes' -Passed ($manifestHashErrors.Count -eq 0) -Detail ($manifestHashErrors -join '; ')
+
+  $snapshotFiles = [ordered]@{
+    'annotation_evidence_core.py' = @('scripts', 'annotation_evidence_core.py')
+    'knowledge_base.py' = @('scripts', 'knowledge_base.py')
+    'annotation-evidence-config.v1.json' = @('references', 'annotation-evidence-config.v1.json')
+    'evidence-scoring-policy.md' = @('references', 'evidence-scoring-policy.md')
+    'knowledge-base/cell-annotation-knowledge-base.v2.json' = @('references', 'cell-annotation-knowledge-base.v2.json')
+    'knowledge-base/legacy-migration.v2.json' = @('references', 'legacy-migration.v2.json')
+    'knowledge-base/knowledge-base.manifest.json' = @('references', 'knowledge-base.manifest.json')
+  }
+  foreach ($id in @('sc-major-celltype-annotation-auto', 'sc-marker-cluster-annotation-auto')) {
+    $skillRoot = Join-Path $root "plugins\$id\skills\$id"
+    $snapshot = Read-JsonFile -Path (Join-Path $skillRoot 'references\annotation-evidence-core.snapshot.json') -Label "annotation snapshot $id"
+    if ($null -eq $snapshot) {
+      continue
+    }
+    $metadataOk = (
+      [string]$snapshot.core_version -eq [string]$evidenceVersion.core_version -and
+      [string]$snapshot.config_version -eq [string]$evidenceVersion.config_version -and
+      [string]$snapshot.knowledge_base_version -eq [string]$evidenceVersion.knowledge_base_version -and
+      [string]$snapshot.snapshot_contract -eq [string]$evidenceVersion.snapshot_contract -and
+      [string]$snapshot.canonical_source -eq 'shared/sc-annotation-evidence-core'
+    )
+    Add-Check -Name "annotation snapshot metadata $id" -Passed $metadataOk -Detail "snapshot core=$($snapshot.core_version), config=$($snapshot.config_version), kb=$($snapshot.knowledge_base_version), source=$($snapshot.canonical_source)"
+
+    $snapshotErrors = [System.Collections.Generic.List[string]]::new()
+    foreach ($entry in $snapshotFiles.GetEnumerator()) {
+      $sourcePath = Join-Path $evidenceRoot ([string]$entry.Key -replace '/', '\')
+      $destinationPath = Join-Path (Join-Path $skillRoot $entry.Value[0]) $entry.Value[1]
+      if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf) -or -not (Test-Path -LiteralPath $destinationPath -PathType Leaf)) {
+        $snapshotErrors.Add("missing:$($entry.Key)")
+        continue
+      }
+      $sourceHash = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant()
+      $destinationHash = (Get-FileHash -LiteralPath $destinationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+      $snapshotProperty = $snapshot.files.PSObject.Properties[[string]$entry.Key]
+      $recordedHash = if ($null -ne $snapshotProperty) { ([string]$snapshotProperty.Value).ToLowerInvariant() } else { '' }
+      if ($sourceHash -ne $destinationHash -or $sourceHash -ne $recordedHash) {
+        $snapshotErrors.Add("mismatch:$($entry.Key)")
+      }
+    }
+    Add-Check -Name "annotation snapshot files $id" -Passed ($snapshotErrors.Count -eq 0) -Detail ($snapshotErrors -join '; ')
+  }
+}
+
 $forbiddenFiles = @(Get-ChildItem -LiteralPath $root -File -Recurse -Force | Where-Object {
   $_.FullName -notmatch '[\\/](logs|outputs|tmp|\.git|__pycache__)[\\/]' -and
-  $_.Name -match '(^\.env($|\.)|\.pem$|\.key$|credentials|secrets?)'
+  $_.Name -match '(^\.env($|\.)|\.pem$|\.key$|credentials|secrets?|\.sqlite3(?:-wal|-shm)?$)'
 })
 Add-Check -Name 'secret-like files' -Passed ($forbiddenFiles.Count -eq 0) -Detail (($forbiddenFiles | ForEach-Object { $_.FullName } | Select-Object -First 10) -join '; ')
 
@@ -160,7 +238,11 @@ Get-ChildItem -LiteralPath $root -File -Recurse -Force | Where-Object {
   $_.FullName -notmatch '[\\/](logs|outputs|tmp|\.git|__pycache__)[\\/]'
 } | ForEach-Object {
   $content = Get-Content -Raw -Encoding utf8 -LiteralPath $_.FullName -ErrorAction SilentlyContinue
-  if ($content -match '(?i)(C:\\Users\\fight\\|E:\\A002-Codex\\\u5DE5\u4F5C\u533A)') {
+  $normalizedContent = ($content -replace '\\\\', '\') -replace '/', '\'
+  if (
+    $normalizedContent -match '(?i)\b[A-Z]:\\Users\\[^\\]+\\' -or
+    $normalizedContent -match '(?i)\b[A-Z]:\\A002-Codex\\\u5DE5\u4F5C\u533A\\'
+  ) {
     $absolutePathHits.Add($_.FullName)
   }
 }

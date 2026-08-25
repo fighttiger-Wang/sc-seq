@@ -32,6 +32,17 @@ def main():
     args = parser.parse_args()
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
+    input_dir = work / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    source_paths = {}
+    for key, name in {
+        "cell_avg_exp": "cell_avg_exp.tsv",
+        "marker_table": "marker_table.tsv",
+        "umap": "umap.png",
+    }.items():
+        path = input_dir / name
+        path.write_text("test\n", encoding="utf-8")
+        source_paths[key] = str(path)
     genes = sorted({gene for values in PROGRAMS.values() for gene in values} | {"CCR7", "SELL", "TCF7", "LEF1", "GZMB", "PRF1", "NKG7"})
     ratio = work / "ratios.tsv"
     with ratio.open("w", encoding="utf-8", newline="") as handle:
@@ -52,7 +63,7 @@ def main():
         },
         "average_shape": [len(genes), len(PROGRAMS)], "average_reader": "test",
         "confirmed_metadata": {"species": "Human", "tissue": "blood", "annotation_level": "subcluster", "parent_population": "T_cell", "parent_kind": "lineage", "interpretation_rule": "test"},
-        "source_paths": {"cell_avg_exp": "test", "marker_table": "test", "umap": "umap.png"},
+        "source_paths": source_paths,
     }
     evidence = enrich_evidence(
         evidence, ratio_path=ratio, annotation_level="subcluster", species="Human", tissue="blood",

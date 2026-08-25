@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.12.0"
+CORE_VERSION = "2.12.1"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"
@@ -427,7 +427,13 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
 
 
 def _absolute_program_gate(label, config, cluster, values, full_ratio):
-    """Validate a configured leaf program without cluster-relative enrichment."""
+    """Validate a configured leaf program without cluster-relative enrichment.
+
+    Repeated canonical identities can be abundant in one subset, so every member may
+    have weak median/MAD specificity even when the absolute identity program is intact.
+    This gate remains conservative by requiring core, supportive, and parent-lineage
+    anchors together with explicit incompatible-program exclusions.
+    """
     rule = next(
         (item for item in config.get("absolute_program_rules", []) if item.get("label") == label),
         None,

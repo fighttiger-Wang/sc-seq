@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.9.3"
+CORE_VERSION = "2.12.1"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"
@@ -304,6 +304,8 @@ def load_cell_evidence(path):
 def _coherent(candidate, thresholds):
     if candidate.get("absolute_negative_blocked", False):
         return False
+    if candidate.get("absolute_program_gate", {}).get("passed", False):
+        return True
     required = candidate.get("required_core_markers", thresholds["minimum_core_markers"])
     if candidate["core_review"] >= required:
         return True
@@ -332,6 +334,162 @@ def _formally_coherent(candidate, thresholds):
     )
 
 
+def _program_hits(cluster, values, marker_floors):
+    hits = []
+    for gene, floor in marker_floors.items():
+        ratio = float(values.get(cluster, {}).get(_norm(gene), {}).get("ratio", 0.0))
+        if ratio >= float(floor):
+            hits.append({"gene": _norm(gene), "ratio": round(ratio, 4), "floor": float(floor)})
+    return hits
+
+
+def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=None):
+    """Audit program-level myeloid boundaries that isolated markers cannot resolve."""
+    rules = config.get("myeloid_boundary_rules", {})
+    if not full_ratio or not rules:
+        return {"assessed": False, "reason": "requires_full_cluster_ratio"}
+
+    neutrophil_rule = rules.get("neutrophil_vs_monocyte", {})
+    monocyte_hits = _program_hits(
+        cluster, values, neutrophil_rule.get("monocyte_program", {}).get("markers", {})
+    )
+    monocyte_minimum = int(
+        neutrophil_rule.get("monocyte_program", {}).get("minimum_markers", 4)
+    )
+    commitment_hits = _program_hits(
+        cluster, values, neutrophil_rule.get("neutrophil_commitment", {}).get("markers", {})
+    )
+    commitment_minimum = int(
+        neutrophil_rule.get("neutrophil_commitment", {}).get("minimum_markers", 2)
+    )
+    alternatives = []
+    for program in neutrophil_rule.get("neutrophil_program_alternatives", []):
+        required_hits = _program_hits(cluster, values, program.get("required_markers", {}))
+        program_hits = _program_hits(cluster, values, program.get("markers", {}))
+        required_passed = len(required_hits) == len(program.get("required_markers", {}))
+        passed = required_passed and len(program_hits) >= int(program.get("minimum_markers", 1))
+        alternatives.append({
+            "program_id": program.get("program_id", ""),
+            "passed": passed,
+            "required_hits": required_hits,
+            "marker_hits": program_hits,
+            "minimum_markers": int(program.get("minimum_markers", 1)),
+        })
+    neutrophil_commitment_passed = len(commitment_hits) >= commitment_minimum
+    neutrophil_program_passed = neutrophil_commitment_passed and any(
+        item["passed"] for item in alternatives
+    )
+    monocyte_program_passed = len(monocyte_hits) >= monocyte_minimum
+
+    dc_rule = rules.get("dc3_vs_monocyte", {})
+    apc_hits = _program_hits(cluster, values, dc_rule.get("apc_program", {}).get("markers", {}))
+    dc_hits = _program_hits(cluster, values, dc_rule.get("dc_specific_program", {}).get("markers", {}))
+    dc_monocyte_hits = _program_hits(
+        cluster, values, dc_rule.get("monocyte_program", {}).get("markers", {})
+    )
+    dc3_candidate = bool(
+        len(apc_hits) >= int(dc_rule.get("apc_program", {}).get("minimum_markers", 3))
+        and len(dc_hits) >= int(dc_rule.get("dc_specific_program", {}).get("minimum_markers", 2))
+        and len(dc_monocyte_hits) >= int(dc_rule.get("monocyte_program", {}).get("minimum_markers", 3))
+    )
+    validation = (cell_evidence or {}).get("identity_boundary_validation", {})
+    cell_level_validated = bool(
+        validation.get("rule_id") == dc_rule.get("rule_id")
+        and validation.get("coexpression_validated") is True
+        and str(validation.get("method", "")).strip()
+    )
+    return {
+        "assessed": True,
+        "neutrophil_vs_monocyte": {
+            "rule_id": neutrophil_rule.get("rule_id", ""),
+            "monocyte_program_passed": monocyte_program_passed,
+            "monocyte_hits": monocyte_hits,
+            "neutrophil_commitment_passed": neutrophil_commitment_passed,
+            "neutrophil_commitment_hits": commitment_hits,
+            "neutrophil_program_passed": neutrophil_program_passed,
+            "neutrophil_program_alternatives": alternatives,
+            "neutrophil_blocked_by_monocyte": bool(
+                monocyte_program_passed
+                and neutrophil_commitment_passed
+                and not neutrophil_program_passed
+            ),
+        },
+        "dc3_vs_monocyte": {
+            "rule_id": dc_rule.get("rule_id", ""),
+            "dc3_boundary_candidate": dc3_candidate,
+            "apc_hits": apc_hits,
+            "dc_specific_hits": dc_hits,
+            "monocyte_hits": dc_monocyte_hits,
+            "cell_level_validated": cell_level_validated,
+            "validation_method": str(validation.get("method", "")),
+        },
+    }
+
+
+def _absolute_program_gate(label, config, cluster, values, full_ratio):
+    """Validate a configured leaf program without cluster-relative enrichment.
+
+    Repeated canonical identities can be abundant in one subset, so every member may
+    have weak median/MAD specificity even when the absolute identity program is intact.
+    This gate remains conservative by requiring core, supportive, and parent-lineage
+    anchors together with explicit incompatible-program exclusions.
+    """
+    rule = next(
+        (item for item in config.get("absolute_program_rules", []) if item.get("label") == label),
+        None,
+    )
+    if not full_ratio or not rule:
+        return {"rule_id": "", "assessed": False, "passed": False}
+
+    def detected(key, floor_key, default_floor):
+        return _detected_branch_anchors(
+            cluster, values, rule.get(key, []), float(rule.get(floor_key, default_floor))
+        )
+
+    core = detected("core_anchors", "core_detection_floor", 0.25)
+    supportive = detected("supportive_anchors", "supportive_detection_floor", 0.10)
+    parent = detected("parent_anchors", "parent_detection_floor", 0.10)
+    forbidden_hits = []
+    for forbidden in rule.get("forbidden_programs", []):
+        genes = forbidden.get("anchors", [])
+        anchors = _detected_branch_anchors(
+            cluster, values, genes, float(forbidden.get("detection_floor", 0.10)),
+        )
+        minimum_dataset_fraction = forbidden.get("minimum_dataset_fraction")
+        dataset_fractions = {}
+        if minimum_dataset_fraction is not None:
+            relative_anchors = []
+            for gene in anchors:
+                current = float(values.get(str(cluster), {}).get(gene, {}).get("ratio", 0.0))
+                peak = max(
+                    (float(profile.get(gene, {}).get("ratio", 0.0)) for profile in values.values()),
+                    default=0.0,
+                )
+                fraction = current / peak if peak > 0 else 0.0
+                dataset_fractions[gene] = round(fraction, 4)
+                if fraction >= float(minimum_dataset_fraction):
+                    relative_anchors.append(gene)
+            anchors = relative_anchors
+        if len(anchors) >= int(forbidden.get("minimum_anchors", 1)):
+            hit = {"program": forbidden.get("program", "forbidden"), "anchors": anchors}
+            if minimum_dataset_fraction is not None:
+                hit["minimum_dataset_fraction"] = float(minimum_dataset_fraction)
+                hit["dataset_fractions"] = dataset_fractions
+            forbidden_hits.append(hit)
+    passed = bool(
+        len(core) >= int(rule.get("minimum_core_anchors", 2))
+        and len(supportive) >= int(rule.get("minimum_supportive_anchors", 1))
+        and len(parent) >= int(rule.get("minimum_parent_anchors", 2))
+        and not forbidden_hits
+    )
+    return {
+        "rule_id": rule.get("rule_id", ""), "assessed": True, "passed": passed,
+        "core_anchors": core, "supportive_anchors": supportive, "parent_anchors": parent,
+        "forbidden_program_hits": forbidden_hits,
+        "coherence_basis": "absolute_program_with_lineage_and_exclusion_gates",
+    }
+
+
 def _project_supported_sibling(ranked, config, thresholds, cluster, values, full_ratio):
     if not full_ratio or not ranked:
         return ranked, {}
@@ -344,6 +502,10 @@ def _project_supported_sibling(ranked, config, thresholds, cluster, values, full
         if not preferred or not _formally_coherent(preferred, thresholds):
             continue
         if preferred["core_review"] < int(rule.get("minimum_core_review", 2)):
+            continue
+        if rule.get("require_absolute_program_gate") and not preferred.get(
+            "absolute_program_gate", {}
+        ).get("passed", False):
             continue
         if preferred["score"] < current["score"] * float(rule.get("minimum_score_ratio", 0.95)):
             continue
@@ -684,6 +846,9 @@ def enrich_evidence(
             candidate["identity_branch_gate"] = _identity_branch_gate(
                 candidate, config, cluster, values, full_ratio
             )
+            candidate["absolute_program_gate"] = _absolute_program_gate(
+                name, config, cluster, values, full_ratio
+            )
             scored.append(candidate)
         ranked = sorted(
             scored,
@@ -700,7 +865,49 @@ def enrich_evidence(
             ranked, config, thresholds, cluster, values, full_ratio
         )
         ranked, descendant_projection = _project_supported_descendant(ranked, config, thresholds)
+        identity_boundary_audit = _myeloid_boundary_audit(
+            config, cluster, values, full_ratio, cell_evidence.get(cluster, {})
+        )
         primary = ranked[0]
+        neutrophil_boundary = identity_boundary_audit.get("neutrophil_vs_monocyte", {})
+        neutrophil_reclassified = bool(neutrophil_boundary.get("neutrophil_blocked_by_monocyte"))
+        monocyte_reclassified_to_neutrophil = False
+        if primary["label"] == "Neutrophil" and neutrophil_boundary.get("neutrophil_blocked_by_monocyte"):
+            monocyte_candidate = next(
+                (
+                    candidate for candidate in ranked
+                    if candidate["label"] in {"Monocyte", "Classical_monocyte", "Nonclassical_monocyte"}
+                    and _formally_coherent(candidate, thresholds)
+                ),
+                None,
+            )
+            if monocyte_candidate is not None:
+                ranked = [monocyte_candidate] + [candidate for candidate in ranked if candidate is not monocyte_candidate]
+                primary = monocyte_candidate
+        elif (
+            primary["label"] in {"Monocyte", "Classical_monocyte", "Nonclassical_monocyte"}
+            and neutrophil_boundary.get("neutrophil_program_passed")
+            and not neutrophil_boundary.get("monocyte_program_passed")
+        ):
+            neutrophil_candidate = next(
+                (
+                    candidate for candidate in ranked
+                    if candidate["label"] == "Neutrophil"
+                    and candidate.get("core_detected", 0) >= 2
+                    and candidate["score"] >= primary["score"] * 0.70
+                ),
+                None,
+            )
+            if neutrophil_candidate is not None:
+                neutrophil_candidate["absolute_program_gate"] = {
+                    "rule_id": neutrophil_boundary.get("rule_id", ""),
+                    "assessed": True,
+                    "passed": True,
+                    "source": "myeloid_boundary_program",
+                }
+                ranked = [neutrophil_candidate] + [candidate for candidate in ranked if candidate is not neutrophil_candidate]
+                primary = neutrophil_candidate
+                monocyte_reclassified_to_neutrophil = True
         restrict_to_parent = bool(config.get("restrict_to_parent"))
         parent_ranked = [
             item for item in ranked
@@ -791,6 +998,19 @@ def enrich_evidence(
         ambient_risk = "not_assessed_cluster_level"
         if not coherent_primary or margin < thresholds["minimum_accept_margin"]:
             risk, action = "R1_REVIEW_RETAIN", "Retain provisionally; inspect marker plots and nearest competing identity."
+        if neutrophil_reclassified:
+            risk = "R1_REVIEW_RETAIN"
+            action = (
+                "A coherent CD14/FCN1/VCAN monocyte program is present but the required mature, early-granule, "
+                "or activated-neutrophil program is incomplete. Retain the monocyte call provisionally, inspect "
+                "cell-level CSF3R/FCGR3B versus CD14/FCN1/VCAN coexpression, and block automatic merging."
+            )
+        elif monocyte_reclassified_to_neutrophil:
+            risk = "R1_REVIEW_RETAIN"
+            action = (
+                "The complete activated-neutrophil program passes while the monocyte program is incomplete. "
+                "Retain Neutrophil provisionally and review the granulocyte/monocyte transition at cell level."
+            )
         if primary["identity_branch_gate"]["rule_id"] and not primary["identity_branch_gate"]["assessed"]:
             risk = "R1_REVIEW_RETAIN"
             action = "Branch-specific identity lacks an observed CD4/CD8 anchor in positive-marker-only evidence; retain provisionally and verify the lineage marker."
@@ -867,6 +1087,23 @@ def enrich_evidence(
                 "Coherent expected-parent and off-parent programs coexist; inspect cell-level coexpression, "
                 "recluster if they occupy separate cells, and test doublets only when they co-occur within cells."
             )
+        dc3_boundary = identity_boundary_audit.get("dc3_vs_monocyte", {})
+        boundary_validation_required = bool(
+            dc3_boundary.get("dc3_boundary_candidate")
+            and not dc3_boundary.get("cell_level_validated")
+        )
+        boundary_validation_resolved = bool(
+            dc3_boundary.get("dc3_boundary_candidate")
+            and dc3_boundary.get("cell_level_validated")
+        )
+        if boundary_validation_required and risk != "R3_DOUBLET_CANDIDATE":
+            risk, mixed_risk = "R2_IDENTITY_BOUNDARY_REVIEW", "indeterminate"
+            action = (
+                "A coherent APC/DC-specific program and a coherent monocyte program coexist in cluster-level ratios. "
+                "Literature can nominate DC3 but cannot establish same-cell coexpression. Require cell-level "
+                "CD1C/CLEC10A/FCER1A versus CD14/FCN1/VCAN/FCGR3A validation or reclustering before formal delivery; "
+                "block automatic merging."
+            )
         provenance = config.get("panel_provenance", {}).get(
             formal_stable_id,
             config.get("panel_provenance", {}).get(primary["label"], {}),
@@ -878,7 +1115,13 @@ def enrich_evidence(
         elif tissue_context_review and risk == "R1_REVIEW_RETAIN":
             action = f"{action} Also verify the noncanonical tissue context and sample provenance."
         state_result = score_states(config, cluster, values, clusters, thresholds, full_ratio, formal_stable_id)
-        resolution_search_required = False
+        resolution_search_required = formal_identity_fallback == "confirmed_parent"
+        if resolution_search_required:
+            action = (
+                f"The confirmed parent {formal_stable_id} is only an interim audit result. "
+                "Continue the mandatory leaf-resolution pass; do not treat a temporary mapping "
+                "or a missing leaf call as successful task completion."
+            )
         if formal_stable_id in {"CD4_T", "CD8_T"} and not formal_identity_fallback:
             formal_identity_fallback = "branch_identity_no_supported_leaf"
             resolution_search_required = True
@@ -945,11 +1188,18 @@ def enrich_evidence(
             "doublet_risk": doublet_risk,
             "mixed_population": mixed_population,
             "suspected_doublet": risk in {"R2_RECLUSTER_OR_DOUBLET_REVIEW", "R3_DOUBLET_CANDIDATE"},
-            "auto_merge_allowed": not mixed_population and not (off_parent_dominant and not off_parent_conflict),
+            "auto_merge_allowed": bool(
+                not mixed_population
+                and not (off_parent_dominant and not off_parent_conflict)
+                and not neutrophil_reclassified
+                and not boundary_validation_required
+            ),
             "mixture_type": (
                 "incompatible_T_sublineages" if sublineage_conflict
                 else "parent_off_parent_lineages" if off_parent_conflict
                 else "off_parent_contaminant" if off_parent_dominant
+                else "unresolved_DC3_monocyte_boundary" if boundary_validation_required
+                else "neutrophil_monocyte_boundary_review" if neutrophil_reclassified
                 else ""
             ),
             "possible_components": (
@@ -957,12 +1207,17 @@ def enrich_evidence(
                 if sublineage_conflict
                 else [parent_primary["label"], off_parent_primary["label"]] if off_parent_conflict
                 else [off_parent_primary["label"]] if off_parent_dominant
+                else ["DC3", "Monocyte"] if boundary_validation_required
+                else ["Neutrophil", primary["label"]] if neutrophil_reclassified
                 else []
             ),
             "sublineage_conflict": (
                 {key: value for key, value in sublineage_conflict.items() if key != "rival"}
                 if sublineage_conflict else {}
             ),
+            "identity_boundary_audit": identity_boundary_audit,
+            "boundary_validation_required": boundary_validation_required,
+            "boundary_validation_resolved": boundary_validation_resolved,
             "risk_level": risk,
             "recommended_action": action,
             "ranked_identity_evidence": ranked[:5],
@@ -980,9 +1235,15 @@ def enrich_evidence(
                 "rival_major_label": _major_label(config, risk_rival["label"]),
                 "sublineage_conflict_rule": sublineage_conflict["rule_id"] if sublineage_conflict else "",
                 "identity_branch_gate": primary["identity_branch_gate"],
+                "absolute_program_gate": primary.get("absolute_program_gate", {}),
                 "dataset_relative_negative_conflicts": relative_negative_conflicts,
                 "descendant_projection": descendant_projection,
                 "sibling_projection": sibling_projection,
+                "identity_boundary_audit": identity_boundary_audit,
+                "neutrophil_reclassified_to_monocyte": neutrophil_reclassified,
+                "monocyte_reclassified_to_neutrophil": monocyte_reclassified_to_neutrophil,
+                "boundary_validation_required": boundary_validation_required,
+                "boundary_validation_resolved": boundary_validation_resolved,
                 "resolution_search_required": resolution_search_required,
                 "expected_parent_id": config.get("resolved_parent_id", ""),
                 "parent_candidate": parent_primary["label"] if parent_primary else "",
