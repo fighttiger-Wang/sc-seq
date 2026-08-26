@@ -1,6 +1,6 @@
 {
   "name": "task-handoff",
-  "version": "0.2.1+codex.20260825162147",
+  "version": "0.2.1+codex.20260826151753",
   "description": "Maintain centralized cross-session continuity records for named projects, software, codebases, and skills.",
   "author": {
     "name": "Personal"

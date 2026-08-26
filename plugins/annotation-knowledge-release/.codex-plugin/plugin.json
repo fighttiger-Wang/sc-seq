@@ -1,6 +1,6 @@
 {
   "name": "annotation-knowledge-release",
-  "version": "0.1.0+codex.20260825162147",
+  "version": "0.1.0+codex.20260826151753",
   "description": "Validate, release, package, install, commit, and push the approved single-cell annotation knowledge base across Windows and macOS.",
   "author": {
     "name": "fight"
