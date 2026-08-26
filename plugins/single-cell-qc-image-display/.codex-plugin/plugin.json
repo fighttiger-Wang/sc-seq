@@ -1,6 +1,6 @@
 {
   "name": "single-cell-qc-image-display",
-  "version": "0.1.0+codex.20260825162147",
+  "version": "0.1.0+codex.20260826151753",
   "description": "Render single-cell QC project tables as Excel workbooks and presentation-ready PNG overview images.",
   "author": {
     "name": "fight"

@@ -1,6 +1,6 @@
 {
   "name": "feature-gene-heatmap-violin",
-  "version": "0.1.0+codex.20260825162147",
+  "version": "0.1.0+codex.20260826151753",
   "description": "Generate a finalized full-marker single-cell heatmap and selected-gene violin panel.",
   "author": {
     "name": "fight"

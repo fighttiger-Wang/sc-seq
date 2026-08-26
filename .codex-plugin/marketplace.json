@@ -87,6 +87,12 @@
       "source": { "source": "local", "path": "./plugins/bioinformatics-results-report-classic" },
       "policy": { "installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL" },
       "category": "Education & Research"
+    },
+    {
+      "name": "celltype-function-heatmap",
+      "source": { "source": "local", "path": "./plugins/celltype-function-heatmap" },
+      "policy": { "installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL" },
+      "category": "Education & Research"
     }
   ]
 }

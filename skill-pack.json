@@ -2,63 +2,67 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 14,
+  "expectedPluginCount": 15,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "single-cell-qc-image-display",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.3.1+codex.20260825162147"
+      "version": "0.3.1+codex.20260826151753"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.6.0+codex.20260825162147"
+      "version": "0.6.0+codex.20260826151753"
     },
     {
       "id": "feature-gene-heatmap-violin",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "kegg-flow-bubble-plot",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "workflow-script-structure",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "workbench",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "task-handoff",
-      "version": "0.2.1+codex.20260825162147"
+      "version": "0.2.1+codex.20260826151753"
     },
     {
       "id": "skill-writing",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "bioinformatics-results-report",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "annotation-knowledge-release",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "personal-skill-marketplace-setup",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
     },
     {
       "id": "bioinformatics-results-report-classic",
-      "version": "0.1.0+codex.20260825162147"
+      "version": "0.1.0+codex.20260826151753"
+    },
+    {
+      "id": "celltype-function-heatmap",
+      "version": "0.1.0+codex.20260826151753"
     }
   ],
   "sharedPaths": [

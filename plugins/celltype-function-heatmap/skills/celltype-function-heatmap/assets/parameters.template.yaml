@@ -1,0 +1,65 @@
+input_dir: "./input"
+celltype_matrix: "Celltype.tsv"
+celltype_sample_matrix: "Celltype_Sample.tsv"
+gene_groups: "gene_groups.xlsx"
+gene_groups_sheet: 1
+gene_group_column: null
+gene_list_column: null
+celltype_colors: "celltype_colors.xlsx"
+celltype_colors_sheet: 1
+output_dir: "./output"
+
+exclude_celltypes:
+  - "ECM_stromal_like_cells"
+
+celltype_order:
+  - "Basal_epithelial_stem_progenitor_cells"
+  - "Cycling_epithelial_progenitor_cells_1"
+  - "Cycling_epithelial_progenitor_cells_2"
+  - "Activated_regenerative_epithelial_cells"
+  - "Interferon_stress_responsive_epithelial_cells"
+  - "Oxidative_stress_epithelial_cells"
+  - "Inflammatory_chemokine_producing_epithelial_cells"
+  - "Inflammatory_remodeling_epithelial_cells"
+  - "Early_differentiated_epithelial_cells"
+  - "Mature_differentiated_keratinocytes"
+  - "Terminally_differentiated_keratinized_epithelial_cells"
+  - "Mitochondrial_metabolic_epithelial"
+  - "Translation_active_epithelial_cells_1"
+  - "Translation_active_epithelial_cells_2"
+
+module_names:
+  - "Basal stem/progenitor"
+  - "Cycling and regenerative"
+  - "IFN and oxidative stress"
+  - "Inflammatory chemokines"
+  - "Inflammatory remodeling"
+  - "Differentiation/keratinization"
+  - "Mitochondrial metabolism"
+  - "Translation activity"
+
+gene_aliases:
+  Tp63: "Trp63"
+  Lor: "Loricrin"
+  Mt-co1: "mt-Co1"
+  Atp5f1: "Atp5f1a"
+
+sample_colors: {}
+module_colors: {}
+
+plot:
+  z_limit: 2.5
+  palette_low: "#67A9CF"
+  palette_mid: "#F7F7F7"
+  palette_high: "#D43F79"
+  dpi: 300
+  all_celltypes_width: 16
+  sample_blocks_width: 28
+  height: 17
+  label_height: 1.7
+  all_celltypes_label_pt: 9
+  sample_blocks_label_pt: 7
+  all_celltypes_wrap_width: 28
+  sample_blocks_wrap_width: 24
+  all_celltypes_line_spacing: 0.18
+  sample_blocks_line_spacing: 0.24

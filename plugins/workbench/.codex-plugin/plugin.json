@@ -1,6 +1,6 @@
 {
   "name": "workbench",
-  "version": "0.1.0+codex.20260825162147",
+  "version": "0.1.0+codex.20260826151753",
   "description": "把自然语言、文件和参考图转成可持续迭代并可接入真实数据的工作台。",
   "author": {
     "name": "WorkBuddy SkillHub / Codex local adaptation"
