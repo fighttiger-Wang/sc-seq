@@ -1,15 +1,15 @@
 {
   "name": "sc-marker-cluster-annotation-auto",
-  "version": "0.6.0+codex.20260825043807",
+  "version": "0.6.0+codex.20260825162147",
   "description": "Accelerated evidence-first subcluster annotation with shared cross-account case learning, staged automatic knowledge promotion, full regression, strict hierarchy consistency, and deterministic QA.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "04 \u00b7 \u5355\u7ec6\u80de\u4e9a\u7fa4\u6ce8\u91ca\uff08\u7cbe\u7ec6\u5206\u578b\uff09",
-    "shortDescription": "\u5728\u5df2\u77e5\u7236\u7fa4\u5185\u5b8c\u6210\u5c42\u7ea7\u4e00\u81f4\u7684\u7ec6\u5206\u4e9a\u578b\u6ce8\u91ca\u3001\u8bc1\u636e\u5ba1\u8ba1\u4e0e\u7ed3\u679c\u4ea4\u4ed8",
-    "longDescription": "\u9762\u5411\u5df2\u77e5\u7236\u7fa4\u5185\u7684\u4e9a\u7fa4\u4e0e\u4e9a\u578b\u6ce8\u91ca\uff0c\u4ece\u5e73\u5747\u8868\u8fbe\u4e0e Marker Excel \u6216 Seurat \u5bf9\u8c61\u5f00\u59cb\uff0c\u6cbf\u6279\u51c6\u7684\u672c\u4f53\u5c42\u7ea7\u8f93\u51fa\u6700\u7ec6\u53ef\u9760\u8eab\u4efd\uff1b\u5c06\u53d1\u80b2\u9636\u6bb5\u3001\u7ec6\u80de\u72b6\u6001\u548c\u7ec4\u7ec7\u8bed\u5883\u4e0e\u8eab\u4efd\u5206\u79bb\uff0c\u7981\u6b62\u7236\u7ea7\u7ed3\u6784\u6807\u7b7e\u4e0e\u5176\u540e\u4ee3\u6807\u7b7e\u6df7\u7528\u3002B \u7ec6\u80de\u91c7\u7528 Developing\u3001Mature \u4e0e Antibody-secreting \u4e09\u5206\u652f\u53ca\u5176\u6587\u732e\u6210\u719f\u4e9a\u578b\u3002\u56fa\u5b9a\u6784\u5efa\u5668\u5b8c\u6210\u7ed3\u679c QA \u540e\uff0c\u4ec5\u5c06\u6700\u7ec8\u5de5\u4f5c\u7c3f\u81ea\u52a8\u590d\u5236\u5230\u539f\u59cb\u8f93\u5165\u76ee\u5f55\u3002\u5927\u7c7b\u7ec6\u80de\u6ce8\u91ca\u7531\u72ec\u7acb\u7684\u5927\u7c7b skill \u5904\u7406\u3002",
+    "displayName": "04 · 单细胞亚群注释（精细分型）",
+    "shortDescription": "在已知父群内完成层级一致的细分亚型注释、证据审计与结果交付",
+    "longDescription": "面向已知父群内的亚群与亚型注释，从平均表达与 Marker Excel 或 Seurat 对象开始，沿批准的本体层级输出最细可靠身份；将发育阶段、细胞状态和组织语境与身份分离，禁止父级结构标签与其后代标签混用。B 细胞采用 Developing、Mature 与 Antibody-secreting 三分支及其文献成熟亚型。固定构建器完成结果 QA 后，仅将最终工作簿自动复制到原始输入目录。大类细胞注释由独立的大类 skill 处理。",
     "developerName": "fight",
     "category": "Productivity",
     "capabilities": [
