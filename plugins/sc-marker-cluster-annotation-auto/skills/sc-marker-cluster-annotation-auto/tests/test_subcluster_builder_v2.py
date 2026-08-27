@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 
 
 SKILL = Path(__file__).resolve().parents[1]
@@ -143,6 +144,20 @@ def main():
     assert result.cell(2, headers["Celltype_EN"]).value == "CD8_Tem"
     assert result.cell(2, headers["细胞状态"]).value == "Exhausted"
     assert isinstance(result.cell(2, headers["质量评分"]).value, (int, float))
+    celltype_cn_col = get_column_letter(headers["中文名称"])
+    quality_col = get_column_letter(headers["质量评分"])
+    celltype_cn_range = f"{celltype_cn_col}2:{celltype_cn_col}{result.max_row}"
+    low_quality_name_rules = [
+        rule
+        for conditional_formatting, rules in result.conditional_formatting._cf_rules.items()
+        if str(conditional_formatting.sqref) == celltype_cn_range
+        for rule in rules
+    ]
+    assert len(low_quality_name_rules) == 1
+    assert low_quality_name_rules[0].formula == [
+        f"${quality_col}2=MIN(${quality_col}$2:${quality_col}${result.max_row})"
+    ]
+    assert low_quality_name_rules[0].dxf.fill.fgColor.rgb == "00F8696B"
     assert max((row.height or 15) for row in result.row_dimensions.values()) <= 54
     main_values = [cell.value for row in result.iter_rows() for cell in row]
     assert not any(isinstance(value, str) and value.lstrip().startswith(("{", "[")) for value in main_values)
@@ -363,7 +378,88 @@ def main():
     ], text=True, capture_output=True)
     assert blocked.returncode != 0
     assert "no UMAP source" in blocked.stderr
-    print(json.dumps({"status": "pass", "checks": 40, "output": str(output)}))
+
+    # Myeloid DC/monocyte boundaries may be delivered conservatively as a blocked mixed-parent
+    # fallback from aggregate evidence, while resolving reclustering confirms components without
+    # automatically implying doublets.
+    myeloid_genes = [
+        "HLA-DRA", "HLA-DPA1", "HLA-DPB1", "CD74", "CD1C", "CLEC10A", "FCER1A",
+        "CD14", "FCN1", "VCAN", "FCGR3A", "LST1", "LYZ", "TYROBP",
+        "C1QA", "C1QB", "C1QC", "MERTK", "FOLR2", "CSF3R", "FCGR3B",
+    ]
+    myeloid_ratio = work / "myeloid_ratios.tsv"
+    with myeloid_ratio.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["gene", "group", "expr_ratio"])
+        for cluster in ("0", "1", "2"):
+            for gene in myeloid_genes:
+                if cluster == "0":
+                    value = 0.8 if gene not in {"CSF3R", "FCGR3B"} else 0.05
+                elif cluster == "1":
+                    value = 0.8 if gene in {"CD14", "FCN1", "VCAN", "LST1", "LYZ", "TYROBP"} else 0.02
+                else:
+                    value = 0.8 if gene in {"C1QA", "C1QB", "C1QC", "MERTK", "FOLR2", "LST1", "LYZ", "TYROBP"} else 0.02
+                writer.writerow([gene, cluster, value])
+    myeloid_evidence = {
+        "clusters": ["0", "1", "2"],
+        "cluster_profiles": {
+            cluster: {
+                "top_markers": [], "qc_state_fraction_top50": 0.0,
+                "naming_top_marker": {"gene": "HLA-DRA" if cluster == "0" else "LYZ"},
+                "raw_top_marker": {"gene": "HLA-DRA" if cluster == "0" else "LYZ"},
+                "top_informative_markers": [{"gene": gene} for gene in myeloid_genes],
+                "excluded_naming_markers": [],
+            }
+            for cluster in ("0", "1", "2")
+        },
+        "average_shape": [len(myeloid_genes), 3], "average_reader": "test",
+        "confirmed_metadata": {
+            "species": "Human", "tissue": "lung", "annotation_level": "subcluster",
+            "parent_population": "Myeloid", "parent_kind": "lineage", "interpretation_rule": "test",
+        },
+        "source_paths": source_paths,
+    }
+    aggregate_myeloid = enrich_evidence(
+        copy.deepcopy(myeloid_evidence), ratio_path=myeloid_ratio,
+        annotation_level="subcluster", species="Human", tissue="lung",
+        parent_population="Myeloid", parent_kind="lineage",
+    )
+    aggregate_decision = aggregate_myeloid["deterministic_annotation_evidence"]["0"]
+    assert aggregate_decision["boundary_validation_required"] is True
+    assert aggregate_decision["stable_id"] == "Myeloid_cell"
+    assert aggregate_decision["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert aggregate_decision["mixed_population"] is True
+    assert aggregate_decision["suspected_doublet"] is False
+    assert aggregate_decision["auto_merge_allowed"] is False
+
+    myeloid_cell_evidence = work / "myeloid_cell_evidence.json"
+    myeloid_cell_evidence.write_text(json.dumps({
+        "0": {
+            "doublet_call": False, "doublet_fraction": 0.0,
+            "mixed_population_confirmed": True, "reclustering_resolved": True,
+            "resolved_components": ["cDC2", "Monocyte", "Macrophage"],
+            "identity_boundary_validation": {
+                "rule_id": "MYELOID_DC3_VS_MONOCYTE_COEXPRESSION_GATE",
+                "coexpression_validated": True,
+                "method": "Per-cell program review plus resolving reclustering.",
+            },
+        }
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    validated_myeloid = enrich_evidence(
+        copy.deepcopy(myeloid_evidence), ratio_path=myeloid_ratio,
+        cell_evidence_path=myeloid_cell_evidence,
+        annotation_level="subcluster", species="Human", tissue="lung",
+        parent_population="Myeloid", parent_kind="lineage",
+    )
+    validated_decision = validated_myeloid["deterministic_annotation_evidence"]["0"]
+    assert validated_decision["boundary_validation_resolved"] is True
+    assert validated_decision["stable_id"] == "Myeloid_cell"
+    assert validated_decision["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert validated_decision["mixed_population"] is True
+    assert validated_decision["suspected_doublet"] is False
+    assert validated_decision["auto_merge_allowed"] is False
+    assert validated_decision["possible_components"] == ["cDC2", "Monocyte", "Macrophage"]
+    print(json.dumps({"status": "pass", "checks": 57, "output": str(output)}))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 {
   "name": "single-cell-qc-extract",
-  "version": "0.1.0+codex.20260826151753",
+  "version": "0.1.0+codex.20260827055618",
   "description": "Extract single-cell project QC fields from Chinese project descriptions and report screenshots.",
   "author": {
     "name": "fight"

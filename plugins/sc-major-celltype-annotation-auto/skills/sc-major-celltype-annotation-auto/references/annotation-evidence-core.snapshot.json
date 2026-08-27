@@ -1,14 +1,14 @@
 {
-  "core_version": "2.12.1",
+  "core_version": "2.12.2",
   "config_version": "2.12.1",
   "knowledge_base_version": "2.7.1",
   "snapshot_contract": "sha256-v1",
   "canonical_source": "shared/sc-annotation-evidence-core",
   "files": {
-    "annotation_evidence_core.py": "4397ee09d498ee69964f3aba4ebb9e65fb0ba2cebbaa1918d936356ba0b55ffa",
+    "annotation_evidence_core.py": "fc2f4c51abc6c200133cb896fd2024f835e085cfb43088fff7fe45d95498bf81",
     "knowledge_base.py": "263aa24abda67eea417a258b3579f400cc3b8848a44ffe7e99248751f0a226f6",
     "annotation-evidence-config.v1.json": "b05074f2338c67faef3c6198a3d0e90ba877bd78aa357d3181312db30351dbd4",
-    "evidence-scoring-policy.md": "4a82bd730e1c74f8fb54e818d6588d9481d61f60e7d19dc2d3ba1cebf8d76a88",
+    "evidence-scoring-policy.md": "38c049aeca5c4253c26c087cf2f68f0d8630e30cac695f2ee63dbce4a08f6db8",
     "knowledge-base/cell-annotation-knowledge-base.v2.json": "a7f448847a3e4ae36b1c36260360479e58670223c2ec7c0e378cdfe7798917e4",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
     "knowledge-base/knowledge-base.manifest.json": "21a585de9d0e343bb6f3fa543af834fe674b683980b2052893340dd91386dc89"

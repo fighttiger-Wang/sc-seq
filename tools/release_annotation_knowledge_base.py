@@ -142,7 +142,10 @@ def publish_runtime() -> dict:
     version = str(bundle["knowledge_base_version"])
     current = published / "current" / MONOLITH.name
     snapshot = published / "versions" / version / MONOLITH.name
-    if snapshot.is_file() and sha256(snapshot) != sha256(MONOLITH):
+    # Windows text writes may normalize LF to CRLF in the runtime store. Compare
+    # parsed JSON content so an identical immutable version is not rejected only
+    # because of newline encoding.
+    if snapshot.is_file() and load_json(snapshot) != bundle:
         raise RuntimeError(f"Runtime version snapshot already exists with different content: {snapshot}")
     atomic_json(snapshot, bundle)
     atomic_json(current, bundle)
