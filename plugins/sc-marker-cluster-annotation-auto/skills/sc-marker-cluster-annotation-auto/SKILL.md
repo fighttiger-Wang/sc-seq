@@ -44,7 +44,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - Keep identity, state, disease role, developmental stage, and tissue specialization separate in both records and workbook columns.
 - For B lineage, use `B_cell > Developing_B > Pro_B/Pre_B/Immature_B/Transitional_B`, `B_cell > Mature_B > Naive_B/Memory_B/GC_B`, and `B_cell > Antibody_secreting_B > Plasmablast/Plasma_cell`.
 - Treat `Developing_B`, `Mature_B`, and `Antibody_secreting_B` as structural parents, not final subcluster labels when a supported child exists.
-- Never mix a normal ontology ancestor label with any of its descendants in one final subcluster mapping. Permit only an explicit `mixed_incompatible_sublineages` common-parent fallback when `mixed_population=true` and `auto_merge_allowed=false`; keep it visibly under manual review and never merge it with normal leaf clusters.
+- Never mix a normal ontology ancestor label with any of its descendants in one final subcluster mapping. A genuine incompatible mixture must use `Multi_cell` / `多细胞`, retain explicit components, remain visibly under manual review, and never merge automatically.
 - Store B maturity in `developmental_stage`; do not use `Mature_B` as a substitute for `Naive_B`, `Memory_B`, or `GC_B`.
 - Keep `Cycling` as state. Render `Cycling_Pro_B`, `Cycling_Pre_B`, or `Cycling_Plasmablast`; never create a stable identity named `Cycling_B`.
 - In full-ratio mode, require the configured number of directionally supported core markers for a leaf identity. Do not treat mere detection of half a panel as coherent evidence; broad lineage markers, ambient immunoglobulins, and weak dataset-wide expression cannot establish a subtype.
@@ -64,7 +64,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - Require TCR plus an NK-like program for NKT; cytotoxic genes alone are insufficient.
 - In full-ratio mode, require at least two `CD3D/CD3E/CD3G/TRAC` anchors at detection ratio >=0.10 before accepting T or NKT. Weak aggregate TCR background cannot convert a strong NK cluster into NKT.
 - If the expected parent program is weak and a coherent off-parent program clearly dominates, formally reassign the cluster with `formal_identity_fallback=off_parent_lineage_reassignment`, require manual review, and block automatic merging until subset provenance is verified.
-- If coherent expected-parent and off-parent programs coexist, return their nearest shared ancestor with `formal_identity_fallback=mixed_parent_off_parent_lineages`, mark mixed/suspected-doublet risk, and block automatic merging.
+- If coherent expected-parent and off-parent programs coexist, return `Multi_cell` / `多细胞` with `formal_identity_fallback=multi_cell_annotation`, mark mixed/suspected-doublet risk, list the concrete components, and block automatic merging. Never return `Cell` or a generic ontology ancestor.
 - Check cDC2 against monocyte-derived programs explicitly.
 - For Myeloid boundaries, require the program gates in `references/myeloid-boundary-gates.md`. Never let isolated `CSF3R`, `FCGR3B`, `XCR1`, `HLA-DRA`, or `CD74` override the complete competing program.
 - `Immature_neutrophil` requires a coherent early/secondary granule program; incomplete mature-neutrophil receptors are not sufficient positive evidence.
@@ -74,8 +74,8 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 
 ## 4. Mixed/doublet policy
 
-- When two coherent incompatible lineage programs coexist, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`.
-- Apply the same block to mutually exclusive sublineages inside one broad lineage. In particular, never directly finalize `CD4_Th17` or `IL17A_gdT` when full detection ratios support a CD4 alpha-beta program and at least two gamma-delta TCR anchors (`TRDC/TRGC1/TRGC2`) with near-scoring candidates. Set `possible_components=CD4_Th17;IL17A_gdT`, fall the formal identity back to `T_cell`, and require cell-level coexpression review or reclustering.
+- When two coherent incompatible lineage programs coexist, output `Multi_cell` / `多细胞`, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`.
+- Apply the same block to mutually exclusive sublineages inside one broad lineage. In particular, never directly finalize `CD4_Th17` or `IL17A_gdT` when full detection ratios support a CD4 alpha-beta program and at least two gamma-delta TCR anchors (`TRDC/TRGC1/TRGC2`) with near-scoring candidates. Set `possible_components=CD4_Th17;IL17A_gdT`, output `Multi_cell`, and require cell-level coexpression review or reclustering.
 - Do not use detection proportions alone to claim that competing programs occupy the same cells or to confirm doublets. Aggregate evidence may support a conservative likely-mixed cluster call when multiple coherent incompatible programs coexist, but it must retain the common-parent fallback, manual review, explicit possible components, and blocked automatic merging.
 - Do not automatically merge that cluster with either normal subtype.
 - Use cell-level coexpression/doublet evidence to distinguish true doublets from unresolved mixed subpopulations.
@@ -177,10 +177,11 @@ After QA passes, the builder must register the de-identified case in the shared 
 - Confirm `stable_id`, `parent_path`, `tissue_module`, `disease_role`, `state_list`, `primary_state`, panel species, and cross-species provenance are populated.
 - Reject semantic duplication: `stable_id` must not be `CD4_Tex`/`CD8_Tex`, and no final label may match `Exhausted_*_Tex`.
 - Confirm display labels contain identity only and the state remains in a separate column.
-- Confirm every CD4/CD8 leaf satisfies its recorded branch-anchor gate, and every unresolved CD4-versus-CD8 conflict falls back to `T_cell` with automatic merging blocked.
+- Confirm every CD4/CD8 leaf satisfies its recorded branch-anchor gate, and every coherent CD4-versus-CD8 mixed conflict is labeled `Multi_cell` with both components retained and automatic merging blocked.
 - Confirm every `gdT` descendant satisfies the gamma-delta TCR gate; distinguish naive-like and type-17 programs when supported, and never infer `IL17A_gdT` from an IL17 program without gamma-delta anchors.
 - Confirm generic `Tn` and `DNT` remain available when CD4/CD8 or gamma-delta branch evidence is insufficient, using dataset-relative anchors and negative conflicts rather than fixed absolute thresholds alone.
-- Confirm every mixed/suspected-doublet cluster has `auto_merge_allowed=false`.
+- Confirm every mixed/suspected-doublet cluster is labeled `Multi_cell` / `多细胞`, has populated `possible_components`, and has `auto_merge_allowed=false`.
+- Reject `Cell` unconditionally as a final major or subcluster label. A non-mixed unresolved cluster must continue targeted resolution or stop formal delivery.
 - Confirm every full-ratio run records the expected parent, off-parent candidate, reassignment/conflict status, and blocks automatic merging for both off-parent reassignments and parent/off-parent mixtures.
 - Confirm an off-parent call has a coherent set of directionally supported anchors; a single shared marker plus weak keratin/background coverage cannot establish epithelial contamination or doublet risk.
 - Confirm UMAP topology was used only as a low-margin consistency check, with identity and state decisions still grounded in marker programs and exclusion evidence.
@@ -188,7 +189,7 @@ After QA passes, the builder must register the de-identified case in the shared 
 - Confirm a sample-specific marker/UMAP conflict was not marked resolved from literature alone. Require cell-level coexpression, sample metadata, trajectory metrics, reference mapping, or quantitative-QC evidence.
 - Confirm every repeated final identity has a cross-island topology audit. A disconnected same-label cluster may remain concordant only with concrete state/sample/trajectory evidence; an unexplained disconnected island must be a resolved conflict before delivery.
 - Confirm workbook QA records knowledge-base/core/config versions and hashes.
-- Confirm every row at the red endpoint of the quality-score color scale applies the same red fill to `中文名称`, including tied minimum scores, without changing the annotation text.
+- Confirm every `Multi_cell` row and every row tied at the red endpoint of the quality-score scale has a static red fill on `中文名称`, so the warning remains visible in WPS without recalculation.
 - Confirm the case-registry sidecar is `registered` or `duplicate`; report `failed` explicitly.
 - Confirm `<workbook>.delivery.json` has `status=copied`, its destination is the unique original E-drive input directory, and the destination SHA-256 equals the workspace workbook. A workspace-only production workbook is not delivered.
 - Confirm the workbook contains only `注释结果`, `详细证据`, and `说明与数据来源`, with filters disabled and compact row heights.

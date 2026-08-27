@@ -4,8 +4,8 @@
   "source": "shared/sc-annotation-evidence-core/knowledge-base",
   "source_workbook": "cell_annotation_standard_evidence_review.xlsx",
   "counts": {
-    "ontology_nodes": 131,
-    "alias_records": 412,
+    "ontology_nodes": 132,
+    "alias_records": 416,
     "marker_panels": 226,
     "tissue_modules": 12,
     "state_rules": 9,
@@ -14,9 +14,9 @@
     "legacy_migrations": 25
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "a7f448847a3e4ae36b1c36260360479e58670223c2ec7c0e378cdfe7798917e4",
-    "ontology.v2.json": "34a6148209a36f1177c7f961a6b23ad3c41e8ab7c122fdbd0361335f2548204e",
-    "aliases.v2.json": "ec9918caa909dc008324e63df8fd991117447b96e1c27addb899411415dca744",
+    "cell-annotation-knowledge-base.v2.json": "4a79994c150a9b27525ae211471b3351918cbac2cf314079246d512ff163e0f7",
+    "ontology.v2.json": "4cc44074dfed8f27c9848b7e72550c60c5024ccf3bbafabcc476dea840270772",
+    "aliases.v2.json": "e8de46b0cea29c32686efb8555aa0b221dbf0d119459b9c095e5ecfbb2ec3559",
     "marker-panels.v2.json": "00eb3809ca5e0e21f20eba06e4c285c636de802db31a4aeabb707457bc27dace",
     "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
     "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
@@ -24,5 +24,5 @@
     "evidence-sources.v2.json": "04ea3106bc37f9c8e16ecd224dd7d53c263aa9e8aaaf33f8d1fd6d2863832f6c",
     "legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1"
   },
-  "knowledge_base_version": "2.7.1"
+  "knowledge_base_version": "2.8.0"
 }

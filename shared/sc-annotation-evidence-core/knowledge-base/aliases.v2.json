@@ -21,6 +21,34 @@
     "maps_to": "Cell"
   },
   {
+    "cell_id": "Multi_cell",
+    "language": "en",
+    "alias": "Multi_cell",
+    "alias_type": "standard_id",
+    "maps_to": "Multi_cell"
+  },
+  {
+    "cell_id": "Multi_cell",
+    "language": "zh",
+    "alias": "多细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Multi_cell"
+  },
+  {
+    "cell_id": "Multi_cell",
+    "language": "en",
+    "alias": "multiplet",
+    "alias_type": "synonym",
+    "maps_to": "Multi_cell"
+  },
+  {
+    "cell_id": "Multi_cell",
+    "language": "en",
+    "alias": "mixed population",
+    "alias_type": "synonym",
+    "maps_to": "Multi_cell"
+  },
+  {
     "cell_id": "Immune_cell",
     "language": "en",
     "alias": "Immune_cell",

@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.12.2"
+CORE_VERSION = "2.13.0"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"
@@ -1076,9 +1076,9 @@ def enrich_evidence(
                 formal_major_label = _major_label(config, resolved_parent)
                 formal_identity_fallback = "confirmed_parent"
             elif annotation_level == "major":
-                formal_stable_id = "Cell"
-                formal_major_label = "Cell"
-                formal_identity_fallback = "ontology_root_unresolved"
+                formal_stable_id = ""
+                formal_major_label = ""
+                formal_identity_fallback = "unresolved_requires_research"
         if sublineage_conflict:
             formal_stable_id = sublineage_conflict["common_ancestor"] or primary_major
             formal_major_label = _major_label(config, formal_stable_id)
@@ -1154,7 +1154,9 @@ def enrich_evidence(
         elif tissue_context_review and risk == "R1_REVIEW_RETAIN":
             action = f"{action} Also verify the noncanonical tissue context and sample provenance."
         state_result = score_states(config, cluster, values, clusters, thresholds, full_ratio, formal_stable_id)
-        resolution_search_required = formal_identity_fallback == "confirmed_parent"
+        resolution_search_required = formal_identity_fallback in {
+            "confirmed_parent", "unresolved_requires_research"
+        }
         if resolution_search_required:
             action = (
                 f"The confirmed parent {formal_stable_id} is only an interim audit result. "
@@ -1180,6 +1182,11 @@ def enrich_evidence(
             or cell_mixed_population
             or boundary_validation_required
         )
+        if mixed_population:
+            formal_stable_id = "Multi_cell"
+            formal_major_label = "Multi_cell"
+            formal_identity_fallback = "multi_cell_annotation"
+            resolution_search_required = False
         cell_doublet_supported = bool(
             cell.get("doublet_call") is True
             or float(cell.get("doublet_fraction", 0.0) or 0.0) >= 0.20
@@ -1211,11 +1218,11 @@ def enrich_evidence(
             "off_parent_reassignment": bool(off_parent_dominant and not off_parent_conflict),
             "off_parent_candidate": off_parent_primary["label"] if off_parent_primary else "",
             "off_parent_candidate_score": off_parent_primary["score"] if off_parent_primary else 0.0,
-            "parent_path": provenance.get("parent_path", []),
-            "tissue_module": provenance.get("tissue_module", []),
-            "developmental_stage": provenance.get("developmental_stage", ""),
-            "ontology_node_kind": provenance.get("node_kind", "identity"),
-            "tissue_scope": provenance.get("tissue_scope", []),
+            "parent_path": ["Multi_cell"] if mixed_population else provenance.get("parent_path", []),
+            "tissue_module": [] if mixed_population else provenance.get("tissue_module", []),
+            "developmental_stage": "" if mixed_population else provenance.get("developmental_stage", ""),
+            "ontology_node_kind": "multi_cell_review" if mixed_population else provenance.get("node_kind", "identity"),
+            "tissue_scope": ["multi_tissue"] if mixed_population else provenance.get("tissue_scope", []),
             "tissue_scope_match": provenance.get("tissue_scope_match", True),
             "tissue_context_review": tissue_context_review,
             "panel_species": provenance.get("panel_species", config.get("species")),
@@ -1261,6 +1268,7 @@ def enrich_evidence(
                 else [off_parent_primary["label"]] if off_parent_dominant
                 else ["cDC2_or_DC3_like", "Monocyte"] if boundary_validation_required
                 else ["Neutrophil", primary["label"]] if neutrophil_reclassified
+                else [primary["label"], risk_rival["label"]] if mixed_population
                 else []
             ),
             "sublineage_conflict": (

@@ -34,7 +34,7 @@ Read `references/context-and-level-routing.md`. Confirm species, tissue, experim
 - Do not collapse unrelated T and NK clusters because one cluster is unresolved.
 - Prefer `T_cell` when CD3/TCR evidence is coherent and NK-like evidence is limited to shared cytotoxic genes.
 - Prefer `NK_cell` only with a coherent NK-specific program and weak/absent CD3/TCR evidence.
-- When coherent T and NK programs coexist, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`; list both components and require cell-level review.
+- When coherent T and NK programs coexist, output `Multi_cell` / `多细胞`, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`; list both components and require cell-level review.
 - Never use `T_NK_cell` as a dataset-wide fallback.
 
 ## 4. Load rules
@@ -83,8 +83,8 @@ For every cluster:
 6. Prefer an exact-species panel. When none exists, permit Human-panel or nearest-supported-species transfer only with ortholog/program conservation, `cross_species_inference=true`, retained panel provenance, reduced confidence, and manual review.
 7. Populate `state_list` and the lineage-specific `primary_state`, while keeping `display_label` equal to the identity.
 8. Require `manual_review=true` for every non-R0 risk. Do not assign high confidence in minimal mode.
-9. If no candidate is coherent, use the ontology-root fallback `Cell`, set `formal_identity_fallback=ontology_root_unresolved`, and retain the weak ranked candidate only in evidence fields.
-10. Mark coherent cross-lineage conflicts as mixed/suspected-doublet and block automatic merging.
+9. Never output `Cell`. If no candidate is coherent and there is no mixed-population evidence, run targeted ontology/atlas/literature resolution; block formal delivery when no defensible identity can be established.
+10. Mark coherent cross-lineage conflicts as `Multi_cell` / `多细胞`, retain concrete identities in `possible_components`, flag mixed/suspected-doublet risk, and block automatic merging.
 11. Use `label_basis=canonical_subtype`; do not use marker-prefixed fallback labels in major mode.
 12. If the approved knowledge base lacks a plausible identity, generate additional candidates and validate them against coherent positive and competing programs. Use `validated_external_candidate` only with at least two independent sources, reduced confidence, manual review, and later multi-case regression before promotion into the approved standard.
 
@@ -110,7 +110,7 @@ After QA passes, the builder must register the de-identified case in the shared 
 
 - Confirm all clusters are present in identical order on result sheets.
 - Confirm all labels are approved ontology IDs or enabled tissue-module major outputs.
-- Permit `Cell` only for a noncoherent R1 unresolved cluster with `formal_identity_fallback=ontology_root_unresolved`.
+- Reject `Cell` unconditionally in both major and subcluster output. Permit `Multi_cell` only when `mixed_population=true`, `possible_components` is populated, manual review is required, and automatic merging is blocked.
 - Confirm repeated labels have no artificial top-marker prefix.
 - Confirm unresolved T/NK clusters are isolated for review and do not alter clear T/NK clusters.
 - Confirm `stable_id`, `parent_path`, `tissue_module`, `disease_role`, `state_list`, `primary_state`, panel species, and cross-species provenance are populated.

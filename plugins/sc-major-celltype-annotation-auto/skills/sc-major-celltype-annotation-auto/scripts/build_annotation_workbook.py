@@ -86,7 +86,10 @@ AUDIT_FIELDS = [
     "label_basis", "canonical_subtype", "top_marker_gene", "literature_source",
     "naming_grammar", "contextually_excluded_naming_markers",
 ]
-LABEL_BASIS = {"canonical_subtype", "validated_external_candidate", "top_marker_fallback", "feature_gene_fallback"}
+LABEL_BASIS = {
+    "canonical_subtype", "validated_external_candidate", "multi_cell_annotation",
+    "top_marker_fallback", "feature_gene_fallback",
+}
 CONFIDENCE = {"high", "medium-high", "medium", "low"}
 FINAL_LABEL_INVALID = re.compile(r"[^A-Za-z0-9_\u3400-\u4DBF\u4E00-\u9FFF]+")
 T_NK_T_MARKERS = {"CD2", "CD3D", "CD3E", "CD3G", "CD5", "CD7", "CD8A", "CD8B", "IL7R", "TRAC", "TRAT1", "TRBC1", "TRBC2", "TRDC", "TRGC1", "TRGC2", "LCK", "LAT"}
@@ -172,8 +175,18 @@ def inject_deterministic_evidence(records, evidence):
         if decision.get("mixed_population"):
             record["mixed_or_doublet"] = True
             record["manual_review"] = True
-            if record.get("mixture_type") in {"", "none"}:
-                record["mixture_type"] = "mixed_population/suspected_doublet"
+            record["stable_id"] = "Multi_cell"
+            record["display_label"] = "Multi_cell"
+            record["celltype_en"] = "Multi_cell"
+            record["celltype_cn"] = "多细胞"
+            record["broad_type"] = "Multi_cell"
+            record["fine_type"] = "Multi_cell"
+            record["canonical_subtype"] = "Multi_cell"
+            record["label_basis"] = "multi_cell_annotation"
+            record["mixture_type"] = decision.get("mixture_type") or record.get("mixture_type") or "mixed_population/suspected_doublet"
+            components = decision.get("possible_components", [])
+            if components:
+                record["possible_components"] = "; ".join(str(item) for item in components)
         record["decision_trace"] = json.dumps(decision.get("decision_trace", {}), ensure_ascii=False, sort_keys=True)
 
 
@@ -254,12 +267,13 @@ def validate(records, clusters, evidence):
             errors.append(f"Record {index} missing fields: {missing}")
             continue
         cluster_id = str(record["cluster_id"])
+        deterministic_decision = evidence.get("deterministic_annotation_evidence", {}).get(cluster_id, {})
         expected_top = top_by_cluster[cluster_id]
         selected_marker = str(record["top_marker_gene"])
         contextual_exclusions = record["contextually_excluded_naming_markers"]
         if record["label_basis"] not in LABEL_BASIS:
             errors.append(f"Cluster {cluster_id} invalid label_basis: {record['label_basis']}")
-        elif record["label_basis"] not in {"canonical_subtype", "validated_external_candidate"}:
+        elif record["label_basis"] not in {"canonical_subtype", "validated_external_candidate", "multi_cell_annotation"}:
             errors.append(
                 f"Cluster {cluster_id} major annotation requires a canonical subtype "
                 "or a validated external candidate"
@@ -308,7 +322,27 @@ def validate(records, clusters, evidence):
         else:
             grammars.add(str(record["naming_grammar"]).strip())
         canonical = str(record["canonical_subtype"]).strip()
-        if record["label_basis"] == "canonical_subtype":
+        stable_id = str(record.get("stable_id", "")).strip()
+        if deterministic_decision.get("resolution_search_required"):
+            errors.append(
+                f"Cluster {cluster_id} remains unresolved and requires targeted research; formal delivery is blocked"
+            )
+        if not stable_id:
+            errors.append(f"Cluster {cluster_id} lacks a defensible final Stable_ID")
+        if stable_id == "Cell" or str(record.get("celltype_en", "")).strip() == "Cell":
+            errors.append(f"Cluster {cluster_id} cannot use forbidden final label Cell")
+        if record["label_basis"] == "multi_cell_annotation":
+            if stable_id != "Multi_cell" or str(record.get("celltype_en", "")).strip() != "Multi_cell":
+                errors.append(f"Cluster {cluster_id} multi-cell annotation must use Stable_ID and English label Multi_cell")
+            if str(record.get("celltype_cn", "")).strip() != "多细胞":
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation must use Chinese name 多细胞")
+            if not record.get("mixed_population") or record.get("auto_merge_allowed"):
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires mixed_population=true and auto_merge_allowed=false")
+            if not str(record.get("possible_components", "")).strip():
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires possible_components")
+            if canonical != "Multi_cell":
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires canonical_subtype=Multi_cell")
+        elif record["label_basis"] == "canonical_subtype":
             if not canonical:
                 errors.append(f"Cluster {cluster_id} canonical_subtype label lacks canonical_subtype")
             if not str(record["literature_source"]).strip():
@@ -343,6 +377,8 @@ def validate(records, clusters, evidence):
             errors.append(f"Cluster {cluster_id} deterministic risk {record['risk_level']} requires manual_review=true")
         if record.get("mixed_population") and (record.get("auto_merge_allowed") or not record.get("mixed_or_doublet")):
             errors.append(f"Cluster {cluster_id} mixed population must block automatic merging and carry mixed_or_doublet=true")
+        if record.get("mixed_population") and stable_id != "Multi_cell":
+            errors.append(f"Cluster {cluster_id} mixed population must use final label Multi_cell")
         if record["evidence_mode"] == "minimal" and record["confidence"] == "high":
             errors.append(f"Cluster {cluster_id} positive-marker-only evidence cannot receive high confidence")
         if "JCHAIN" in str(record["supporting_markers"]).upper() and "plasma" in str(record["celltype_en"]).lower():
@@ -480,6 +516,14 @@ def main():
     ws.conditional_formatting.add(f"{mixed_col}2:{mixed_col}{ws.max_row}", FormulaRule(formula=[f'{mixed_col}2="是"'], fill=PatternFill("solid", fgColor="F8CBAD")))
     ws.conditional_formatting.add(f"{review_col}2:{review_col}{ws.max_row}", FormulaRule(formula=[f'{review_col}2="是"'], fill=PatternFill("solid", fgColor="FFF2CC")))
     ws.conditional_formatting.add(f"{confidence_col}2:{confidence_col}{ws.max_row}", FormulaRule(formula=[f'{confidence_col}2="low"'], fill=PatternFill("solid", fgColor="FCE4D6")))
+    quality_scores = [float(record["quality_score"]) for record in records]
+    minimum_quality = min(quality_scores) if quality_scores else None
+    multi_cell_red = PatternFill("solid", fgColor="FFF8696B")
+    for row_index, record in enumerate(records, start=2):
+        if record.get("mixed_population") or record.get("stable_id") == "Multi_cell" or float(record["quality_score"]) == minimum_quality:
+            name_cell = ws.cell(row_index, MAIN_FIELDS.index("celltype_cn") + 1)
+            name_cell.fill = multi_cell_red
+            name_cell.font = Font(bold=True, color="FFFFFFFF")
 
     metadata = evidence.get("confirmed_metadata", {})
     paths = evidence.get("source_paths", {})
@@ -535,6 +579,8 @@ def main():
         "status": "pass", "workbook": str(output), "sheets": check.sheetnames,
         "record_count": len(records), "review_clusters": [str(r["cluster_id"]) for r in records if r["manual_review"]],
         "mixed_or_doublet_clusters": [str(r["cluster_id"]) for r in records if r["mixed_or_doublet"]],
+        "multi_cell_clusters": [str(r["cluster_id"]) for r in records if str(r.get("stable_id")) == "Multi_cell"],
+        "multi_cell_chinese_static_red": True,
         "t_nk_composite_clusters": [str(r["cluster_id"]) for r in records if str(r["celltype_en"]) == "T_NK_cell"],
         "t_nk_label_regime": ("composite" if any(str(r["celltype_en"]) == "T_NK_cell" for r in records) else ("split" if any(str(r["celltype_en"]) in {"T_cell", "NK_cell"} for r in records) else "not_applicable")),
         "formula_cells": 0, "source_files_unchanged": True,

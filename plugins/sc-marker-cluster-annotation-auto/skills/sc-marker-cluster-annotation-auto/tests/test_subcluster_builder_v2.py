@@ -144,20 +144,9 @@ def main():
     assert result.cell(2, headers["Celltype_EN"]).value == "CD8_Tem"
     assert result.cell(2, headers["细胞状态"]).value == "Exhausted"
     assert isinstance(result.cell(2, headers["质量评分"]).value, (int, float))
-    celltype_cn_col = get_column_letter(headers["中文名称"])
-    quality_col = get_column_letter(headers["质量评分"])
-    celltype_cn_range = f"{celltype_cn_col}2:{celltype_cn_col}{result.max_row}"
-    low_quality_name_rules = [
-        rule
-        for conditional_formatting, rules in result.conditional_formatting._cf_rules.items()
-        if str(conditional_formatting.sqref) == celltype_cn_range
-        for rule in rules
-    ]
-    assert len(low_quality_name_rules) == 1
-    assert low_quality_name_rules[0].formula == [
-        f"${quality_col}2=MIN(${quality_col}$2:${quality_col}${result.max_row})"
-    ]
-    assert low_quality_name_rules[0].dxf.fill.fgColor.rgb == "00F8696B"
+    lowest_score = min(result.cell(row, headers["质量评分"]).value for row in range(2, result.max_row + 1))
+    lowest_rows = [row for row in range(2, result.max_row + 1) if result.cell(row, headers["质量评分"]).value == lowest_score]
+    assert all(result.cell(row, headers["中文名称"]).fill.fgColor.rgb == "FFF8696B" for row in lowest_rows)
     assert max((row.height or 15) for row in result.row_dimensions.values()) <= 54
     main_values = [cell.value for row in result.iter_rows() for cell in row]
     assert not any(isinstance(value, str) and value.lstrip().startswith(("{", "[")) for value in main_values)
@@ -170,8 +159,8 @@ def main():
     assert conflict == [{"ancestor": "Mature_B", "descendant": "Naive_B"}]
     mixed_parent_fallback = hierarchy_depth_conflicts([
         {
-            "stable_id": "T_cell", "parent_path": ["Cell", "Immune_cell", "T_NK_lineage", "T_cell"],
-            "formal_identity_fallback": "mixed_incompatible_sublineages",
+            "stable_id": "Multi_cell", "parent_path": ["Multi_cell"],
+            "formal_identity_fallback": "multi_cell_annotation",
             "mixed_population": True, "auto_merge_allowed": False,
         },
         {"stable_id": "CD4_Tn", "parent_path": ["Cell", "Immune_cell", "T_NK_lineage", "T_cell", "CD4_T", "CD4_Tn"]},
@@ -179,8 +168,8 @@ def main():
     assert mixed_parent_fallback == []
     off_parent_mixed_fallback = hierarchy_depth_conflicts([
         {
-            "stable_id": "T_NK_lineage", "parent_path": ["Cell", "Immune_cell", "T_NK_lineage"],
-            "formal_identity_fallback": "mixed_parent_off_parent_lineages",
+            "stable_id": "Multi_cell", "parent_path": ["Multi_cell"],
+            "formal_identity_fallback": "multi_cell_annotation",
             "mixed_population": True, "auto_merge_allowed": False,
         },
         {"stable_id": "CD4_Tn", "parent_path": ["Cell", "Immune_cell", "T_NK_lineage", "T_cell", "CD4_T", "CD4_Tn"]},
@@ -426,8 +415,8 @@ def main():
     )
     aggregate_decision = aggregate_myeloid["deterministic_annotation_evidence"]["0"]
     assert aggregate_decision["boundary_validation_required"] is True
-    assert aggregate_decision["stable_id"] == "Myeloid_cell"
-    assert aggregate_decision["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert aggregate_decision["stable_id"] == "Multi_cell"
+    assert aggregate_decision["formal_identity_fallback"] == "multi_cell_annotation"
     assert aggregate_decision["mixed_population"] is True
     assert aggregate_decision["suspected_doublet"] is False
     assert aggregate_decision["auto_merge_allowed"] is False
@@ -453,8 +442,8 @@ def main():
     )
     validated_decision = validated_myeloid["deterministic_annotation_evidence"]["0"]
     assert validated_decision["boundary_validation_resolved"] is True
-    assert validated_decision["stable_id"] == "Myeloid_cell"
-    assert validated_decision["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert validated_decision["stable_id"] == "Multi_cell"
+    assert validated_decision["formal_identity_fallback"] == "multi_cell_annotation"
     assert validated_decision["mixed_population"] is True
     assert validated_decision["suspected_doublet"] is False
     assert validated_decision["auto_merge_allowed"] is False

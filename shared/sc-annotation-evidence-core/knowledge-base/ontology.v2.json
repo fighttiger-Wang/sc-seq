@@ -18,6 +18,24 @@
     "review_note": ""
   },
   {
+    "cell_id": "Multi_cell",
+    "name_en": "Multi_cell",
+    "name_cn": "多细胞",
+    "parent_id": "",
+    "branch": "mixed_population",
+    "node_kind": "multi_cell_review",
+    "tissue_scope": "multi_tissue",
+    "major_output_allowed": "Yes",
+    "subcluster_output_allowed": "Yes",
+    "external_ontology_id": "",
+    "ontology_lookup_name": "multiplet or mixed cell population",
+    "aliases": "multiplet; mixed population; 多细胞",
+    "evidence_ids": "",
+    "evidence_gate": "User-approved operational label",
+    "proposed_status": "Approve",
+    "review_note": "仅用于存在明确多谱系或互斥亚群混合证据的cluster；必须列出可能组成、人工复核并禁止自动合并"
+  },
+  {
     "cell_id": "Immune_cell",
     "name_en": "Immune_cell",
     "name_cn": "免疫细胞",

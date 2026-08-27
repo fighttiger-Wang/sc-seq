@@ -2,7 +2,7 @@
   "schema_version": "2.0.0",
   "standard_name": "human-multitissue-cell-annotation-standard",
   "approved_at": "2026-08-25",
-  "approval_scope": "all proposed changes, disputed policies, ontology nodes, marker panels, tissue modules, state rules, decision rules, and legacy migrations",
+  "approval_scope": "all proposed changes, disputed policies, ontology nodes, marker panels, tissue modules, state rules, decision rules, legacy migrations, and the user-approved global Multi_cell fallback policy",
   "evidence_gate": "two independent studies or one authoritative large atlas/ontology",
   "ontology": [
     {
@@ -22,6 +22,24 @@
       "evidence_gate": "Meets",
       "proposed_status": "Approve",
       "review_note": ""
+    },
+    {
+      "cell_id": "Multi_cell",
+      "name_en": "Multi_cell",
+      "name_cn": "多细胞",
+      "parent_id": "",
+      "branch": "mixed_population",
+      "node_kind": "multi_cell_review",
+      "tissue_scope": "multi_tissue",
+      "major_output_allowed": "Yes",
+      "subcluster_output_allowed": "Yes",
+      "external_ontology_id": "",
+      "ontology_lookup_name": "multiplet or mixed cell population",
+      "aliases": "multiplet; mixed population; 多细胞",
+      "evidence_ids": "",
+      "evidence_gate": "User-approved operational label",
+      "proposed_status": "Approve",
+      "review_note": "仅用于存在明确多谱系或互斥亚群混合证据的cluster；必须列出可能组成、人工复核并禁止自动合并"
     },
     {
       "cell_id": "Immune_cell",
@@ -2401,6 +2419,34 @@
       "alias": "cell",
       "alias_type": "synonym",
       "maps_to": "Cell"
+    },
+    {
+      "cell_id": "Multi_cell",
+      "language": "en",
+      "alias": "Multi_cell",
+      "alias_type": "standard_id",
+      "maps_to": "Multi_cell"
+    },
+    {
+      "cell_id": "Multi_cell",
+      "language": "zh",
+      "alias": "多细胞",
+      "alias_type": "standard_cn",
+      "maps_to": "Multi_cell"
+    },
+    {
+      "cell_id": "Multi_cell",
+      "language": "en",
+      "alias": "multiplet",
+      "alias_type": "synonym",
+      "maps_to": "Multi_cell"
+    },
+    {
+      "cell_id": "Multi_cell",
+      "language": "en",
+      "alias": "mixed population",
+      "alias_type": "synonym",
+      "maps_to": "Multi_cell"
     },
     {
       "cell_id": "Immune_cell",
@@ -9538,5 +9584,5 @@
       "maximum_absolute_negative_hits": 1
     }
   },
-  "knowledge_base_version": "2.7.1"
+  "knowledge_base_version": "2.8.0"
 }

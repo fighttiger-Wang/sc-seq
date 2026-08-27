@@ -14,7 +14,7 @@ Every annotation record contains:
 Rules:
 
 - `stable_id` is the finest approved identity supported by the cluster.
-- When no candidate is coherent, set `formal_identity_fallback=confirmed_parent` for a known lineage or `ontology_root_unresolved`/`stable_id=Cell` for mixed major mode; keep the weak candidate only in evidence fields and require review.
+- `Cell` is forbidden as a final label in every annotation mode. A coherent mixed/multiplet cluster uses `stable_id=Multi_cell`, Chinese name `多细胞`, populated `possible_components`, manual review, and `auto_merge_allowed=false`. A noncoherent non-mixed cluster must enter targeted research and block formal delivery if unresolved.
 - Major mode may display its nearest enabled major ancestor; subcluster mode displays the finest defensible within-parent identity.
 - `display_label` equals the identity. Store state separately in `state`, preserve all detected states in `state_list`, and retain one `primary_state` for prioritization.
 - Repeated canonical labels remain identical; cluster ID provides uniqueness.

@@ -1,16 +1,16 @@
 {
-  "core_version": "2.12.2",
-  "config_version": "2.12.1",
-  "knowledge_base_version": "2.7.1",
+  "core_version": "2.13.0",
+  "config_version": "2.13.0",
+  "knowledge_base_version": "2.8.0",
   "snapshot_contract": "sha256-v1",
   "canonical_source": "shared/sc-annotation-evidence-core",
   "files": {
-    "annotation_evidence_core.py": "fc2f4c51abc6c200133cb896fd2024f835e085cfb43088fff7fe45d95498bf81",
+    "annotation_evidence_core.py": "0d13449ae6e6d43d6834a743666af000e376364faeca306b1b6312b9dc58cadf",
     "knowledge_base.py": "263aa24abda67eea417a258b3579f400cc3b8848a44ffe7e99248751f0a226f6",
-    "annotation-evidence-config.v1.json": "b05074f2338c67faef3c6198a3d0e90ba877bd78aa357d3181312db30351dbd4",
-    "evidence-scoring-policy.md": "38c049aeca5c4253c26c087cf2f68f0d8630e30cac695f2ee63dbce4a08f6db8",
-    "knowledge-base/cell-annotation-knowledge-base.v2.json": "a7f448847a3e4ae36b1c36260360479e58670223c2ec7c0e378cdfe7798917e4",
+    "annotation-evidence-config.v1.json": "4fc94d9c705bc7eb25a04f1d3aa422fb3a6fe151d9eef8347ca5f2709b1377ee",
+    "evidence-scoring-policy.md": "d4328edb2ba2ac2f9ecffd5f3e30cd7cbac79175dfb66d0e1cdc5de99e0a16c1",
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": "4a79994c150a9b27525ae211471b3351918cbac2cf314079246d512ff163e0f7",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
-    "knowledge-base/knowledge-base.manifest.json": "21a585de9d0e343bb6f3fa543af834fe674b683980b2052893340dd91386dc89"
+    "knowledge-base/knowledge-base.manifest.json": "9914482a9fd723ea99960681e619f766cd1c11bd16ec7a9ce4741cc76683c787"
   }
 }

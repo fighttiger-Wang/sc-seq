@@ -21,6 +21,7 @@ Use the approved stable IDs and parent relationships in `cell-annotation-knowled
 - Use standard English stable ID, standard Chinese name, and aliases. Keep final identifiers portable with Chinese characters, ASCII letters, digits, and `_`.
 - Treat M1/M2, TAM, CAF, malignancy, angiogenic, inflammatory, and related context programs as state/role unless the approved node explicitly defines a stable identity.
 - Never use dataset-wide `T_NK_cell`. Resolve T/NK per cluster and mark unresolved coherent conflicts as mixed/suspected-doublet with automatic merging blocked.
+- Never use `Cell` as a final identity. Use `Multi_cell` / `多细胞` only for a supported mixed/multiplet cluster and retain the component identities separately; unresolved non-mixed evidence must trigger research or stop delivery.
 - Permit formal cross-species labels only with panel species, target species, evidence IDs, and `cross_species_inference=true` recorded.
 
 Use `legacy-migration.v2.json` for old-project remapping.

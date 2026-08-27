@@ -115,6 +115,14 @@ def main():
     mixed_evidence, _, _ = build(work, "mixed", mixed_programs, mixed_labels)
     assert mixed_evidence["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
     assert mixed_evidence["deterministic_annotation_evidence"]["0"]["auto_merge_allowed"] is False
+    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["stable_id"] == "Multi_cell"
+    mixed_workbook = load_workbook(work / "mixed.xlsx", data_only=False)
+    mixed_result = mixed_workbook["注释结果"]
+    mixed_headers = {cell.value: cell.column for cell in mixed_result[1]}
+    assert mixed_result.cell(2, mixed_headers["中文名称"]).value == "多细胞"
+    assert mixed_result.cell(2, mixed_headers["Celltype_EN"]).value == "Multi_cell"
+    assert mixed_result.cell(2, mixed_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    assert (work / "mixed.qa.json").read_text(encoding="utf-8").find('"multi_cell_chinese_static_red": true') >= 0
 
     minimal_evidence = json.loads(json.dumps(split_evidence))
     minimal_records = json.loads(json.dumps(split_records))

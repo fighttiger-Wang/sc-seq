@@ -136,7 +136,7 @@ AUDIT_FIELDS = [
 ]
 LABEL_BASIS = {
     "canonical_subtype", "validated_external_candidate", "researched_branch_fallback",
-    "top_marker_fallback", "feature_gene_fallback",
+    "multi_cell_annotation", "top_marker_fallback", "feature_gene_fallback",
 }
 CONFIDENCE = {"high", "medium-high", "medium", "low"}
 FINAL_LABEL_INVALID = re.compile(r"[^A-Za-z0-9_\u3400-\u4DBF\u4E00-\u9FFF]+")
@@ -247,6 +247,14 @@ def inject_deterministic_evidence(records, evidence):
         if decision.get("mixed_population"):
             record["mixed_or_doublet"] = True
             record["manual_review"] = True
+            record["stable_id"] = "Multi_cell"
+            record["display_label"] = "Multi_cell"
+            record["celltype_en"] = "Multi_cell"
+            record["celltype_cn"] = "多细胞"
+            record["broad_type"] = "Multi_cell"
+            record["fine_type"] = "Multi_cell"
+            record["canonical_subtype"] = "Multi_cell"
+            record["label_basis"] = "multi_cell_annotation"
             record["mixture_type"] = decision.get("mixture_type") or record.get("mixture_type") or "mixed_population/suspected_doublet"
             components = decision.get("possible_components", [])
             if components:
@@ -459,7 +467,20 @@ def validate(records, clusters, evidence):
                 f"Cluster {cluster_id} branch_identity_no_supported_leaf requires a targeted resolution search; "
                 "use a validated external leaf or a two-source researched_branch_fallback before delivery"
             )
-        if record["label_basis"] == "canonical_subtype":
+        if stable_id == "Cell" or english_label == "Cell":
+            errors.append(f"Cluster {cluster_id} cannot use forbidden final label Cell")
+        if record["label_basis"] == "multi_cell_annotation":
+            if stable_id != "Multi_cell" or english_label != "Multi_cell":
+                errors.append(f"Cluster {cluster_id} multi-cell annotation must use Stable_ID and English label Multi_cell")
+            if str(record.get("celltype_cn", "")).strip() != "多细胞":
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation must use Chinese name 多细胞")
+            if not record.get("mixed_population") or record.get("auto_merge_allowed"):
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires mixed_population=true and auto_merge_allowed=false")
+            if not str(record.get("possible_components", "")).strip():
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires possible_components")
+            if canonical != "Multi_cell":
+                errors.append(f"Cluster {cluster_id} Multi_cell annotation requires canonical_subtype=Multi_cell")
+        elif record["label_basis"] == "canonical_subtype":
             if not canonical:
                 errors.append(f"Cluster {cluster_id} canonical_subtype label lacks canonical_subtype")
             if not str(record["literature_source"]).strip():
@@ -527,6 +548,8 @@ def validate(records, clusters, evidence):
                 errors.append(f"Cluster {cluster_id} noncanonical tissue identity confidence cannot be high")
         if record.get("mixed_population") and (record.get("auto_merge_allowed") or not record.get("mixed_or_doublet")):
             errors.append(f"Cluster {cluster_id} mixed population must block automatic merging and carry mixed_or_doublet=true")
+        if record.get("mixed_population") and stable_id != "Multi_cell":
+            errors.append(f"Cluster {cluster_id} mixed population must use final label Multi_cell")
         if str(record.get("risk_level", "")).startswith(("R1_", "R2_", "R3_")) and not record.get("manual_review"):
             errors.append(f"Cluster {cluster_id} non-R0 evidence requires manual_review=true")
         boundary = deterministic_decision.get("identity_boundary_audit", {})
@@ -690,24 +713,22 @@ def main():
     set_widths(ws, [10, 22, 20, 16, 15, 15, 18, 28, 24, 24, 11, 11, 16, 18, 22, 42, 12, 36])
     set_widths(detail, [10, 18, 18, 24, 34, 20, 18, 16, 16, 20, 14, 18, 24, 14, 16, 28, 16, 14, 14, 28, 16, 18, 20, 14, 20, 14, 12, 16, 16, 18, 14, 18, 34, 16, 20, 20, 34, 24] + [16, 24, 36, 18, 28, 18, 24, 22, 18, 22, 48])
     quality_col = get_column_letter(MAIN_FIELDS.index("quality_score") + 1)
-    celltype_cn_col = get_column_letter(MAIN_FIELDS.index("celltype_cn") + 1)
     mixed_col = get_column_letter(MAIN_FIELDS.index("mixed_or_doublet") + 1)
     review_col = get_column_letter(MAIN_FIELDS.index("manual_review") + 1)
     confidence_col = get_column_letter(MAIN_FIELDS.index("confidence") + 1)
     low_quality_red = "F8696B"
     ws.conditional_formatting.add(f"{quality_col}2:{quality_col}{ws.max_row}", ColorScaleRule(start_type="min", start_color=low_quality_red, mid_type="percentile", mid_value=50, mid_color="FFEB84", end_type="max", end_color="63BE7B"))
-    absolute_quality_col = f"${quality_col}"
-    absolute_quality_range = f"{absolute_quality_col}$2:{absolute_quality_col}${ws.max_row}"
-    ws.conditional_formatting.add(
-        f"{celltype_cn_col}2:{celltype_cn_col}{ws.max_row}",
-        FormulaRule(
-            formula=[f"{absolute_quality_col}2=MIN({absolute_quality_range})"],
-            fill=PatternFill("solid", fgColor=low_quality_red),
-        ),
-    )
     ws.conditional_formatting.add(f"{mixed_col}2:{mixed_col}{ws.max_row}", FormulaRule(formula=[f'{mixed_col}2="是"'], fill=PatternFill("solid", fgColor="F8CBAD")))
     ws.conditional_formatting.add(f"{review_col}2:{review_col}{ws.max_row}", FormulaRule(formula=[f'{review_col}2="是"'], fill=PatternFill("solid", fgColor="FFF2CC")))
     ws.conditional_formatting.add(f"{confidence_col}2:{confidence_col}{ws.max_row}", FormulaRule(formula=[f'{confidence_col}2="low"'], fill=PatternFill("solid", fgColor="FCE4D6")))
+    quality_scores = [float(record["quality_score"]) for record in records]
+    minimum_quality = min(quality_scores) if quality_scores else None
+    multi_cell_red = PatternFill("solid", fgColor="FFF8696B")
+    for row_index, record in enumerate(records, start=2):
+        if record.get("mixed_population") or record.get("stable_id") == "Multi_cell" or float(record["quality_score"]) == minimum_quality:
+            name_cell = ws.cell(row_index, MAIN_FIELDS.index("celltype_cn") + 1)
+            name_cell.fill = multi_cell_red
+            name_cell.font = Font(bold=True, color="FFFFFFFF")
 
     metadata = evidence.get("confirmed_metadata", {})
     paths = evidence.get("source_paths", {})
@@ -766,6 +787,8 @@ def main():
         "status": "pass", "workbook": str(output), "sheets": check.sheetnames,
         "record_count": len(records), "review_clusters": [str(r["cluster_id"]) for r in records if r["manual_review"]],
         "mixed_or_doublet_clusters": [str(r["cluster_id"]) for r in records if r["mixed_or_doublet"]],
+        "multi_cell_clusters": [str(r["cluster_id"]) for r in records if str(r.get("stable_id")) == "Multi_cell"],
+        "multi_cell_chinese_static_red": True,
         "formula_cells": 0, "source_files_unchanged": True,
         "visual_qa": "compact_human_record_layout",
         "auto_filter_enabled": False,
@@ -832,6 +855,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

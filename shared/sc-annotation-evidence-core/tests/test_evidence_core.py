@@ -199,7 +199,9 @@ def main():
     assert mixed["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
     assert mixed["deterministic_annotation_evidence"]["2"]["mixed_population"] is True
     assert mixed["deterministic_annotation_evidence"]["2"]["auto_merge_allowed"] is False
-    assert mixed["deterministic_annotation_evidence"]["2"]["stable_id"] in {"T_cell", "NK_cell"}
+    assert mixed["deterministic_annotation_evidence"]["0"]["stable_id"] == "Multi_cell"
+    assert mixed["deterministic_annotation_evidence"]["2"]["stable_id"] == "Multi_cell"
+    assert mixed["deterministic_annotation_evidence"]["2"]["formal_identity_fallback"] == "multi_cell_annotation"
 
     t_sublineage_path = work / "t_sublineage_mixed.tsv"
     t_sublineage_programs = {"0": ["cd4_th17", "gdt_partial"], "1": ["t"]}
@@ -213,8 +215,8 @@ def main():
     assert t_sublineage_decision["risk_level"] == "R2_RECLUSTER_OR_DOUBLET_REVIEW"
     assert t_sublineage_decision["mixed_population"] is True
     assert t_sublineage_decision["auto_merge_allowed"] is False
-    assert t_sublineage_decision["stable_id"] == "T_cell"
-    assert t_sublineage_decision["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert t_sublineage_decision["stable_id"] == "Multi_cell"
+    assert t_sublineage_decision["formal_identity_fallback"] == "multi_cell_annotation"
     assert set(t_sublineage_decision["possible_components"]) == {"CD4_Th17", "IL17A_gdT"}
     assert t_sublineage_decision["sublineage_conflict"]["rule_id"] == "CD4_ALPHA_BETA_VS_GAMMA_DELTA_T"
 
@@ -315,8 +317,8 @@ def main():
     assert cd8_decision["decision_trace"]["identity_branch_gate"]["passed"] is True
     mixed_cd4_cd8 = cd4_cd8["deterministic_annotation_evidence"]["2"]
     assert mixed_cd4_cd8["risk_level"] == "R2_RECLUSTER_OR_DOUBLET_REVIEW"
-    assert mixed_cd4_cd8["stable_id"] == "T_cell"
-    assert mixed_cd4_cd8["formal_identity_fallback"] == "mixed_incompatible_sublineages"
+    assert mixed_cd4_cd8["stable_id"] == "Multi_cell"
+    assert mixed_cd4_cd8["formal_identity_fallback"] == "multi_cell_annotation"
     assert mixed_cd4_cd8["auto_merge_allowed"] is False
     assert set(mixed_cd4_cd8["possible_components"]) == {"CD4_T", "CD8_T"}
     assert mixed_cd4_cd8["sublineage_conflict"]["rule_id"] == "CD4_ALPHA_BETA_VS_CD8_ALPHA_BETA_T"
@@ -357,8 +359,8 @@ def main():
     expected_t = off_parent["deterministic_annotation_evidence"]["1"]
     assert expected_t["off_parent_detected"] is False
     mixed_parent = off_parent["deterministic_annotation_evidence"]["2"]
-    assert mixed_parent["stable_id"] == "T_NK_lineage"
-    assert mixed_parent["formal_identity_fallback"] == "mixed_parent_off_parent_lineages"
+    assert mixed_parent["stable_id"] == "Multi_cell"
+    assert mixed_parent["formal_identity_fallback"] == "multi_cell_annotation"
     assert mixed_parent["risk_level"] == "R2_RECLUSTER_OR_DOUBLET_REVIEW"
     assert mixed_parent["auto_merge_allowed"] is False
 
@@ -540,9 +542,10 @@ def main():
 
     empty_major = enrich_evidence(evidence(["0"]), annotation_level="major", tissue="blood", parent_population="All_cells", parent_kind="mixed")
     empty_major_decision = empty_major["deterministic_annotation_evidence"]["0"]
-    assert empty_major_decision["stable_id"] == "Cell"
-    assert empty_major_decision["primary_major_label"] == "Cell"
-    assert empty_major_decision["formal_identity_fallback"] == "ontology_root_unresolved"
+    assert empty_major_decision["stable_id"] == ""
+    assert empty_major_decision["primary_major_label"] == ""
+    assert empty_major_decision["formal_identity_fallback"] == "unresolved_requires_research"
+    assert empty_major_decision["resolution_search_required"] is True
     empty_sub = enrich_evidence(evidence(["0"]), annotation_level="subcluster", tissue="stomach", parent_population="T_cell", parent_kind="lineage")
     assert empty_sub["deterministic_annotation_evidence"]["0"]["stable_id"] == "T_cell"
     assert empty_sub["deterministic_annotation_evidence"]["0"]["resolution_search_required"] is True
