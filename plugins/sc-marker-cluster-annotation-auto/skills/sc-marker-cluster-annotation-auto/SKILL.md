@@ -68,7 +68,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - Check cDC2 against monocyte-derived programs explicitly.
 - For Myeloid boundaries, require the program gates in `references/myeloid-boundary-gates.md`. Never let isolated `CSF3R`, `FCGR3B`, `XCR1`, `HLA-DRA`, or `CD74` override the complete competing program.
 - `Immature_neutrophil` requires a coherent early/secondary granule program; incomplete mature-neutrophil receptors are not sufficient positive evidence.
-- Treat aggregate APC + cDC2-like + monocyte evidence as a DC3 boundary candidate. Literature may nominate DC3 but cannot prove same-cell coexpression. Without cell-level validation or resolving reclustering, block formal delivery and automatic merging.
+- Treat aggregate APC + cDC2-like + monocyte evidence as a DC3 boundary candidate. Literature may nominate DC3 but cannot prove same-cell coexpression. When the aggregate programs are jointly coherent, deliver a conservative likely-mixed `Myeloid_cell` common-parent fallback with `mixed_population=true`, `suspected_doublet=false`, `manual_review=true`, and `auto_merge_allowed=false`; do not force DC3 or require RData merely to complete the annotation. Use cell-level validation or resolving reclustering only to refine the components and distinguish separate subpopulations from same-cell coexpression/doublets.
 - Call Myofibroblast only with a coherent contractile plus ECM program.
 - Call TA_cell only with intestinal lineage/developmental evidence and store Cycling separately.
 
@@ -76,7 +76,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 
 - When two coherent incompatible lineage programs coexist, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`.
 - Apply the same block to mutually exclusive sublineages inside one broad lineage. In particular, never directly finalize `CD4_Th17` or `IL17A_gdT` when full detection ratios support a CD4 alpha-beta program and at least two gamma-delta TCR anchors (`TRDC/TRGC1/TRGC2`) with near-scoring candidates. Set `possible_components=CD4_Th17;IL17A_gdT`, fall the formal identity back to `T_cell`, and require cell-level coexpression review or reclustering.
-- Do not use detection proportions alone to decide whether the competing programs occupy separate cells. Separate cells imply a mixed cluster requiring reclustering; same-cell coexpression requires doublet review. Cluster-level evidence may flag but cannot confirm either mechanism.
+- Do not use detection proportions alone to claim that competing programs occupy the same cells or to confirm doublets. Aggregate evidence may support a conservative likely-mixed cluster call when multiple coherent incompatible programs coexist, but it must retain the common-parent fallback, manual review, explicit possible components, and blocked automatic merging.
 - Do not automatically merge that cluster with either normal subtype.
 - Use cell-level coexpression/doublet evidence to distinguish true doublets from unresolved mixed subpopulations.
 - For T/NK, resolve each cluster independently; never trigger dataset-wide label collapse.
@@ -188,6 +188,7 @@ After QA passes, the builder must register the de-identified case in the shared 
 - Confirm a sample-specific marker/UMAP conflict was not marked resolved from literature alone. Require cell-level coexpression, sample metadata, trajectory metrics, reference mapping, or quantitative-QC evidence.
 - Confirm every repeated final identity has a cross-island topology audit. A disconnected same-label cluster may remain concordant only with concrete state/sample/trajectory evidence; an unexplained disconnected island must be a resolved conflict before delivery.
 - Confirm workbook QA records knowledge-base/core/config versions and hashes.
+- Confirm every row at the red endpoint of the quality-score color scale applies the same red fill to `中文名称`, including tied minimum scores, without changing the annotation text.
 - Confirm the case-registry sidecar is `registered` or `duplicate`; report `failed` explicitly.
 - Confirm `<workbook>.delivery.json` has `status=copied`, its destination is the unique original E-drive input directory, and the destination SHA-256 equals the workspace workbook. A workspace-only production workbook is not delivered.
 - Confirm the workbook contains only `注释结果`, `详细证据`, and `说明与数据来源`, with filters disabled and compact row heights.

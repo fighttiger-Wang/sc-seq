@@ -1,6 +1,6 @@
 {
   "name": "personal-skill-marketplace-setup",
-  "version": "0.1.0+codex.20260826151753",
+  "version": "0.1.0+codex.20260827055618",
   "description": "Bootstrap, audit, preflight, install, publish, update, and repair the shared personal Codex skill marketplace across Windows and macOS.",
   "author": {
     "name": "fight"

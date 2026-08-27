@@ -1,6 +1,6 @@
 {
   "name": "celltype-function-heatmap",
-  "version": "0.1.0+codex.20260826151753",
+  "version": "0.1.0+codex.20260827055618",
   "description": "Generate the fixed two-panel cell-type function heatmap deliverable from expression matrices and annotation tables.",
   "author": {
     "name": "fight"

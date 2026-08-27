@@ -1,6 +1,6 @@
 {
   "name": "workflow-script-structure",
-  "version": "0.1.0+codex.20260826151753",
+  "version": "0.1.0+codex.20260827055618",
   "description": "Standardize workflow packages by separating callable code, editable parameters, and submission scripts.",
   "author": {
     "name": "fight"

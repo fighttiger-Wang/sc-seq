@@ -532,7 +532,10 @@ def validate(records, clusters, evidence):
         boundary = deterministic_decision.get("identity_boundary_audit", {})
         neutrophil_boundary = boundary.get("neutrophil_vs_monocyte", {})
         if stable_id in {"Neutrophil", "Immature_neutrophil", "Neutrophil_progenitor"}:
-            if boundary.get("assessed") and not neutrophil_boundary.get("neutrophil_program_passed"):
+            neutrophil_gate_passed = neutrophil_boundary.get("neutrophil_program_passed")
+            if stable_id in {"Immature_neutrophil", "Neutrophil_progenitor"}:
+                neutrophil_gate_passed = neutrophil_boundary.get("immature_neutrophil_program_passed")
+            if boundary.get("assessed") and not neutrophil_gate_passed:
                 errors.append(
                     f"Cluster {cluster_id} {stable_id} label fails the neutrophil program gate; "
                     "CSF3R/FCGR3B alone cannot override a coherent monocyte program"
@@ -545,7 +548,18 @@ def validate(records, clusters, evidence):
                 )
             if not dc3_boundary.get("cell_level_validated") and record.get("auto_merge_allowed"):
                 errors.append(f"Cluster {cluster_id} provisional DC3/monocyte boundary must block automatic merging")
-        if deterministic_decision.get("boundary_validation_required") and not deterministic_decision.get("boundary_validation_resolved"):
+        unresolved_boundary_as_blocked_mixture = bool(
+            deterministic_decision.get("boundary_validation_required")
+            and not deterministic_decision.get("boundary_validation_resolved")
+            and record.get("mixed_population")
+            and not record.get("auto_merge_allowed")
+            and str(record.get("formal_identity_fallback", "")) == "mixed_incompatible_sublineages"
+        )
+        if (
+            deterministic_decision.get("boundary_validation_required")
+            and not deterministic_decision.get("boundary_validation_resolved")
+            and not unresolved_boundary_as_blocked_mixture
+        ):
             errors.append(
                 f"Cluster {cluster_id} has an unresolved DC3/monocyte identity boundary; literature review alone "
                 "cannot satisfy the required cell-level coexpression or reclustering gate for formal delivery"
@@ -676,10 +690,21 @@ def main():
     set_widths(ws, [10, 22, 20, 16, 15, 15, 18, 28, 24, 24, 11, 11, 16, 18, 22, 42, 12, 36])
     set_widths(detail, [10, 18, 18, 24, 34, 20, 18, 16, 16, 20, 14, 18, 24, 14, 16, 28, 16, 14, 14, 28, 16, 18, 20, 14, 20, 14, 12, 16, 16, 18, 14, 18, 34, 16, 20, 20, 34, 24] + [16, 24, 36, 18, 28, 18, 24, 22, 18, 22, 48])
     quality_col = get_column_letter(MAIN_FIELDS.index("quality_score") + 1)
+    celltype_cn_col = get_column_letter(MAIN_FIELDS.index("celltype_cn") + 1)
     mixed_col = get_column_letter(MAIN_FIELDS.index("mixed_or_doublet") + 1)
     review_col = get_column_letter(MAIN_FIELDS.index("manual_review") + 1)
     confidence_col = get_column_letter(MAIN_FIELDS.index("confidence") + 1)
-    ws.conditional_formatting.add(f"{quality_col}2:{quality_col}{ws.max_row}", ColorScaleRule(start_type="min", start_color="F8696B", mid_type="percentile", mid_value=50, mid_color="FFEB84", end_type="max", end_color="63BE7B"))
+    low_quality_red = "F8696B"
+    ws.conditional_formatting.add(f"{quality_col}2:{quality_col}{ws.max_row}", ColorScaleRule(start_type="min", start_color=low_quality_red, mid_type="percentile", mid_value=50, mid_color="FFEB84", end_type="max", end_color="63BE7B"))
+    absolute_quality_col = f"${quality_col}"
+    absolute_quality_range = f"{absolute_quality_col}$2:{absolute_quality_col}${ws.max_row}"
+    ws.conditional_formatting.add(
+        f"{celltype_cn_col}2:{celltype_cn_col}{ws.max_row}",
+        FormulaRule(
+            formula=[f"{absolute_quality_col}2=MIN({absolute_quality_range})"],
+            fill=PatternFill("solid", fgColor=low_quality_red),
+        ),
+    )
     ws.conditional_formatting.add(f"{mixed_col}2:{mixed_col}{ws.max_row}", FormulaRule(formula=[f'{mixed_col}2="是"'], fill=PatternFill("solid", fgColor="F8CBAD")))
     ws.conditional_formatting.add(f"{review_col}2:{review_col}{ws.max_row}", FormulaRule(formula=[f'{review_col}2="是"'], fill=PatternFill("solid", fgColor="FFF2CC")))
     ws.conditional_formatting.add(f"{confidence_col}2:{confidence_col}{ws.max_row}", FormulaRule(formula=[f'{confidence_col}2="low"'], fill=PatternFill("solid", fgColor="FCE4D6")))

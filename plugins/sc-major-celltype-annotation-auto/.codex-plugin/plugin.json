@@ -1,6 +1,6 @@
 {
   "name": "sc-major-celltype-annotation-auto",
-  "version": "0.3.1+codex.20260826151753",
+  "version": "0.3.1+codex.20260827055618",
   "description": "Approved multi-tissue major-celltype annotation with shared cross-account case learning, staged knowledge promotion, deterministic QA, and delivery.",
   "author": {
     "name": "fight"

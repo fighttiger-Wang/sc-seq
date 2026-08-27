@@ -34,9 +34,9 @@ A cluster-level combination of:
 
 is a `DC3` boundary candidate, not proof of DC3. Aggregate ratios cannot determine whether the programs coexist within the same cells or occupy separate cells.
 
-Literature may nominate DC3 and define the expected program, but formal delivery requires either cell-level coexpression evidence with method/provenance or reclustering that resolves a coherent DC3 population from monocytes/cDC2.
+Literature may nominate DC3 and define the expected program, but aggregate evidence cannot prove a homogeneous DC3 population or same-cell coexpression. Without cell-level evidence, prefer a conservative likely-mixed `Myeloid_cell` fallback with `possible_components=cDC2_or_DC3_like;Monocyte`, require manual review, and block automatic merging. This mixed fallback may be formally delivered because it does not overclaim DC3 or doublets.
 
-Until then, keep the boundary unresolved, require manual review, block automatic merging, and do not promote the candidate into the shared standard.
+Cell-level coexpression or resolving reclustering is optional refinement: use it to separate true mixed subpopulations from same-cell boundary biology or doublets. Do not promote DC3 into the shared standard without that validation.
 
 ## UMAP use
 

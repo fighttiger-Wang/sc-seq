@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.12.1"
+CORE_VERSION = "2.12.2"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"
@@ -379,6 +379,10 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
     neutrophil_program_passed = neutrophil_commitment_passed and any(
         item["passed"] for item in alternatives
     )
+    immature_neutrophil_program_passed = any(
+        item["program_id"] == "early_granule_neutrophil" and item["passed"]
+        for item in alternatives
+    )
     monocyte_program_passed = len(monocyte_hits) >= monocyte_minimum
 
     dc_rule = rules.get("dc3_vs_monocyte", {})
@@ -407,6 +411,7 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
             "neutrophil_commitment_passed": neutrophil_commitment_passed,
             "neutrophil_commitment_hits": commitment_hits,
             "neutrophil_program_passed": neutrophil_program_passed,
+            "immature_neutrophil_program_passed": immature_neutrophil_program_passed,
             "neutrophil_program_alternatives": alternatives,
             "neutrophil_blocked_by_monocyte": bool(
                 monocyte_program_passed
@@ -1040,6 +1045,18 @@ def enrich_evidence(
             risk = "R1_REVIEW_RETAIN"
             action = "Identity is coherent, but state/QC genes dominate the top markers; review library complexity and QC metrics."
         cell = cell_evidence.get(cluster, {})
+        cell_mixed_population = bool(cell.get("mixed_population_confirmed"))
+        cell_mixture_resolved_negative = bool(
+            cell.get("reclustering_resolved")
+            and cell.get("mixed_population_confirmed") is False
+            and cell.get("doublet_call") is not True
+            and float(cell.get("doublet_fraction", 0.0) or 0.0) < 0.20
+        )
+        resolved_cell_components = [
+            str(item).strip()
+            for item in cell.get("resolved_components", [])
+            if str(item).strip()
+        ]
         if cell.get("doublet_call") is True or float(cell.get("doublet_fraction", 0.0) or 0.0) >= 0.20:
             risk, doublet_risk = "R3_DOUBLET_CANDIDATE", "high"
             action = "Review per-sample doublet calls and remove only confirmed high-risk cells before reclustering."
@@ -1087,6 +1104,24 @@ def enrich_evidence(
                 "Coherent expected-parent and off-parent programs coexist; inspect cell-level coexpression, "
                 "recluster if they occupy separate cells, and test doublets only when they co-occur within cells."
             )
+        if cell_mixed_population and len(resolved_cell_components) >= 2:
+            formal_stable_id = config.get("resolved_parent_id", "") or primary_major or "Cell"
+            formal_major_label = _major_label(config, formal_stable_id)
+            formal_identity_fallback = "mixed_incompatible_sublineages"
+            if risk != "R3_DOUBLET_CANDIDATE":
+                risk, mixed_risk = "R2_RECLUSTER_OR_DOUBLET_REVIEW", "high"
+            action = (
+                "Cell-level program review and resolving reclustering identify distinct component populations. "
+                "Retain the original cluster as a mixed population, report the resolved components, block automatic "
+                "merging, and do not imply a doublet unless an explicit cell-level doublet call supports it."
+            )
+        elif cell_mixture_resolved_negative and risk == "R2_RECLUSTER_OR_DOUBLET_REVIEW":
+            risk, mixed_risk = "R1_REVIEW_RETAIN", "low"
+            action = (
+                "Cell-level program review and reclustering do not resolve a separate competing population or "
+                "doublet-enriched component. Retain the coherent primary identity under manual review and treat the "
+                "aggregate rival program as an intrinsic state or shared program rather than a confirmed mixture."
+            )
         dc3_boundary = identity_boundary_audit.get("dc3_vs_monocyte", {})
         boundary_validation_required = bool(
             dc3_boundary.get("dc3_boundary_candidate")
@@ -1098,11 +1133,15 @@ def enrich_evidence(
         )
         if boundary_validation_required and risk != "R3_DOUBLET_CANDIDATE":
             risk, mixed_risk = "R2_IDENTITY_BOUNDARY_REVIEW", "indeterminate"
+            formal_stable_id = config.get("resolved_parent_id", "") or primary_major or "Cell"
+            formal_major_label = _major_label(config, formal_stable_id)
+            formal_identity_fallback = "mixed_incompatible_sublineages"
             action = (
                 "A coherent APC/DC-specific program and a coherent monocyte program coexist in cluster-level ratios. "
-                "Literature can nominate DC3 but cannot establish same-cell coexpression. Require cell-level "
-                "CD1C/CLEC10A/FCER1A versus CD14/FCN1/VCAN/FCGR3A validation or reclustering before formal delivery; "
-                "block automatic merging."
+                "Literature can nominate DC3 but cannot establish same-cell coexpression. Report the original cluster "
+                "conservatively as a likely mixed Myeloid population, retain cDC2/DC3-like and monocyte components, "
+                "require manual review, and block automatic merging. Cell-level validation is optional refinement for "
+                "distinguishing separate subpopulations from same-cell coexpression or doublets."
             )
         provenance = config.get("panel_provenance", {}).get(
             formal_stable_id,
@@ -1134,10 +1173,16 @@ def enrich_evidence(
                 "sources before accepting a researched fallback or external identity."
             )
         mixed_population = bool(
-            cross_identity_rival is not None
+            (cross_identity_rival is not None and not cell_mixture_resolved_negative)
             or tnk_provisional == "unresolved_T_NK"
             or sublineage_conflict is not None
             or off_parent_conflict
+            or cell_mixed_population
+            or boundary_validation_required
+        )
+        cell_doublet_supported = bool(
+            cell.get("doublet_call") is True
+            or float(cell.get("doublet_fraction", 0.0) or 0.0) >= 0.20
         )
         decisions[cluster] = {
             "evidence_mode": evidence_mode,
@@ -1187,7 +1232,12 @@ def enrich_evidence(
             "mixed_cluster_risk": mixed_risk,
             "doublet_risk": doublet_risk,
             "mixed_population": mixed_population,
-            "suspected_doublet": risk in {"R2_RECLUSTER_OR_DOUBLET_REVIEW", "R3_DOUBLET_CANDIDATE"},
+            "suspected_doublet": (
+                cell_doublet_supported
+                if cell_mixed_population
+                else False if boundary_validation_required
+                else risk in {"R2_RECLUSTER_OR_DOUBLET_REVIEW", "R3_DOUBLET_CANDIDATE"}
+            ),
             "auto_merge_allowed": bool(
                 not mixed_population
                 and not (off_parent_dominant and not off_parent_conflict)
@@ -1195,19 +1245,21 @@ def enrich_evidence(
                 and not boundary_validation_required
             ),
             "mixture_type": (
-                "incompatible_T_sublineages" if sublineage_conflict
+                "cell_validated_mixed_population" if cell_mixed_population
+                else "incompatible_T_sublineages" if sublineage_conflict
                 else "parent_off_parent_lineages" if off_parent_conflict
                 else "off_parent_contaminant" if off_parent_dominant
-                else "unresolved_DC3_monocyte_boundary" if boundary_validation_required
+                else "aggregate_DC_monocyte_mixed_candidate" if boundary_validation_required
                 else "neutrophil_monocyte_boundary_review" if neutrophil_reclassified
                 else ""
             ),
             "possible_components": (
-                [sublineage_conflict["primary_label"], sublineage_conflict["rival_label"]]
+                resolved_cell_components if cell_mixed_population
+                else [sublineage_conflict["primary_label"], sublineage_conflict["rival_label"]]
                 if sublineage_conflict
                 else [parent_primary["label"], off_parent_primary["label"]] if off_parent_conflict
                 else [off_parent_primary["label"]] if off_parent_dominant
-                else ["DC3", "Monocyte"] if boundary_validation_required
+                else ["cDC2_or_DC3_like", "Monocyte"] if boundary_validation_required
                 else ["Neutrophil", primary["label"]] if neutrophil_reclassified
                 else []
             ),
