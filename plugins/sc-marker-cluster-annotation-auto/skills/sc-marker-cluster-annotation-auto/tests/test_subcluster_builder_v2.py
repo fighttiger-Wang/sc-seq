@@ -256,6 +256,91 @@ def main():
         assert "repeats exhaustion semantics" in str(exc)
     else:
         raise AssertionError("Builder QA must reject deprecated Tex identities and redundant labels")
+
+    supported_external_records = copy.deepcopy(records)
+    inject_deterministic_evidence(supported_external_records, evidence)
+    supported_external = supported_external_records[0]
+    supported_external_id = str(supported_external["stable_id"])
+    supported_external.update({
+        "label_basis": "validated_external_candidate",
+        "canonical_subtype": supported_external_id,
+        "celltype_en": supported_external_id,
+        "celltype_cn": supported_external_id,
+        "display_label": supported_external_id,
+        "candidate_labels": f"{supported_external_id}; CD8_Tcm",
+        "supporting_markers": "CD3D; CD3E; TRAC",
+        "literature_source": "source-one; source-two",
+        "literature_details": [
+            {"title": "Source one", "pmid": "PMID:1", "species": "Human", "tissue": "blood", "supported_conclusion": "Supports the identity."},
+            {"title": "Source two", "doi": "10.1000/two", "species": "Human", "tissue": "blood", "supported_conclusion": "Independently supports the identity."},
+        ],
+        "override_validation": {
+            "method": "quantitative_qc", "evidence_ids": ["ratio:cluster0"],
+            "supported_identity": supported_external_id,
+            "competing_identity_excluded": "CD8_Tcm lacks its coherent CCR7/SELL program.",
+        },
+        "manual_review": True,
+        "confidence": "medium",
+    })
+    validate(supported_external_records, list(PROGRAMS), evidence)
+
+    unsupported_external_records = copy.deepcopy(supported_external_records)
+    unsupported_external_records[0]["supporting_markers"] = ""
+    unsupported_external_records[0].pop("literature_details")
+    unsupported_external_records[0].pop("override_validation")
+    try:
+        validate(unsupported_external_records, list(PROGRAMS), evidence)
+    except ValueError as exc:
+        assert "identity override requires at least two explicit supporting markers" in str(exc)
+        assert "requires literature_details" in str(exc)
+    else:
+        raise AssertionError("Unsupported validated_external_candidate must fail formal QA")
+
+    mature_boundary_records = copy.deepcopy(supported_external_records)
+    mature = mature_boundary_records[0]
+    mature.update({
+        "stable_id": "Mature_neutrophil", "canonical_subtype": "Mature_neutrophil",
+        "celltype_en": "Mature_neutrophil", "celltype_cn": "Mature_neutrophil",
+        "display_label": "Mature_neutrophil", "candidate_labels": "Mature_neutrophil; Monocyte",
+    })
+    mature["override_validation"]["supported_identity"] = "Mature_neutrophil"
+    mature_evidence = copy.deepcopy(evidence)
+    mature_evidence["deterministic_annotation_evidence"]["0"]["identity_boundary_audit"] = {
+        "assessed": True,
+        "neutrophil_vs_monocyte": {
+            "neutrophil_program_passed": False,
+            "immature_neutrophil_program_passed": False,
+            "borderline_activated_neutrophil_candidate": False,
+        },
+    }
+    try:
+        validate(mature_boundary_records, list(PROGRAMS), mature_evidence)
+    except ValueError as exc:
+        assert "Mature_neutrophil label fails the neutrophil program gate" in str(exc)
+    else:
+        raise AssertionError("Mature_neutrophil must be covered by neutrophil boundary QA")
+
+    dc_activation_only_records = copy.deepcopy(supported_external_records)
+    dc_record = dc_activation_only_records[0]
+    dc_record.update({
+        "stable_id": "Migratory_DC", "canonical_subtype": "Migratory_DC",
+        "celltype_en": "Migratory_DC", "celltype_cn": "Migratory_DC",
+        "display_label": "Migratory_DC", "candidate_labels": "Migratory_DC; Neutrophil",
+        "supporting_markers": "CD83; ITGAX",
+    })
+    dc_record["override_validation"]["supported_identity"] = "Migratory_DC"
+    dc_evidence = copy.deepcopy(evidence)
+    dc_evidence["deterministic_annotation_evidence"]["0"]["identity_boundary_audit"] = {
+        "assessed": True,
+        "dc_like_activation": {"passed": True},
+        "dc_identity_programs": {"Migratory_DC": {"passed": False}},
+    }
+    try:
+        validate(dc_activation_only_records, list(PROGRAMS), dc_evidence)
+    except ValueError as exc:
+        assert "CD83/ITGAX activation alone cannot establish a DC leaf" in str(exc)
+    else:
+        raise AssertionError("Activation-only DC override must fail identity-program QA")
     incomplete_audit = copy.deepcopy(umap_audit)
     incomplete_audit["clusters"].pop("2")
     try:
@@ -264,6 +349,27 @@ def main():
         assert "Missing UMAP audit clusters" in str(exc)
     else:
         raise AssertionError("UMAP audit must cover every cluster")
+    unsupported_external_umap = copy.deepcopy(umap_audit)
+    unsupported_external_umap["clusters"]["0"]["nearest_clusters"] = ["2"]
+    try:
+        validate_umap_audit(
+            unsupported_external_umap, list(PROGRAMS), formal=True,
+            records=supported_external_records,
+        )
+    except ValueError as exc:
+        assert "cannot use plain concordant UMAP audit" in str(exc)
+    else:
+        raise AssertionError("External identity without nearest-label or current-case support must fail UMAP QA")
+    resolved_external_umap = copy.deepcopy(unsupported_external_umap)
+    resolved_external_umap["clusters"]["0"].update({
+        "research_status": "resolved",
+        "evidence_ids": ["ratio:cluster0"],
+        "conflict_resolution_basis": "quantitative_qc",
+    })
+    validate_umap_audit(
+        resolved_external_umap, list(PROGRAMS), formal=True,
+        records=supported_external_records,
+    )
     pending_audit = copy.deepcopy(umap_audit)
     pending_audit["clusters"]["1"].update({
         "marker_umap_relation": "conflict",
@@ -448,7 +554,7 @@ def main():
     assert validated_decision["suspected_doublet"] is False
     assert validated_decision["auto_merge_allowed"] is False
     assert validated_decision["possible_components"] == ["cDC2", "Monocyte", "Macrophage"]
-    print(json.dumps({"status": "pass", "checks": 57, "output": str(output)}))
+    print(json.dumps({"status": "pass", "checks": 64, "output": str(output)}))
 
 
 if __name__ == "__main__":

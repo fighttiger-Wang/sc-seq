@@ -2,6 +2,7 @@
 """Exercise major workbook QA for per-cluster T/NK, mixed blocking, and confidence caps."""
 
 import argparse
+import copy
 import csv
 import json
 import subprocess
@@ -14,6 +15,7 @@ from openpyxl import load_workbook
 SKILL = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SKILL / "scripts"))
 from annotation_evidence_core import enrich_evidence  # noqa: E402
+from build_annotation_workbook import inject_deterministic_evidence, validate  # noqa: E402
 
 
 PANELS = {
@@ -138,7 +140,40 @@ def main():
         text=True, capture_output=True,
     )
     assert failed.returncode != 0 and "cannot receive high confidence" in (failed.stdout + failed.stderr)
-    print(json.dumps({"status": "pass", "checks": 12, "work_dir": str(work)}))
+
+    external_records = copy.deepcopy(split_records)
+    inject_deterministic_evidence(external_records, split_evidence)
+    external = external_records[0]
+    external_id = str(external["stable_id"])
+    external.update({
+        "label_basis": "validated_external_candidate",
+        "canonical_subtype": external_id,
+        "candidate_labels": f"{external_id}; Stromal_cell",
+        "supporting_markers": "EPCAM; KRT8; KRT18",
+        "literature_source": "source-one; source-two",
+        "manual_review": True,
+        "confidence": "medium",
+    })
+    try:
+        validate(external_records, list(split_programs), split_evidence)
+    except ValueError as exc:
+        assert "requires literature_details" in str(exc)
+        assert "requires an approved current-case override_validation method" in str(exc)
+    else:
+        raise AssertionError("Unsupported external major-celltype override must fail")
+    external.update({
+        "literature_details": [
+            {"title": "Source one", "pmid": "PMID:M1", "species": "Human", "tissue": "test", "supported_conclusion": "Supports the major identity."},
+            {"title": "Source two", "doi": "10.1000/m2", "species": "Human", "tissue": "test", "supported_conclusion": "Independently supports the major identity."},
+        ],
+        "override_validation": {
+            "method": "reference_mapping", "evidence_ids": ["reference:test"],
+            "supported_identity": external_id,
+            "competing_identity_excluded": "Reference mapping excludes the competing stromal identity.",
+        },
+    })
+    validate(external_records, list(split_programs), split_evidence)
+    print(json.dumps({"status": "pass", "checks": 16, "work_dir": str(work)}))
 
 
 if __name__ == "__main__":

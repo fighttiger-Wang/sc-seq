@@ -16,6 +16,8 @@ from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from annotation_override_policy import validate_identity_override
+
 
 SKILL_NAME = "sc-major-celltype-annotation-auto"
 SKILL_VERSION = "0.3.1"
@@ -119,6 +121,7 @@ EVIDENCE_FIELDS = [
     "rival_lineage_score", "tnk_provisional", "risk_level", "recommended_action", "mixed_population",
     "suspected_doublet", "auto_merge_allowed", "label_basis", "canonical_subtype", "literature_source",
     "naming_grammar",
+    "literature_details", "override_validation", "override_audit",
 ]
 EVIDENCE_HEADERS = [
     "Cluster", "Stable_ID", "精细类型", "本体路径", "组织模块", "本体节点类型",
@@ -128,6 +131,7 @@ EVIDENCE_HEADERS = [
     "检测特异性", "竞争谱系", "竞争大类", "竞争评分", "T/NK 判定", "风险等级",
     "处置建议", "混合群", "疑似双细胞", "允许自动合并", "命名依据", "标准亚型",
     "文献依据", "命名规则",
+    "Structured literature details", "Override validation", "Override audit",
 ]
 
 
@@ -268,6 +272,9 @@ def validate(records, clusters, evidence):
             continue
         cluster_id = str(record["cluster_id"])
         deterministic_decision = evidence.get("deterministic_annotation_evidence", {}).get(cluster_id, {})
+        override_audit = validate_identity_override(record, deterministic_decision)
+        record["override_audit"] = override_audit
+        errors.extend(override_audit["errors"])
         expected_top = top_by_cluster[cluster_id]
         selected_marker = str(record["top_marker_gene"])
         contextual_exclusions = record["contextually_excluded_naming_markers"]
@@ -626,6 +633,9 @@ def main():
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
         "deterministic_risk_by_cluster": {str(record["cluster_id"]): record["risk_level"] for record in records},
         "deterministic_action_by_cluster": {str(record["cluster_id"]): record["recommended_action"] for record in records},
+        "override_audits_by_cluster": {
+            str(record["cluster_id"]): record.get("override_audit", {}) for record in records
+        },
         "deterministic_tnk_arbitration": evidence.get("deterministic_tnk_arbitration", {}),
     }
     qa_path = output.with_suffix(".qa.json")

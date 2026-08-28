@@ -14,11 +14,15 @@ Do not call a neutrophil or an immature-neutrophil subtype from `CSF3R` or `FCGR
 
 A coherent `CD14/FCN1/VCAN/LST1/TYROBP` program with no downstream neutrophil program blocks a neutrophil call even when `CSF3R` is high. Reclassify provisionally to the best-supported monocyte node, require cell-level review, and set `auto_merge_allowed=false`.
 
+When `CSF3R` passes, `FCGR3B` is narrowly below its conservative floor but remains at least 75% of that floor, at least two of `PI3/SLPI/CXCL8` pass, and the coherent monocyte program is absent, retain Neutrophil only as an `R1_REVIEW_RETAIN` borderline candidate. Require targeted quantitative-QC/UMAP review, manual review, and `auto_merge_allowed=false`; do not force a monocyte leaf merely because one commitment marker missed a hard cutoff by a narrow margin.
+
 `Immature_neutrophil` specifically requires an early or secondary granule program. “Incomplete mature receptors” is not positive evidence of immaturity.
 
 ## DC versus monocyte
 
 `HLA-DRA`, `CD74`, and other MHC-II genes establish antigen presentation, not DC identity. Require a DC-specific program:
+
+`CD83`, `ITGAX/CD11c`, and `RELB` indicate APC/DC-like activation and may populate `state_list=DC_like`; they are not DC identity anchors by themselves.
 
 - cDC1: at least two coherent anchors among `CLEC9A`, `XCR1`, `WDFY4`, `CADM1`, with monocyte exclusions checked.
 - cDC2: coherent `CD1C/CLEC10A/FCER1A` support, with `FCN1/CD14/VCAN/S100A8` competition explicitly assessed.

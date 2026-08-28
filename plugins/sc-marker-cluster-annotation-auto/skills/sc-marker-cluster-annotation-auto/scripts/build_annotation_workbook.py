@@ -17,6 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from umap_audit import apply_umap_audit, load_umap_audit, validate_umap_audit
+from annotation_override_policy import validate_identity_override
 
 
 SKILL_NAME = "sc-marker-cluster-annotation-auto"
@@ -183,12 +184,14 @@ EVIDENCE_FIELDS.extend([
     "umap_same_label_clusters", "umap_same_label_topology",
     "umap_separation_explanation", "umap_separation_evidence", "umap_conflict_resolution_basis",
     "identity_boundary_audit", "boundary_validation_required", "boundary_validation_resolved",
+    "literature_details", "override_validation", "override_audit",
 ])
 EVIDENCE_HEADERS.extend([
     "UMAP复核状态", "UMAP近邻Cluster", "UMAP拓扑摘要", "Marker与UMAP关系",
     "UMAP复核动作", "UMAP触发研究状态", "UMAP证据ID",
     "同标签Cluster", "同标签拓扑", "空间分离解释", "空间分离证据",
     "Conflict resolution basis", "Identity boundary audit", "Boundary validation required", "Boundary validation resolved",
+    "Structured literature details", "Override validation", "Override audit",
 ])
 
 
@@ -448,6 +451,9 @@ def validate(records, clusters, evidence):
         ]
         branch_fallback = str(record.get("formal_identity_fallback", "")) == "branch_identity_no_supported_leaf"
         deterministic_decision = evidence.get("deterministic_annotation_evidence", {}).get(cluster_id, {})
+        override_audit = validate_identity_override(record, deterministic_decision)
+        record["override_audit"] = override_audit
+        errors.extend(override_audit["errors"])
         if deterministic_decision.get("resolution_search_required") and record["label_basis"] not in {
             "validated_external_candidate", "researched_branch_fallback"
         }:
@@ -554,14 +560,29 @@ def validate(records, clusters, evidence):
             errors.append(f"Cluster {cluster_id} non-R0 evidence requires manual_review=true")
         boundary = deterministic_decision.get("identity_boundary_audit", {})
         neutrophil_boundary = boundary.get("neutrophil_vs_monocyte", {})
-        if stable_id in {"Neutrophil", "Immature_neutrophil", "Neutrophil_progenitor"}:
+        if stable_id in {"Neutrophil", "Mature_neutrophil", "Immature_neutrophil", "Neutrophil_progenitor"}:
             neutrophil_gate_passed = neutrophil_boundary.get("neutrophil_program_passed")
             if stable_id in {"Immature_neutrophil", "Neutrophil_progenitor"}:
                 neutrophil_gate_passed = neutrophil_boundary.get("immature_neutrophil_program_passed")
+            if stable_id in {"Neutrophil", "Mature_neutrophil"} and neutrophil_boundary.get(
+                "borderline_activated_neutrophil_candidate"
+            ):
+                neutrophil_gate_passed = bool(
+                    record.get("manual_review")
+                    and not record.get("auto_merge_allowed")
+                    and override_audit.get("status") in {"pass", "not_required"}
+                )
             if boundary.get("assessed") and not neutrophil_gate_passed:
                 errors.append(
                     f"Cluster {cluster_id} {stable_id} label fails the neutrophil program gate; "
                     "CSF3R/FCGR3B alone cannot override a coherent monocyte program"
+                )
+        dc_programs = boundary.get("dc_identity_programs", {})
+        if stable_id in {"cDC1", "cDC2", "Migratory_DC"} and boundary.get("assessed"):
+            if not dc_programs.get(stable_id, {}).get("passed"):
+                errors.append(
+                    f"Cluster {cluster_id} {stable_id} label fails its DC identity-program gate; "
+                    "CD83/ITGAX activation alone cannot establish a DC leaf"
                 )
         dc3_boundary = boundary.get("dc3_vs_monocyte", {})
         if stable_id == "DC3":
@@ -840,6 +861,9 @@ def main():
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
         "deterministic_risk_by_cluster": {str(record["cluster_id"]): record["risk_level"] for record in records},
         "deterministic_action_by_cluster": {str(record["cluster_id"]): record["recommended_action"] for record in records},
+        "override_audits_by_cluster": {
+            str(record["cluster_id"]): record.get("override_audit", {}) for record in records
+        },
         "umap_reviewed_clusters": umap_summary["reviewed_clusters"],
         "umap_conflict_clusters": umap_summary["conflict_clusters"],
         "umap_research_pending_clusters": umap_summary["research_pending_clusters"],
@@ -855,5 +879,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

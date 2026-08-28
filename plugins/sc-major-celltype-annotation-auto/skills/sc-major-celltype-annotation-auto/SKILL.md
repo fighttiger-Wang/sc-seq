@@ -86,7 +86,7 @@ For every cluster:
 9. Never output `Cell`. If no candidate is coherent and there is no mixed-population evidence, run targeted ontology/atlas/literature resolution; block formal delivery when no defensible identity can be established.
 10. Mark coherent cross-lineage conflicts as `Multi_cell` / `多细胞`, retain concrete identities in `possible_components`, flag mixed/suspected-doublet risk, and block automatic merging.
 11. Use `label_basis=canonical_subtype`; do not use marker-prefixed fallback labels in major mode.
-12. If the approved knowledge base lacks a plausible identity, generate additional candidates and validate them against coherent positive and competing programs. Use `validated_external_candidate` only with at least two independent sources, reduced confidence, manual review, and later multi-case regression before promotion into the approved standard.
+12. If the approved knowledge base lacks a plausible identity, generate additional candidates and validate them against coherent positive and competing programs. Use `validated_external_candidate` only with at least two independent sources, reduced confidence, manual review, and later multi-case regression before promotion into the approved standard. Every external or manual identity override additionally requires at least two supporting markers, inclusion of the final identity in `candidate_labels`, and structured current-case `override_validation`; it cannot bypass deterministic mixed/off-parent conflicts or failed identity gates.
 
 Populate `annotation_records.json` in normalized cluster order.
 

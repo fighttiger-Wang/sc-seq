@@ -52,7 +52,11 @@ def _record_context(records):
         primary_state = str(record.get("primary_state") or "").strip()
         if primary_state and primary_state not in states:
             states = [primary_state] + list(states)
-        context[cluster] = {"label": label, "states": [str(item) for item in states]}
+        context[cluster] = {
+            "label": label,
+            "states": [str(item) for item in states],
+            "label_basis": str(record.get("label_basis") or "").strip(),
+        }
     return context
 
 
@@ -106,6 +110,7 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
 
         if record_context:
             label = record_context.get(cluster, {}).get("label", "")
+            label_basis = record_context.get(cluster, {}).get("label_basis", "")
             expected_peers = sorted(
                 (peer for peer in label_groups.get(label, []) if peer != cluster), key=str
             )
@@ -118,6 +123,22 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
                 errors.append(f"Cluster {cluster} unique final label requires same_label_topology=not_applicable")
             if expected_peers and same_label_topology == "not_applicable":
                 errors.append(f"Cluster {cluster} repeated final label requires adjacent/disconnected topology review")
+            if label_basis in {"validated_external_candidate", "researched_branch_fallback"}:
+                nearest_labels = {
+                    record_context.get(str(peer), {}).get("label", "")
+                    for peer in item.get("nearest_clusters", [])
+                }
+                nearest_supports_label = bool(label and label in nearest_labels)
+                concrete_resolution = bool(
+                    research_status in {"resolved", "reused"}
+                    and conflict_resolution_basis not in {"none", "literature_only"}
+                    and item.get("evidence_ids")
+                )
+                if relation == "concordant" and not nearest_supports_label and not concrete_resolution:
+                    errors.append(
+                        f"Cluster {cluster} {label_basis} cannot use plain concordant UMAP audit when no nearest "
+                        f"cluster shares final identity {label}; provide resolved current-case evidence or mark a conflict"
+                    )
 
         if same_label_topology == "disconnected":
             if separation_explanation == "none":

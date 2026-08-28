@@ -42,6 +42,8 @@ UMAP is supporting evidence. It can trigger reassessment, literature search, mar
 
 Repeated labels require a cross-island audit against the final records. A disconnected same-label island may remain concordant only when a concrete dominant state, verified sample effect, or defensible trajectory boundary explains the separation. A state explanation must name a state present in the final record. Every disconnected repeated label has `auto_merge_allowed=false`; retaining the same identity is not permission to merge clusters. Without explanatory evidence, set `marker_umap_relation=conflict`, `research_required=true`, and resolve or reuse research before formal delivery. Literature alone cannot resolve sample-specific topology and is invalid as the sole formal `conflict_resolution_basis`. The builder compares `same_label_clusters` with the final labels, so an all-concordant audit written independently of the annotation table cannot pass.
 
+For `validated_external_candidate` or `researched_branch_fallback`, compare the final identity against the labels of `nearest_clusters`. If no nearest cluster shares that identity, plain `concordant/not_required/none` is invalid. Retain a conflict or provide resolved/reused current-case evidence with a concrete basis such as quantitative QC, cell-level coexpression, resolving reclustering, reference mapping, sample metadata, or trajectory metrics.
+
 ## Candidate promotion and regression
 
 Promote a validated candidate immediately after all of the following pass:

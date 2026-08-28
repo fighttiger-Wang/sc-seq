@@ -168,6 +168,40 @@ def main():
     assert myeloid_validated["boundary_validation_resolved"] is True
     assert myeloid_validated["identity_boundary_audit"]["dc3_vs_monocyte"]["cell_level_validated"] is True
 
+    cluster8_path = work / "n135_cluster8_borderline.tsv"
+    cluster8_values = {
+        "8_like": {
+            "CSF3R": .486, "FCGR3B": .093, "CXCR2": .020,
+            "PI3": .440, "SLPI": .299, "CXCL8": .867,
+            "CD14": .040, "FCN1": .029, "VCAN": .032, "FCGR3A": .018,
+            "LST1": .080, "TYROBP": .120,
+            "CD83": .748, "ITGAX": .681, "RELB": .120, "XCR1": .172,
+            "CLEC9A": .000, "WDFY4": .000, "CADM1": .000,
+            "CD1C": .000, "CLEC10A": .000, "FCER1A": .000,
+            "CCR7": .000, "FSCN1": .015, "LAMP3": .016,
+            "HLA-DRA": .105, "HLA-DPA1": .040, "HLA-DPB1": .030, "CD74": .086,
+        },
+        "monocyte_reference": {
+            "CSF3R": .010, "FCGR3B": .010, "PI3": .020, "SLPI": .030, "CXCL8": .100,
+            "CD14": .800, "FCN1": .900, "VCAN": .850, "FCGR3A": .300,
+            "LST1": .900, "TYROBP": .900, "CD83": .020, "ITGAX": .030,
+        },
+    }
+    write_ratio_values(cluster8_path, cluster8_values)
+    cluster8 = enrich_evidence(
+        evidence(cluster8_values), ratio_path=cluster8_path,
+        annotation_level="subcluster", species="Human", tissue="fetal lung",
+        parent_population="Myeloid_cell", parent_kind="lineage",
+    )["deterministic_annotation_evidence"]["8_like"]
+    assert cluster8["stable_id"] == "Neutrophil"
+    assert cluster8["risk_level"] == "R1_REVIEW_RETAIN"
+    assert cluster8["auto_merge_allowed"] is False
+    assert cluster8["identity_boundary_audit"]["neutrophil_vs_monocyte"]["borderline_activated_neutrophil_candidate"] is True
+    assert cluster8["identity_boundary_audit"]["neutrophil_vs_monocyte"]["monocyte_program_passed"] is False
+    assert cluster8["identity_boundary_audit"]["dc_like_activation"]["passed"] is True
+    assert not any(item["passed"] for item in cluster8["identity_boundary_audit"]["dc_identity_programs"].values())
+    assert "DC_like" in cluster8["state_list"]
+
     same_major_cross_module_path = work / "same_major_cross_module.tsv"
     same_major_cross_module_programs = {
         "0": ["ose", "ta"],
@@ -635,7 +669,7 @@ def main():
     assert cd4_tem["deterministic_annotation_evidence"]["1"]["stable_id"] == "CD4_Tn"
     assert cd4_tem["deterministic_annotation_evidence"]["0"]["cross_species_inference"] is False
 
-    print(json.dumps({"status": "pass", "tests": 153, "work_dir": str(work)}))
+    print(json.dumps({"status": "pass", "tests": 161, "work_dir": str(work)}))
 
 
 if __name__ == "__main__":

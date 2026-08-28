@@ -20,6 +20,7 @@ TARGETS = (
 )
 FILES = {
     "annotation_evidence_core.py": ("scripts", "annotation_evidence_core.py"),
+    "annotation_override_policy.py": ("scripts", "annotation_override_policy.py"),
     "knowledge_base.py": ("scripts", "knowledge_base.py"),
     "annotation-evidence-config.v1.json": ("references", "annotation-evidence-config.v1.json"),
     "evidence-scoring-policy.md": ("references", "evidence-scoring-policy.md"),

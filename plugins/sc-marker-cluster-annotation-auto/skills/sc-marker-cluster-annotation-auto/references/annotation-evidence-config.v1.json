@@ -1,5 +1,5 @@
 {
-  "config_version": "2.13.0",
+  "config_version": "2.14.0",
   "thresholds": {
     "minimum_detection_floor": 0.05,
     "primary_detection_floor": 0.20,
@@ -298,6 +298,14 @@
         "markers": {"CSF3R": 0.20, "FCGR3B": 0.10},
         "minimum_markers": 2
       },
+      "borderline_activated_neutrophil": {
+        "required_anchor_markers": {"CSF3R": 0.20},
+        "borderline_marker": "FCGR3B",
+        "borderline_floor_fraction": 0.75,
+        "program_id": "activated_inflammatory_neutrophil",
+        "minimum_program_markers": 2,
+        "requires_monocyte_program_absent": true
+      },
       "neutrophil_program_alternatives": [
         {
           "program_id": "mature_neutrophil",
@@ -318,6 +326,24 @@
           "minimum_markers": 2
         }
       ]
+    },
+    "dc_identity_programs": {
+      "cDC1": {
+        "markers": {"CLEC9A": 0.10, "XCR1": 0.10, "WDFY4": 0.10, "CADM1": 0.10},
+        "minimum_markers": 2
+      },
+      "cDC2": {
+        "markers": {"CD1C": 0.10, "CLEC10A": 0.10, "FCER1A": 0.10},
+        "minimum_markers": 2
+      },
+      "Migratory_DC": {
+        "markers": {"CCR7": 0.10, "FSCN1": 0.10, "LAMP3": 0.10},
+        "minimum_markers": 2
+      }
+    },
+    "dc_like_activation": {
+      "markers": {"CD83": 0.10, "ITGAX": 0.10, "RELB": 0.10},
+      "minimum_markers": 2
     },
     "dc3_vs_monocyte": {
       "rule_id": "MYELOID_DC3_VS_MONOCYTE_COEXPRESSION_GATE",
@@ -436,7 +462,7 @@
     "S_phase": ["MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "PCNA", "TYMS", "RRM1", "RRM2", "PCLAF"],
     "G2M_phase": ["MKI67", "TOP2A", "UBE2C", "CENPF", "TPX2", "NUSAP1", "CDC20", "CCNB1", "CCNB2", "BIRC5"],
     "interferon": ["ISG15", "RSAD2", "MX1", "MX2", "IFI6", "IFI44", "IFIT1", "IFIT3", "OAS1A", "USP18"],
-    "activation_APC": ["CD40", "CD83", "CCR7", "REL", "RELB", "NFKB1", "NFKB2", "IFI30"],
+    "activation_APC": ["CD40", "CD83", "ITGAX", "CCR7", "REL", "RELB", "NFKB1", "NFKB2", "IFI30"],
     "exhaustion": ["TOX", "TOX2", "PDCD1", "HAVCR2", "TIGIT", "LAG3", "ENTPD1", "CXCL13"],
     "hypoxia": ["HIF1A", "CA9", "VEGFA", "BNIP3", "NDRG1", "SLC2A1"],
     "stress": ["FOS", "JUN", "JUNB", "DUSP1", "HSPA1A", "HSPA1B"],

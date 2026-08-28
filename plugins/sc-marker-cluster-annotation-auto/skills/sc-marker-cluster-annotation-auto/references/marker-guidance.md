@@ -30,9 +30,11 @@ Do not infer identity from one famous marker when the panel requires a program. 
 - Require FOXI1/CFTR evidence and rarity review for Pulmonary_ionocyte.
 - Require CNV/mutation/tissue evidence for malignant disease role.
 
+Separate state programs from identity across every lineage. `CD83/ITGAX` indicate APC/DC-like activation, `PDCD1/LAG3` exhaustion, `MKI67/TOP2A` cycling, and shared cytotoxic genes activation/cytotoxicity; none can establish DC, exhausted-T, proliferating-cell, NK/NKT, or another identity without its coherent lineage program. `JCHAIN` alone likewise cannot establish plasma identity without the terminal secretion program.
+
 Missing genes in positive-marker-only data are unknown, not zero. Cross-lineage coherent conflicts require mixed/doublet review and `auto_merge_allowed=false`.
 
-The approved panel is a validation standard, not a closed candidate list. When a plausible subtype is absent or local candidates are noncoherent, search curated databases and primary literature. Require at least two independent sources and explicit competing-program checks before using `validated_external_candidate`. Literature validates candidate biology but cannot substitute for sample-level or cell-level validation of a boundary-defined identity; promote only after biological validation and multi-case historical regression.
+The approved panel is a validation standard, not a closed candidate list. When a plausible subtype is absent or local candidates are noncoherent, search curated databases and primary literature. Require at least two independent sources, two explicit supporting markers, final-identity inclusion in `candidate_labels`, structured current-case `override_validation`, and explicit competing-program checks before using `validated_external_candidate`. Literature validates candidate biology but cannot substitute for sample-level or cell-level validation of a boundary-defined identity; promote only after biological validation and multi-case historical regression.
 
 Do not accept a generic CD4/CD8 branch solely because its broader panel out-scores every child. When `branch_identity_no_supported_leaf` appears, re-open the candidate set, review low-ranked markers and negatives, apply configured descendant projection, and search for missing memory/effector or tissue-specialized identities. A researched branch fallback requires two independent sources documenting why no finer identity is defensible and cannot coexist with a normal descendant in the final table.
 

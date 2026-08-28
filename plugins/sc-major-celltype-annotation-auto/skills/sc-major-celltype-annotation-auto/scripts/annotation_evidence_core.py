@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.13.0"
+CORE_VERSION = "2.14.0"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"
@@ -343,6 +343,17 @@ def _program_hits(cluster, values, marker_floors):
     return hits
 
 
+def _borderline_program_hit(cluster, values, gene, floor, minimum_fraction):
+    ratio = float(values.get(cluster, {}).get(_norm(gene), {}).get("ratio", 0.0))
+    near_floor = float(floor) * float(minimum_fraction)
+    if near_floor <= ratio < float(floor):
+        return {
+            "gene": _norm(gene), "ratio": round(ratio, 4), "floor": float(floor),
+            "near_floor": round(near_floor, 4), "floor_fraction": float(minimum_fraction),
+        }
+    return {}
+
+
 def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=None):
     """Audit program-level myeloid boundaries that isolated markers cannot resolve."""
     rules = config.get("myeloid_boundary_rules", {})
@@ -385,6 +396,56 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
     )
     monocyte_program_passed = len(monocyte_hits) >= monocyte_minimum
 
+    borderline_rule = neutrophil_rule.get("borderline_activated_neutrophil", {})
+    borderline_anchor_hits = _program_hits(
+        cluster, values, borderline_rule.get("required_anchor_markers", {})
+    )
+    borderline_gene = str(borderline_rule.get("borderline_marker", "")).strip()
+    commitment_markers = neutrophil_rule.get("neutrophil_commitment", {}).get("markers", {})
+    borderline_hit = _borderline_program_hit(
+        cluster,
+        values,
+        borderline_gene,
+        commitment_markers.get(borderline_gene, 1.0),
+        borderline_rule.get("borderline_floor_fraction", 0.75),
+    ) if borderline_gene else {}
+    borderline_program = next(
+        (
+            item for item in alternatives
+            if item["program_id"] == borderline_rule.get("program_id", "")
+        ),
+        {},
+    )
+    borderline_activated_neutrophil_candidate = bool(
+        borderline_rule
+        and len(borderline_anchor_hits) == len(borderline_rule.get("required_anchor_markers", {}))
+        and borderline_hit
+        and len(borderline_program.get("marker_hits", []))
+        >= int(borderline_rule.get("minimum_program_markers", 2))
+        and (
+            not borderline_rule.get("requires_monocyte_program_absent", True)
+            or not monocyte_program_passed
+        )
+    )
+
+    dc_identity_programs = {}
+    for identity, program in rules.get("dc_identity_programs", {}).items():
+        hits = _program_hits(cluster, values, program.get("markers", {}))
+        minimum = int(program.get("minimum_markers", 2))
+        dc_identity_programs[identity] = {
+            "passed": len(hits) >= minimum,
+            "marker_hits": hits,
+            "minimum_markers": minimum,
+        }
+    dc_like_rule = rules.get("dc_like_activation", {})
+    dc_like_hits = _program_hits(cluster, values, dc_like_rule.get("markers", {}))
+    dc_like_activation = {
+        "passed": len(dc_like_hits) >= int(dc_like_rule.get("minimum_markers", 2)),
+        "marker_hits": dc_like_hits,
+        "minimum_markers": int(dc_like_rule.get("minimum_markers", 2)),
+        "interpretation": "state_support_only_not_DC_identity",
+    }
+
     dc_rule = rules.get("dc3_vs_monocyte", {})
     apc_hits = _program_hits(cluster, values, dc_rule.get("apc_program", {}).get("markers", {}))
     dc_hits = _program_hits(cluster, values, dc_rule.get("dc_specific_program", {}).get("markers", {}))
@@ -412,6 +473,9 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
             "neutrophil_commitment_hits": commitment_hits,
             "neutrophil_program_passed": neutrophil_program_passed,
             "immature_neutrophil_program_passed": immature_neutrophil_program_passed,
+            "borderline_activated_neutrophil_candidate": borderline_activated_neutrophil_candidate,
+            "borderline_anchor_hits": borderline_anchor_hits,
+            "borderline_commitment_hit": borderline_hit,
             "neutrophil_program_alternatives": alternatives,
             "neutrophil_blocked_by_monocyte": bool(
                 monocyte_program_passed
@@ -419,6 +483,8 @@ def _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence=N
                 and not neutrophil_program_passed
             ),
         },
+        "dc_identity_programs": dc_identity_programs,
+        "dc_like_activation": dc_like_activation,
         "dc3_vs_monocyte": {
             "rule_id": dc_rule.get("rule_id", ""),
             "dc3_boundary_candidate": dc3_candidate,
@@ -877,6 +943,20 @@ def enrich_evidence(
         neutrophil_boundary = identity_boundary_audit.get("neutrophil_vs_monocyte", {})
         neutrophil_reclassified = bool(neutrophil_boundary.get("neutrophil_blocked_by_monocyte"))
         monocyte_reclassified_to_neutrophil = False
+        borderline_neutrophil_retained = False
+        if (
+            primary["label"] == "Neutrophil"
+            and neutrophil_boundary.get("borderline_activated_neutrophil_candidate")
+            and not neutrophil_boundary.get("monocyte_program_passed")
+        ):
+            primary["absolute_program_gate"] = {
+                "rule_id": neutrophil_boundary.get("rule_id", ""),
+                "assessed": True,
+                "passed": True,
+                "source": "borderline_activated_neutrophil_review",
+                "provisional": True,
+            }
+            borderline_neutrophil_retained = True
         if primary["label"] == "Neutrophil" and neutrophil_boundary.get("neutrophil_blocked_by_monocyte"):
             monocyte_candidate = next(
                 (
@@ -891,15 +971,22 @@ def enrich_evidence(
                 primary = monocyte_candidate
         elif (
             primary["label"] in {"Monocyte", "Classical_monocyte", "Nonclassical_monocyte"}
-            and neutrophil_boundary.get("neutrophil_program_passed")
+            and (
+                neutrophil_boundary.get("neutrophil_program_passed")
+                or neutrophil_boundary.get("borderline_activated_neutrophil_candidate")
+            )
             and not neutrophil_boundary.get("monocyte_program_passed")
         ):
+            borderline_candidate = bool(
+                neutrophil_boundary.get("borderline_activated_neutrophil_candidate")
+                and not neutrophil_boundary.get("neutrophil_program_passed")
+            )
             neutrophil_candidate = next(
                 (
                     candidate for candidate in ranked
                     if candidate["label"] == "Neutrophil"
                     and candidate.get("core_detected", 0) >= 2
-                    and candidate["score"] >= primary["score"] * 0.70
+                    and (borderline_candidate or candidate["score"] >= primary["score"] * 0.70)
                 ),
                 None,
             )
@@ -908,11 +995,16 @@ def enrich_evidence(
                     "rule_id": neutrophil_boundary.get("rule_id", ""),
                     "assessed": True,
                     "passed": True,
-                    "source": "myeloid_boundary_program",
+                    "source": (
+                        "borderline_activated_neutrophil_review"
+                        if borderline_candidate else "myeloid_boundary_program"
+                    ),
+                    "provisional": borderline_candidate,
                 }
                 ranked = [neutrophil_candidate] + [candidate for candidate in ranked if candidate is not neutrophil_candidate]
                 primary = neutrophil_candidate
                 monocyte_reclassified_to_neutrophil = True
+                borderline_neutrophil_retained = borderline_candidate
         restrict_to_parent = bool(config.get("restrict_to_parent"))
         parent_ranked = [
             item for item in ranked
@@ -1010,11 +1102,19 @@ def enrich_evidence(
                 "or activated-neutrophil program is incomplete. Retain the monocyte call provisionally, inspect "
                 "cell-level CSF3R/FCGR3B versus CD14/FCN1/VCAN coexpression, and block automatic merging."
             )
-        elif monocyte_reclassified_to_neutrophil:
+        elif monocyte_reclassified_to_neutrophil and not borderline_neutrophil_retained:
             risk = "R1_REVIEW_RETAIN"
             action = (
                 "The complete activated-neutrophil program passes while the monocyte program is incomplete. "
                 "Retain Neutrophil provisionally and review the granulocyte/monocyte transition at cell level."
+            )
+        elif borderline_neutrophil_retained or neutrophil_boundary.get("borderline_activated_neutrophil_candidate"):
+            risk = "R1_REVIEW_RETAIN"
+            action = (
+                "A borderline activated-neutrophil program is present: CSF3R and PI3/SLPI/CXCL8 support the branch, "
+                "FCGR3B is just below its conservative commitment floor, and the monocyte program is incomplete. "
+                "Do not force a monocyte leaf. Complete targeted quantitative-QC/UMAP review and record any identity "
+                "override with structured evidence."
             )
         if primary["identity_branch_gate"]["rule_id"] and not primary["identity_branch_gate"]["assessed"]:
             risk = "R1_REVIEW_RETAIN"
@@ -1154,6 +1254,18 @@ def enrich_evidence(
         elif tissue_context_review and risk == "R1_REVIEW_RETAIN":
             action = f"{action} Also verify the noncanonical tissue context and sample provenance."
         state_result = score_states(config, cluster, values, clusters, thresholds, full_ratio, formal_stable_id)
+        dc_like_activation = identity_boundary_audit.get("dc_like_activation", {})
+        if dc_like_activation.get("passed") and formal_stable_id not in {"cDC1", "cDC2", "Migratory_DC", "DC3"}:
+            state_result["detected"].append({
+                "state": "dc_like_activation",
+                "marker_count": len(dc_like_activation.get("marker_hits", [])),
+                "genes": [item.get("gene", "") for item in dc_like_activation.get("marker_hits", [])],
+                "interpretation": "state_support_only_not_DC_identity",
+            })
+            if "DC_like" not in state_result["state_list"]:
+                state_result["state_list"].append("DC_like")
+            if not state_result["primary_state"]:
+                state_result["primary_state"] = "DC_like"
         resolution_search_required = formal_identity_fallback in {
             "confirmed_parent", "unresolved_requires_research"
         }
@@ -1249,6 +1361,7 @@ def enrich_evidence(
                 not mixed_population
                 and not (off_parent_dominant and not off_parent_conflict)
                 and not neutrophil_reclassified
+                and not borderline_neutrophil_retained
                 and not boundary_validation_required
             ),
             "mixture_type": (
@@ -1258,6 +1371,7 @@ def enrich_evidence(
                 else "off_parent_contaminant" if off_parent_dominant
                 else "aggregate_DC_monocyte_mixed_candidate" if boundary_validation_required
                 else "neutrophil_monocyte_boundary_review" if neutrophil_reclassified
+                else "borderline_activated_neutrophil_review" if borderline_neutrophil_retained
                 else ""
             ),
             "possible_components": (
@@ -1302,6 +1416,7 @@ def enrich_evidence(
                 "identity_boundary_audit": identity_boundary_audit,
                 "neutrophil_reclassified_to_monocyte": neutrophil_reclassified,
                 "monocyte_reclassified_to_neutrophil": monocyte_reclassified_to_neutrophil,
+                "borderline_neutrophil_retained": borderline_neutrophil_retained,
                 "boundary_validation_required": boundary_validation_required,
                 "boundary_validation_resolved": boundary_validation_resolved,
                 "resolution_search_required": resolution_search_required,
