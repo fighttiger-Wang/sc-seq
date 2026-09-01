@@ -11,6 +11,16 @@ Build user-facing callable skills as plugins in the shared local marketplace, no
 
 Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode once for the task. If it installs an update, stop and ask the user to restart Codex and open a new task before continuing. Never edit an installed plugin cache as source.
 
+## Candidate, release, and callable states
+
+Keep the stable marketplace checkout and its `main`-derived working tree clean while a Skill is being drafted. Perform unapproved edits in a session-local isolated worktree or staging copy. A candidate may be tested through an explicit file/path handoff in the current task, but it must not be registered, installed, or exposed through `/`.
+
+Each Skill owns its own release sequence. Keep the fixed workflow number (`03`, `04`, etc.) separate from the visible release version (`v3.03`, `v3.04`, etc.). The visible name may be `03 · Name v3.03`; the plugin package's cache-busting version remains a separate technical field. Every release record must also contain the Git commit and content SHA-256.
+
+After the user has finished testing, summarize the candidate and ask for explicit publication consent. Without consent, do not copy or merge the candidate into the stable source, update registries, change cachebusters, write a published audit record, or install it. With consent, promote only the explicitly named Skill(s), create the release record, validate all registry/cache/hash gates, and install only the resulting release. A partial promotion is a failure: keep the previous callable release and report the failed gate.
+
+The two annotation Skills `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto` are independent release units. Never alter, rebuild, synchronize, or publish either one merely because the other one was edited. Never treat shared annotation evidence or knowledge-base files as permission to change either Skill; their scope must be explicitly named.
+
 Codex/OpenAI accounts can be switched and the package can be cloned to Windows or macOS. The plugin source remains in the configured shared marketplace while account-specific Codex registration can change. Keep exactly one active source for every maintained skill: `workspace-local`. Do not use `~/.codex/plugins/cache` as a source because it is only an installed cache.
 
 Normalize every internal skill/plugin id to lowercase ASCII hyphen-case. Keep the requested Chinese name in UI metadata.
@@ -66,10 +76,12 @@ Assign later maintained skills the next unused two-digit number, currently `15`.
 9. Set the same `NN · Name` display name in both `plugin.json` and `agents/openai.yaml`.
 10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^\d{2} · .+$`; reject `路` or a missing/wrong separator.
 11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
-12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan; for an unregistered new plugin, finish the three registries before proceeding.
-13. Ask the user for explicit publication confirmation. Only then invoke confirmed publish, which updates cachebusters, synchronizes `skill-pack.json`, tests, commits, and pushes a `codex/*` branch. Create a PR when GitHub CLI/API access is available; otherwise return the compare URL.
+12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan containing the candidate's changed paths, affected Skills, proposed visible release versions, technical package versions, commit/hash evidence, tests, and installation impact; for an unregistered new plugin, finish the three registries before proceeding.
+13. Ask the user for explicit publication confirmation. Only then promote the explicitly approved Skill(s), update cachebusters and `skill-pack.json`, test, create the release record, commit, and push a `codex/*` branch. Do not install a candidate branch as the stable `/` release unless the release gate explicitly verifies the selected stable ref; create a PR when GitHub CLI/API access is available and never merge automatically.
 14. Treat the PR as the release gate. `main` is the stable source used by other computers; do not merge automatically or report a merge without remote evidence.
 15. After the PR is merged, other computers receive it through `preflight`. If plugins are installed or changed, tell the user to restart Codex and open a new task before testing `/`.
+
+Before any `/` invocation after a release or account/computer switch, require a preflight result proving that the local source commit, installed plugin package version, visible release version, and content hash match the remote stable release. If the remote cannot be checked, mark freshness as unverified and do not claim the entry is latest.
 
 Read [shared-git-lifecycle.md](references/shared-git-lifecycle.md) when creating, updating, publishing, merging, or synchronizing a maintained Skill.
 
