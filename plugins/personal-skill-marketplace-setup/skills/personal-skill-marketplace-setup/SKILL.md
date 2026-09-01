@@ -7,6 +7,23 @@ description: Bootstrap, audit, preflight, install, update, publish, repair, or r
 
 Use `scripts/setup.py` as the cross-platform manager. The Git checkout is authoritative; never edit an installed plugin cache as source.
 
+## Release identity and promotion boundary
+
+The remote Git repository's stable `main` ref is the cross-computer release authority. A local clone is only a working copy of that authority; a Codex plugin cache, a bare skill directory, an account-specific registration, a downloaded archive, or an annotation database is never an authority.
+
+Every maintained Skill has two independent identities:
+
+- a fixed workflow id such as `03` or `04`, used for lookup and ordering;
+- an independent user-facing release version such as `v3.03`, used only after the user explicitly approves publication.
+
+The immutable release identity is the tuple `skill id + release version + Git commit + content SHA-256`. A version string without the commit and hash is insufficient evidence of equality.
+
+Unpublished edits are session-local or isolated-worktree candidates. They must not update the stable checkout, any marketplace registry, any Codex cache, any database record marked published, or the `/` callable entry. A test result is not publication consent.
+
+After testing, report the changed files, affected Skill ids, proposed release versions, commit/hash evidence, and risks, then ask whether to publish. Only an explicit affirmative publication decision may promote the candidate, update release metadata, install the matching cache, and make the entry callable. If any synchronization or hash check fails, stop and leave the old callable version intact.
+
+When a local machine or account cannot reach the remote stable ref, report that freshness is unverified; do not infer that a local cache is current. After a successful install or changed preflight, require a Codex restart and a new task before testing `/`.
+
 ```bash
 python scripts/setup.py bootstrap --destination <approved-clone-path> --workspace-root <approved-workspace>
 python scripts/setup.py preflight
@@ -24,6 +41,7 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 - `preflight`: run once per task before first using or editing another `workspace-local` Skill. Fetch the stable ref and compare commits. Do nothing when current; fast-forward and reinstall affected plugins when behind; stop on dirty, detached, unexpected, ahead, or divergent state. If plugins changed, require a Codex restart and new task.
 - `publish`: first run without `--confirm-publish` to report changed paths, affected plugins, unregistered new-plugin directories, and tests. A new plugin must first be registered by `skill-writing` in `skill-pack.json` and both marketplace manifests. Ask the user for explicit confirmation. After confirmation, create or reuse a `codex/*` branch, update affected plugin cachebusters and `skill-pack.json`, test, commit, push, and optionally create a PR with authenticated GitHub CLI. Never push directly to `main`.
 - `audit`: read-only source/config/install diagnosis; no fetch, pull, registration, or writes.
+- `audit`: also report the release version, Git commit, content hash, source/cache classification, and whether the installed callable entry exactly matches the remote stable release. Never repair by choosing the newest-looking local copy.
 - `install`: install an existing verified checkout, or clone to an exact approved destination. It does not add managed workspace guidance.
 - `update`: legacy explicit full update; require a clean worktree, use `git pull --ff-only`, then validate and reinstall all plugins. Prefer `preflight` for routine use.
 - `repair`: do not fetch or pull. Validate and reinstall the exact local versions.
@@ -52,6 +70,7 @@ The bootstrap cannot log the user into GitHub, install Git/Python with an OS pac
 5. A pull request is a candidate release, not a synchronization result. Treat it as merged only when remote GitHub evidence reports the merge and the remote stable ref contains it. Other computers update from the stable ref, not from an open PR branch.
 6. A passing doctor, unit test, or GitHub Actions run proves only those checks. It does not prove scientific interpretation, customer-facing output, R/Python packages, WPS, fonts, containers, credentials, or remote runtimes.
 7. After install, update, repair, bootstrap, or a preflight that changed installed plugins, tell the user to restart Codex and open a new task.
+8. Never batch-update or infer a coupled release for `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto`. They are independent Skills; update and publish only the explicitly named Skill(s). Do not invoke annotation knowledge-base publication as a side effect unless the user explicitly includes that scope.
 
 ## Managed synchronization guidance
 

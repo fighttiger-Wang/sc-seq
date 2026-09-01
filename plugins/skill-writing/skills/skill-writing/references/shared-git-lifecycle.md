@@ -2,6 +2,12 @@
 
 Use this workflow for every maintained `workspace-local` Skill on Windows or macOS.
 
+## Release identity
+
+The remote repository's stable `main` ref is the only cross-computer release authority. Keep the workflow number (for example `03`) fixed for lookup, and maintain an independent per-Skill visible release version (for example `v3.03`). Record both with the exact Git commit and a content SHA-256. Plugin cachebuster versions are technical installation metadata and must not replace the user-facing release version.
+
+Draft edits belong to the current task's isolated worktree or staging copy. They are testable only through an explicit current-task path and are not registered, installed, published, or callable through `/`. Publication requires an explicit user confirmation after the test report. Promotion must be all-or-nothing across the selected Skill's source, manifests, release record, and installation; on a failed gate, retain the previous callable release.
+
 ## Why a pull request exists
 
 GitHub is the shared transport, while `main` is the stable release channel. A pull request keeps candidate changes on a `codex/*` branch so that conflicts, changed files, tests, and platform results can be reviewed before every computer consumes them. A PR is not required for Git to function, but it is the safety boundary that prevents an untested edit from immediately becoming the shared version.
