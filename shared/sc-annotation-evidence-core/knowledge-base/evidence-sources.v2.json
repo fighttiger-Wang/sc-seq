@@ -228,6 +228,42 @@
     "authority_gate": "Yes"
   },
   {
+    "source_id": "SRC_DC3_DUTERTRE",
+    "short_name": "Human DC3 / inflammatory DC study",
+    "source_type": "primary_study",
+    "title": "Single-Cell Analysis of Human Mononuclear Phagocytes Reveals Subset-Defining Markers and Identifies Circulating Inflammatory Dendritic Cells",
+    "year": 2019,
+    "journal": "Immunity",
+    "doi": "10.1016/j.immuni.2019.08.008",
+    "url_or_path": "https://doi.org/10.1016/j.immuni.2019.08.008",
+    "relevance": "Defines human CD1c-positive inflammatory dendritic populations with monocyte-like CD14/CD163 features that underpin the DC3 boundary program.",
+    "authority_gate": "Yes"
+  },
+  {
+    "source_id": "SRC_DC3_BOURDELY",
+    "short_name": "Human CD163-positive DC3 functional study",
+    "source_type": "primary_study",
+    "title": "Transcriptional and Functional Analysis of CD1c+ Human Dendritic Cells Identifies a CD163+ Subset Priming CD8+CD103+ T Cells",
+    "year": 2020,
+    "journal": "Immunity",
+    "doi": "10.1016/j.immuni.2020.06.002",
+    "url_or_path": "https://doi.org/10.1016/j.immuni.2020.06.002",
+    "relevance": "Supports a distinct CD1c-positive, CD163-positive DC3 population carrying both dendritic and monocyte-like features.",
+    "authority_gate": "Yes"
+  },
+  {
+    "source_id": "SRC_DC3_CYTLAK",
+    "short_name": "Human DC3 developmental pathway study",
+    "source_type": "primary_study",
+    "title": "Differential IRF8 Transcription Factor Requirement Defines Two Pathways of Dendritic Cell Development in Humans",
+    "year": 2020,
+    "journal": "Immunity",
+    "doi": "10.1016/j.immuni.2020.07.003",
+    "url_or_path": "https://doi.org/10.1016/j.immuni.2020.07.003",
+    "relevance": "Provides developmental evidence that human DC3 follows a pathway distinguishable from conventional cDC1/cDC2 while retaining monocyte-related features.",
+    "authority_gate": "Yes"
+  },
+  {
     "source_id": "SRC_FIBRO",
     "short_name": "Cross-tissue fibroblast atlas",
     "source_type": "authoritative_atlas",

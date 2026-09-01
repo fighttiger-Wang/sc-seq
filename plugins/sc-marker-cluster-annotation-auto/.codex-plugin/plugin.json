@@ -1,6 +1,6 @@
 {
   "name": "sc-marker-cluster-annotation-auto",
-  "version": "0.6.0+codex.20260828015035",
+  "version": "0.6.1+codex.20260901015123",
   "description": "Accelerated evidence-first subcluster annotation with shared cross-account case learning, staged automatic knowledge promotion, full regression, strict hierarchy consistency, and deterministic QA.",
   "author": {
     "name": "fight"
@@ -18,6 +18,8 @@
       "Compact lineage and cell-cycle evidence packs",
       "Optional full gene-by-cluster detection-ratio scoring",
       "Directional full-ratio coherence without detection-only leaf calls",
+      "Dataset-relative competing-program gates that reject ubiquitous background expression and ontology-ancestor rivals",
+      "Dominance-first mutually exclusive identity-program arbitration with cell-level validation escalation",
       "Program-level neutrophil/monocyte and DC3/monocyte boundary gates",
       "Literature-only UMAP conflict blocking and disconnected-label merge blocking",
       "Absolute exclusion gates for terminal differentiation boundaries",
@@ -35,7 +37,9 @@
       "Single-cell cluster annotation",
       "Seurat object extraction",
       "Mixed and doublet review",
-      "Alpha-beta versus gamma-delta T-sublineage conflict detection with parent fallback",
+      "Alpha-beta versus gamma-delta receptor-program dominance with unresolved-boundary fallback",
+      "NKT absolute TCR-plus-NK-plus-cytotoxic program gate with coherent gamma-delta TCR exclusion",
+      "Evidence-ID-backed disconnected UMAP label review",
       "CD4 versus CD8 alpha-beta branch-anchor gating with identity/state-separated exhaustion and mixed-parent fallback",
       "Chinese and English Excel reporting",
       "Canonical subtype hierarchy and literature verification",

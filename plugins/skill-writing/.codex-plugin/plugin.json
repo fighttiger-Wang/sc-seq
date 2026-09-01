@@ -1,6 +1,6 @@
 {
   "name": "skill-writing",
-  "version": "0.1.0+codex.20260827055618",
+  "version": "0.1.0+codex.20260901015123",
   "description": "Personal workflow for writing Codex skills as callable personal plugins.",
   "author": {
     "name": "fight"

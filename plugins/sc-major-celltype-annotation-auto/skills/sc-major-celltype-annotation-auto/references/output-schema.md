@@ -9,7 +9,7 @@ Every annotation record contains:
 | Species/provenance | `target_species`, `panel_species`, `cross_species_inference`, `marker_panel_evidence_ids`, `marker_panel_evidence_gate` |
 | Evidence | `supporting_markers`, `conflicting_markers`, `candidate_labels`, `rationale`, `primary_evidence_major_label`, `formal_identity_fallback`, deterministic scores and decision trace |
 | Risk | `mixed_or_doublet`, `mixed_population`, `suspected_doublet`, `mixture_type`, `possible_components`, `auto_merge_allowed`, `manual_review`, `review_action` |
-| Naming/override audit | `label_basis`, `canonical_subtype`, `top_marker_gene`, `literature_source`, `literature_details`, `override_validation`, `override_audit`, `naming_grammar`, `contextually_excluded_naming_markers` |
+| Naming/override audit | `label_basis`, `canonical_subtype`, `top_marker_gene`, `literature_source`, `literature_details`, `override_validation`, `override_audit`, `user_constraint_audit`, `naming_grammar`, `contextually_excluded_naming_markers` |
 
 Rules:
 
@@ -22,5 +22,6 @@ Rules:
 - Cross-species Human-panel transfer requires `cross_species_inference=true` and panel provenance.
 - Every non-R0 result requires manual review; minimal evidence cannot receive high confidence.
 - `validated_external_candidate` requires at least two independent structured sources, at least two supporting markers, final-identity inclusion in `candidate_labels`, structured current-case `override_validation`, manual review, and confidence below high until formal promotion. It cannot bypass deterministic mixed/off-parent conflicts or failed identity gates.
+- `user_constraint_audit` records hard excluded labels, conflict-only markers, excluded ranked candidates, and whether a legal alternative was selected. A final label that remains explicitly excluded is invalid and blocks QA.
 
 The final workbook contains exactly `注释结果`, `详细证据`, and `说明与数据来源`. The main sheet shows identity, developmental stage, state, quality score, mixed/doublet risk, and concise judgment evidence without JSON or full paths. Automatic filters are disabled, rows are compact, and no blank manual-entry columns are created. QA records cluster order, label normalization, knowledge-base/core/config versions and hashes, active tissue modules, cross-species calls, mixed/doublet blocks, and identity-state separation.

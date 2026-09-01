@@ -1,6 +1,6 @@
 {
   "name": "sc-major-celltype-annotation-auto",
-  "version": "0.3.1+codex.20260828015035",
+  "version": "0.3.2+codex.20260901015123",
   "description": "Approved multi-tissue major-celltype annotation with shared cross-account case learning, staged knowledge promotion, deterministic QA, and delivery.",
   "author": {
     "name": "fight"
@@ -25,6 +25,8 @@
       "Major-celltype annotation across mixed lineages",
       "XLSX TSV and CSV average-expression inputs",
       "Broad-lineage evidence and negative-evidence checks",
+      "Dataset-relative competing-program gates that reject ubiquitous background expression and ontology-ancestor rivals",
+      "Dominance-first mutually exclusive identity-program arbitration",
       "Independent per-cluster T/NK arbitration with mixed/doublet merge blocking",
       "State and subtype separation from major identity",
       "Mixed and doublet review",

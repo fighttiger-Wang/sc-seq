@@ -27,6 +27,7 @@ Read:
 - `references/automation-and-permissions.md`
 - `references/acceleration-and-umap-workflow.md`
 - `references/case-learning-registry.md`
+- `references/biological-reasoning-framework.md` whenever evidence is weak, noisy, shared, contradictory, or topology-discordant
 - `references/myeloid-boundary-gates.md` when the parent or a competing candidate is Myeloid
 - `references/cell-annotation-knowledge-base.v2.json` only for targeted parent/node/panel and cross-lineage-sentinel lookup
 - `references/legacy-migration.v2.json` for old-label conversion
@@ -36,6 +37,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 ## 3. Annotation policy
 
 - Annotate every cluster to the finest reliable identity supported within its parent branch.
+- Apply the biological evidence hierarchy before subtype scoring: identity-defining structure/receptor programs, explicit sibling exclusions, differentiation programs, state/QC programs, then topology. A lower tier cannot override a coherent higher-tier competitor.
 - Require consistency only among siblings under the same parent. Different lineages may stop at different depths.
 - Allow repeated standard IDs; `cluster_id` provides uniqueness.
 - Never add `<top_marker>_` merely to distinguish repeated canonical labels.
@@ -46,6 +48,8 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - Treat `Developing_B`, `Mature_B`, and `Antibody_secreting_B` as structural parents, not final subcluster labels when a supported child exists.
 - Never mix a normal ontology ancestor label with any of its descendants in one final subcluster mapping. A genuine incompatible mixture must use `Multi_cell` / `多细胞`, retain explicit components, remain visibly under manual review, and never merge automatically.
 - Store B maturity in `developmental_stage`; do not use `Mature_B` as a substitute for `Naive_B`, `Memory_B`, or `GC_B`.
+- Treat user-supplied subtype exclusions as hard constraints: use `--annotation-constraints` or repeated `--exclude-label`, and never emit an excluded identity merely because it has the highest raw score. If every supported candidate is excluded, block formal delivery and report the unresolved boundary.
+- Treat `--exclude-marker` genes as conflict/contamination-only evidence for this run. They may be shown in `conflicting_markers` and the audit trail, but cannot supply positive identity or state support.
 - Keep `Cycling` as state. Render `Cycling_Pro_B`, `Cycling_Pre_B`, or `Cycling_Plasmablast`; never create a stable identity named `Cycling_B`.
 - In full-ratio mode, require the configured number of directionally supported core markers for a leaf identity. Do not treat mere detection of half a panel as coherent evidence; broad lineage markers, ambient immunoglobulins, and weak dataset-wide expression cannot establish a subtype.
 - Apply absolute exclusion gates at identity boundaries. In particular, high retention of both `MS4A1` and `PAX5` blocks terminal `Plasmablast`/`Plasma_cell` calls even when cycling or isolated secretory genes are present. Require a coherent antibody-secretion/ER program for antibody-secreting identities.
@@ -57,7 +61,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - In positive-marker-only mode, treat an unobserved CD4/CD8 branch anchor as unknown and do not formalize a branch-specific leaf; fall back to the confirmed T parent while retaining the weak subtype candidates for review.
 - Use generic `Tn` when a coherent naive T program is present but CD4/CD8 branch evidence is not defensible. Use `DNT` when coherent T/Tn evidence coexists with a dataset-relative double-negative phenotype and gamma-delta evidence is insufficient; do not infer `gdT` from weak absolute receptor expression alone.
 - Never emit `CD4_Tex` or `CD8_Tex` as a formal `Stable_ID`; they are legacy identity/state boundary labels only. Resolve the identity as `CD4_T`, `CD8_T`, or a supported finer subtype, and record persistent exhaustion only as `State=Exhausted`. If both CD4 and CD8 alpha-beta programs are coherent, return `T_cell`, mark incompatible sublineage mixture, and block automatic merging pending cell-level review.
-- In full-ratio mode, require at least two `TRDC/TRGC1/TRGC2` anchors before accepting any `gdT` descendant. Within that verified branch, use `Naive_like_gdT` for a coherent `TCF7/LEF1/SELL/CCR7` program and `IL17A_gdT` for a coherent `IL17A/IL23R/RORC/RORA` program. `IL17A_gdT` is an identity-state boundary node in the gamma-delta branch, not `CD4_Th17` and not a generic state attached to unresolved `gdT`.
+- In full-ratio mode, require at least two `TRDC/TRGC1/TRGC2` anchors before accepting any `gdT` descendant, then arbitrate the complete gamma-delta program against `TRAC/TRBC1/TRBC2`. A dominant alpha-beta program blocks gamma-delta leaves; a dominant gamma-delta program blocks CD4/CD8 alpha-beta leaves; a non-dominant dual program remains a boundary review. Only after this branch decision, use `Naive_like_gdT` for a coherent `TCF7/LEF1/SELL/CCR7` program and `IL17A_gdT` for a coherent `IL17A/IL23R/RORC/RORA` program.
 - Treat M1/M2, TAM, CAF, and malignancy as state/role fields.
 - Require a coherent persistent program for Exhausted; PDCD1/LAG3 alone are insufficient.
 - Retain Tfh and Tph as distinct nodes with explicit competing-program checks.
@@ -68,7 +72,7 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 - Check cDC2 against monocyte-derived programs explicitly.
 - For Myeloid boundaries, require the program gates in `references/myeloid-boundary-gates.md`. Never let isolated `CSF3R`, `FCGR3B`, `XCR1`, `HLA-DRA`, or `CD74` override the complete competing program.
 - `Immature_neutrophil` requires a coherent early/secondary granule program; incomplete mature-neutrophil receptors are not sufficient positive evidence.
-- Treat aggregate APC + cDC2-like + monocyte evidence as a DC3 boundary candidate. Literature may nominate DC3 but cannot prove same-cell coexpression. When the aggregate programs are jointly coherent, deliver a conservative likely-mixed `Myeloid_cell` common-parent fallback with `mixed_population=true`, `suspected_doublet=false`, `manual_review=true`, and `auto_merge_allowed=false`; do not force DC3 or require RData merely to complete the annotation. Use cell-level validation or resolving reclustering only to refine the components and distinguish separate subpopulations from same-cell coexpression/doublets.
+- Treat aggregate APC + cDC2-like + competitive monocyte-specific evidence as a DC3 boundary candidate. Count `CD14/FCN1/VCAN/FCGR3A` as monocyte-specific anchors and treat `LST1/TYROBP` only as pan-myeloid support. A complete prevalence-dominant cDC2 program with weak monocyte background remains cDC2 under manual review and blocked automatic merging; it is not `Multi_cell`. When the APC, DC-specific, and monocyte-specific programs jointly pass, annotate the best-fit terminal identity `DC3`, reduce confidence, require manual review, and block automatic merging. Aggregate evidence is sufficient for the identity judgment but not for claims of cluster purity, same-cell coexpression, or doublets; use cell-level validation or resolving reclustering only for those refinements.
 - Call Myofibroblast only with a coherent contractile plus ECM program.
 - Call TA_cell only with intestinal lineage/developmental evidence and store Cycling separately.
 
@@ -76,14 +80,18 @@ Treat the approved knowledge base as the runtime source of truth. Load global po
 
 - When two coherent incompatible lineage programs coexist, output `Multi_cell` / `多细胞`, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`.
 - Apply the same block to mutually exclusive sublineages inside one broad lineage. In particular, never directly finalize `CD4_Th17` or `IL17A_gdT` when full detection ratios support a CD4 alpha-beta program and at least two gamma-delta TCR anchors (`TRDC/TRGC1/TRGC2`) with near-scoring candidates. Set `possible_components=CD4_Th17;IL17A_gdT`, output `Multi_cell`, and require cell-level coexpression review or reclustering.
-- Do not use detection proportions alone to claim that competing programs occupy the same cells or to confirm doublets. Aggregate evidence may support a conservative likely-mixed cluster call when multiple coherent incompatible programs coexist, but it must retain the common-parent fallback, manual review, explicit possible components, and blocked automatic merging.
+- Do not use detection proportions alone to claim that competing programs occupy the same cells or to confirm doublets. Aggregate evidence may still support a boundary-defined terminal identity such as DC3 when its registered multi-program gate passes; express residual uncertainty through confidence, boundary audit, and blocked automatic merging rather than a broad parent or `Multi_cell` label.
 - Do not automatically merge that cluster with either normal subtype.
 - Use cell-level coexpression/doublet evidence to distinguish true doublets from unresolved mixed subpopulations.
 - For T/NK, resolve each cluster independently; never trigger dataset-wide label collapse.
 
 ## 5. Normalize and preflight
 
-Accept paired Excel files or a Seurat object. Preserve raw inputs and full marker order. Missing genes are unknown in positive-marker-only mode and zero only in a verified full ratio table.
+Accept paired Excel files or a Seurat object. Preserve raw inputs and full marker order. Missing genes are unknown in positive-marker-only mode and zero only in a verified complete full-ratio table. The normal `--ratios` path requires every average-expression gene for every cluster; use `--allow-partial-ratios` only for provisional review, never formal delivery. Supply `--context-json` when age, sex, disease, treatment, anatomy, platform, depth, or doublet metadata are available.
+
+Input contract: the minimum usable input is the paired cluster marker table plus average-expression table, with confirmed `subcluster` level, species, tissue, and parent population. Add full `--ratios`, `--umap`, and RData/Seurat-derived cell evidence when available. The optional constraints JSON is `{"exclude_labels":[],"conflict_markers":[],"clusters":{"cluster_id":{"exclude_labels":[],"conflict_markers":[]}}}`; CLI flags are global shorthand.
+
+Subcluster output contract: return standardized ontology-compatible English/Chinese identities, explicitly preserve excluded candidates and conflict markers in the evidence trail, keep state separate, and distinguish unsupported identity, contamination/background, and confirmed mixed/doublet. Do not silently replace a forbidden label with a broad ancestor.
 
 ```bash
 python3 scripts/prepare_annotation.py \
@@ -95,7 +103,8 @@ python3 scripts/prepare_annotation.py \
   --workspace-root <workspace-root> --output-dir <run-dir> \
   --species <species> --tissue <tissue> \
   --annotation-level subcluster --parent-population <parent> \
-  --parent-kind <auto|lineage|state|mixed|unknown>
+  --parent-kind <auto|lineage|state|mixed|unknown> \
+  [--annotation-constraints <constraints.json>] [--exclude-label <label> ...] [--exclude-marker <gene> ...]
 ```
 
 The preflight must record knowledge-base/core/config versions, active tissue modules, panel provenance, evidence mode, source paths, and normalized cluster order.
@@ -117,10 +126,12 @@ Read `annotation_evidence_digest.json` first. For every cluster:
 10. If no candidate is coherent under a confirmed lineage parent, keep the confirmed parent only as an interim audit result; do not use it to bypass final table-wide hierarchy consistency.
 11. Mark coherent incompatible programs as mixed/suspected-doublet and block automatic merging.
 12. Audit off-parent programs whenever full ratios exist; distinguish a dominant contaminant from a true mixed cluster instead of forcing every cluster into the declared parent lineage.
-13. Treat the approved knowledge base as the validation baseline, not a closed candidate box. If it lacks a plausible subtype, generate and research additional candidates. Use `validated_external_candidate` with at least two independent sources, reduced confidence, and manual review. Every external or manual identity override must also list at least two explicit supporting markers, retain the final identity in `candidate_labels`, and provide structured `override_validation` with a current-case method, evidence IDs, the supported identity, and the competing identity exclusion. It cannot bypass failed branch/program/absolute-negative gates, mixed/off-parent conflicts, or an incoherent ranked candidate. Boundary-defined identities additionally require sample-level or cell-level validation appropriate to the boundary. Promote only after current-case biological validation and all registered historical regressions pass; software regression alone cannot validate biology.
-14. When a UMAP or equivalent embedding is available, review every cluster and write the structured audit described in `references/acceleration-and-umap-workflow.md`. Use topology as supporting evidence. Marker/UMAP conflict triggers integrated reassessment and may update marker standards or add a new subtype; neither source automatically overrides the other.
-15. Audit every repeated final identity across the whole embedding. Disconnected same-label islands require concrete state, sample, or trajectory evidence; otherwise mark a conflict and complete research/reclassification before formal delivery. Never create an all-concordant audit independently of the final labels.
-16. A disconnected repeated identity always has `auto_merge_allowed=false`. It may retain the same provisional identity after explanation, but automatic merging requires separate downstream manual adjudication.
+13. Treat the approved knowledge base as the validation baseline, not a closed candidate box. If it lacks a plausible subtype, generate and research additional candidates. Use `validated_external_candidate` with at least two independent sources, reduced confidence, and manual review. Every external or manual identity override must also list at least two explicit supporting markers, retain the final identity in `candidate_labels`, and provide structured `override_validation` with a current-case method, evidence IDs, the supported identity, and the competing identity exclusion. It cannot bypass failed branch/program/absolute-negative gates, mixed/off-parent conflicts, or an incoherent ranked candidate. Boundary-defined identities require the registered aggregate program gate for naming; require cell/sample-level validation only for stronger claims such as purity, same-cell coexpression, doublets, or resolving mixed components. Promote only after current-case biological validation and all registered historical regressions pass; software regression alone cannot validate biology.
+14. Treat background expression systematically across all identities. A secondary program can trigger mixed/off-parent review only after it passes the shared dataset-relative competing-program gate (coherence, multiple strong anchors, specificity, relative score, and a distinct ontology branch). Never count a broad ancestor as an independent rival of its supported descendant.
+15. For a configured mutually exclusive boundary, record both complete program prevalences before leaf selection. Use the configured ratio plus absolute-margin dominance rule; never let an isolated enriched rival gene override the majority identity program. If neither side dominates, escalate through cell-level coexpression and the boundary-specific orthogonal assay instead of guessing.
+16. When a UMAP or equivalent embedding is available, review every cluster and write the structured audit described in `references/acceleration-and-umap-workflow.md`. Use topology as supporting evidence. Marker/UMAP conflict triggers integrated reassessment and may update marker standards or add a new subtype; neither source automatically overrides the other.
+17. Audit every repeated final identity across the whole embedding. Disconnected same-label islands require concrete state, sample, or trajectory evidence; otherwise mark a conflict and complete research/reclassification before formal delivery. Never create an all-concordant audit independently of the final labels.
+18. A disconnected repeated identity always has `auto_merge_allowed=false`. It may retain the same provisional identity after explanation, but automatic merging requires separate downstream manual adjudication.
 
 Populate `annotation_records.json` in normalized cluster order.
 
@@ -181,6 +192,7 @@ After QA passes, the builder must register the de-identified case in the shared 
 - Confirm display labels contain identity only and the state remains in a separate column.
 - Confirm every CD4/CD8 leaf satisfies its recorded branch-anchor gate, and every coherent CD4-versus-CD8 mixed conflict is labeled `Multi_cell` with both components retained and automatic merging blocked.
 - Confirm every `gdT` descendant satisfies the gamma-delta TCR gate; distinguish naive-like and type-17 programs when supported, and never infer `IL17A_gdT` from an IL17 program without gamma-delta anchors.
+- Confirm every configured mutually exclusive boundary records both program profiles, dominance ratio/margin, resolution, and validation ladder; a rival-dominant candidate cannot be final, and an unresolved dual program cannot be silently forced to one branch.
 - Confirm generic `Tn` and `DNT` remain available when CD4/CD8 or gamma-delta branch evidence is insufficient, using dataset-relative anchors and negative conflicts rather than fixed absolute thresholds alone.
 - Confirm every mixed/suspected-doublet cluster is labeled `Multi_cell` / `多细胞`, has populated `possible_components`, and has `auto_merge_allowed=false`.
 - Reject `Cell` unconditionally as a final major or subcluster label. A non-mixed unresolved cluster must continue targeted resolution or stop formal delivery.

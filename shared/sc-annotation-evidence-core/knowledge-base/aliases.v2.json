@@ -1204,6 +1204,27 @@
     "maps_to": "cDC2"
   },
   {
+    "cell_id": "DC3",
+    "language": "en",
+    "alias": "DC3",
+    "alias_type": "standard_id",
+    "maps_to": "DC3"
+  },
+  {
+    "cell_id": "DC3",
+    "language": "zh",
+    "alias": "3型树突状细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "DC3"
+  },
+  {
+    "cell_id": "DC3",
+    "language": "en",
+    "alias": "CD1c CD163 dendritic cell",
+    "alias_type": "synonym",
+    "maps_to": "DC3"
+  },
+  {
     "cell_id": "pDC",
     "language": "en",
     "alias": "pDC",

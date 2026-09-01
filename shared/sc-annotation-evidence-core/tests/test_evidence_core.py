@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from annotation_evidence_core import compose_display_label, enrich_evidence, score_panel  # noqa: E402
+from annotation_evidence_core import _absolute_program_gate, _competing_program_audit, _cross_identity_competitor_policy, _tnk_arbitration, compose_display_label, enrich_evidence, load_ratio_table, score_panel  # noqa: E402
 from knowledge_base import build_runtime_config, load_knowledge_base  # noqa: E402
 
 
@@ -21,7 +21,7 @@ PANELS = {
     "macro": ["C1QA", "C1QB", "C1QC", "MERTK"],
     "t": ["CD3D", "CD3E", "CD3G", "TRAC"],
     "nk": ["NKG7", "KLRD1", "NCR1", "GNLY"],
-    "cd4_th17": ["CD3D", "CD3E", "TRAC", "CD4", "CD40LG", "RORC", "CCR6", "IL17A", "IL17F", "IL23R", "RORA"],
+    "cd4_th17": ["CD3D", "CD3E", "TRAC", "TRBC1", "TRBC2", "CD4", "CD40LG", "RORC", "CCR6", "IL17A", "IL17F", "IL23R", "RORA"],
     "cd4_branch": ["CD4", "CD40LG"],
     "cd4_tem": ["CD44", "IL7R", "IFNG", "TNFSF8", "TNFSF11", "TNFRSF4", "IL21"],
     "cd8_branch": ["CD8A", "CD8B1"],
@@ -146,8 +146,107 @@ def main():
     assert myeloid_boundary["4_like"]["auto_merge_allowed"] is False
     assert myeloid_boundary["17_like"]["identity_boundary_audit"]["dc3_vs_monocyte"]["dc3_boundary_candidate"] is True
     assert myeloid_boundary["17_like"]["boundary_validation_required"] is True
+    assert myeloid_boundary["17_like"]["stable_id"] == "DC3"
+    assert myeloid_boundary["17_like"]["formal_identity_fallback"] == "dc3_boundary_best_fit"
+    assert myeloid_boundary["17_like"]["mixed_population"] is False
+    assert myeloid_boundary["17_like"]["suspected_doublet"] is False
     assert myeloid_boundary["17_like"]["risk_level"] == "R2_IDENTITY_BOUNDARY_REVIEW"
     assert myeloid_boundary["17_like"]["auto_merge_allowed"] is False
+    assert myeloid_boundary["17_like"]["possible_components"] == []
+    cluster7_path = work / "n135_cdc2_dominant_background.tsv"
+    cluster7_values = {
+        "7_like": {
+            "HLA-DRA": .9782, "HLA-DPA1": .9442, "HLA-DPB1": .9406, "CD74": .9842,
+            "CD1C": .6582, "CLEC10A": .8558, "FCER1A": .4994,
+            "CD14": .2824, "FCN1": .0730, "VCAN": .2739, "FCGR3A": .1470,
+            "LST1": .8291, "TYROBP": .8606,
+        },
+        "monocyte_reference": {
+            "CD14": .90, "FCN1": .95, "VCAN": .92, "FCGR3A": .65,
+            "LST1": .95, "TYROBP": .97, "CD1C": .03, "CLEC10A": .02, "FCER1A": .01,
+        },
+    }
+    write_ratio_values(cluster7_path, cluster7_values)
+    cluster7 = enrich_evidence(
+        evidence(cluster7_values), ratio_path=cluster7_path,
+        annotation_level="subcluster", species="Human", tissue="fetal lung",
+        parent_population="Myeloid_cell", parent_kind="lineage",
+    )["deterministic_annotation_evidence"]["7_like"]
+    assert cluster7["stable_id"] == "cDC2"
+    assert cluster7["risk_level"] == "R1_REVIEW_RETAIN"
+    assert cluster7["mixed_population"] is False
+    assert cluster7["auto_merge_allowed"] is False
+    cluster7_boundary = cluster7["identity_boundary_audit"]["dc3_vs_monocyte"]
+    assert cluster7_boundary["dc3_boundary_candidate"] is False
+    assert cluster7_boundary["cdc2_dominant"] is True
+    assert cluster7_boundary["boundary_reason"] == "cdc2_dominant_over_weak_monocyte_background"
+    assert {item["gene"] for item in cluster7_boundary["monocyte_specific_hits"]} == {"CD14", "VCAN"}
+    assert {item["gene"] for item in cluster7_boundary["pan_myeloid_hits"]} == {"LST1", "TYROBP"}
+
+    cycling_macrophage_path = work / "n135_cycling_macrophage_blocks_dc3.tsv"
+    cycling_macrophage_values = {
+        "cycling_macrophage": {
+            "HLA-DRA": .88, "HLA-DPA1": .76, "HLA-DPB1": .70, "CD74": .91,
+            "CD1C": .33, "CLEC10A": .48, "FCER1A": .13,
+            "CD14": .53, "FCN1": .40, "VCAN": .50, "FCGR3A": .32,
+            "C1QA": .47, "C1QB": .50, "C1QC": .51, "MERTK": .36,
+            "MKI67": .76, "TOP2A": .76, "UBE2C": .76, "STMN1": .92,
+        },
+        "dc3_reference": {
+            "HLA-DRA": .99, "HLA-DPA1": .88, "HLA-DPB1": .86, "CD74": .99,
+            "CD1C": .11, "CLEC10A": .36, "FCER1A": .11,
+            "CD14": .38, "FCN1": .59, "VCAN": .45, "FCGR3A": .50,
+            "C1QA": .18, "C1QB": .17, "C1QC": .26, "MERTK": .13,
+        },
+    }
+    write_ratio_values(cycling_macrophage_path, cycling_macrophage_values)
+    cycling_macrophage = enrich_evidence(
+        evidence(cycling_macrophage_values), ratio_path=cycling_macrophage_path,
+        annotation_level="subcluster", species="Human", tissue="fetal lung",
+        parent_population="Myeloid_cell", parent_kind="lineage",
+    )["deterministic_annotation_evidence"]["cycling_macrophage"]
+    assert cycling_macrophage["identity_boundary_audit"]["dc3_vs_monocyte"]["macrophage_competing"] is True
+    assert cycling_macrophage["identity_boundary_audit"]["dc3_vs_monocyte"]["dc3_boundary_candidate"] is False
+    assert cycling_macrophage["stable_id"] in {"Macrophage", "Tissue_resident_macrophage"}
+    assert cycling_macrophage["state_list"] and "Cycling" in cycling_macrophage["state_list"]
+
+    lineage_config = json.loads((ROOT / "annotation-evidence-config.v1.json").read_text(encoding="utf-8"))
+    boundary_kb = load_knowledge_base()
+    lineage_config.update(build_runtime_config(
+        boundary_kb, species="Human", tissue="fetal lung", annotation_level="subcluster",
+        parent_population="Myeloid_cell", parent_kind="lineage",
+    ))
+    primary_monocyte = {
+        "label": "Nonclassical_monocyte", "score": .6578, "core_review": 3,
+        "core_strong": 1, "specificity": .4156, "required_core_markers": 2,
+        "identity_branch_gate": {"passed": True, "assessed": True},
+        "absolute_program_gate": {}, "mutually_exclusive_program_gate": {},
+        "absolute_negative_blocked": False, "full_ratio_evidence": True,
+    }
+    weak_fibroblast = {
+        "label": "Fibroblast", "score": .3924, "core_review": 4, "core_strong": 2,
+        "specificity": .1048, "required_core_markers": 2,
+        "identity_branch_gate": {"passed": True, "assessed": True},
+        "absolute_program_gate": {}, "mutually_exclusive_program_gate": {},
+        "absolute_negative_blocked": False, "full_ratio_evidence": True,
+    }
+    weak_policy = _cross_identity_competitor_policy(
+        weak_fibroblast, lineage_config, lineage_config["thresholds"]
+    )
+    assert weak_policy["policy_source"] == "lineage_constrained_off_parent_conflict"
+    assert weak_policy["minimum_score_ratio"] == .70
+    weak_fibro_audit = _competing_program_audit(
+        primary_monocyte, weak_fibroblast, lineage_config,
+        lineage_config["thresholds"], weak_policy,
+    )
+    assert weak_fibro_audit["eligible"] is False
+    assert weak_fibro_audit["checks"]["minimum_score_ratio"] is False
+    true_fibroblast = dict(weak_fibroblast, score=.50, specificity=.20, core_strong=4)
+    true_fibro_audit = _competing_program_audit(
+        primary_monocyte, true_fibroblast, lineage_config,
+        lineage_config["thresholds"], weak_policy,
+    )
+    assert true_fibro_audit["eligible"] is True
     myeloid_cell_evidence = work / "n135_myeloid_cell_evidence.json"
     myeloid_cell_evidence.write_text(json.dumps({
         "17_like": {
@@ -167,6 +266,8 @@ def main():
     assert myeloid_validated["boundary_validation_required"] is False
     assert myeloid_validated["boundary_validation_resolved"] is True
     assert myeloid_validated["identity_boundary_audit"]["dc3_vs_monocyte"]["cell_level_validated"] is True
+    assert myeloid_validated["stable_id"] == "DC3"
+    assert myeloid_validated["mixed_population"] is False
 
     cluster8_path = work / "n135_cluster8_borderline.tsv"
     cluster8_values = {
@@ -231,14 +332,17 @@ def main():
     assert mixed["deterministic_annotation_evidence"]["0"]["risk_level"] == "R2_RECLUSTER_OR_DOUBLET_REVIEW"
     assert mixed["deterministic_annotation_evidence"]["2"]["tnk_provisional"] == "unresolved_T_NK"
     assert mixed["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
-    assert mixed["deterministic_annotation_evidence"]["2"]["mixed_population"] is True
+    assert mixed["deterministic_annotation_evidence"]["2"]["mixed_population"] is False
+    assert mixed["deterministic_annotation_evidence"]["2"]["mixed_evidence"] is True
+    assert mixed["deterministic_annotation_evidence"]["2"]["review_in_subcluster"] is True
     assert mixed["deterministic_annotation_evidence"]["2"]["auto_merge_allowed"] is False
-    assert mixed["deterministic_annotation_evidence"]["0"]["stable_id"] == "Multi_cell"
-    assert mixed["deterministic_annotation_evidence"]["2"]["stable_id"] == "Multi_cell"
-    assert mixed["deterministic_annotation_evidence"]["2"]["formal_identity_fallback"] == "multi_cell_annotation"
+    assert mixed["deterministic_annotation_evidence"]["0"]["stable_id"] != "Multi_cell"
+    assert mixed["deterministic_annotation_evidence"]["0"]["mixed_evidence"] is True
+    assert mixed["deterministic_annotation_evidence"]["2"]["stable_id"] != "Multi_cell"
+    assert mixed["deterministic_annotation_evidence"]["2"]["formal_identity_fallback"] != "multi_cell_annotation"
 
     t_sublineage_path = work / "t_sublineage_mixed.tsv"
-    t_sublineage_programs = {"0": ["cd4_th17", "gdt_partial"], "1": ["t"]}
+    t_sublineage_programs = {"0": ["cd4_th17", "gdt_anchors"], "1": ["t"]}
     write_ratios(t_sublineage_path, t_sublineage_programs)
     t_sublineage = enrich_evidence(
         evidence(t_sublineage_programs), ratio_path=t_sublineage_path,
@@ -251,7 +355,7 @@ def main():
     assert t_sublineage_decision["auto_merge_allowed"] is False
     assert t_sublineage_decision["stable_id"] == "Multi_cell"
     assert t_sublineage_decision["formal_identity_fallback"] == "multi_cell_annotation"
-    assert set(t_sublineage_decision["possible_components"]) == {"CD4_Th17", "IL17A_gdT"}
+    assert set(t_sublineage_decision["possible_components"]) == {"CD4_Th17", "gdT"}
     assert t_sublineage_decision["sublineage_conflict"]["rule_id"] == "CD4_ALPHA_BETA_VS_GAMMA_DELTA_T"
 
     gdt_subtype_path = work / "gdt_subtypes.tsv"
@@ -291,6 +395,82 @@ def main():
     assert mait_gate["1"]["stable_id"] == "MAIT"
     assert mait_gate["1"]["decision_trace"]["identity_branch_gate"]["rule_id"] == "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR"
     assert mait_gate["2"]["stable_id"] != "MAIT"
+
+    # N135 T/NK boundary regression: an NKT score cannot be built from a
+    # generic TCR plus shared NK-like genes. Identity-defining receptor programs
+    # must compete on cluster prevalence: the fetal-lung-like case has a dominant
+    # alpha-beta plus CD8/naive program and must not resolve to gamma-delta,
+    # while a true gamma-delta and a true TCR+NK program remain distinguishable.
+    nkt_gdt_path = work / "n135_nkt_vs_gdt.tsv"
+    nkt_gdt_values = {
+        "14_like": {
+            "CD3D": .7815, "CD3E": .6975, "CD3G": .7143, "TRAC": .6555,
+            "TRBC1": .4706, "TRBC2": .8151,
+            "TRDC": .5042, "TRGC1": .1176, "TRGC2": .5210,
+            "CD8A": .3529, "CD8B": .2101, "KLRD1": .3866, "NKG7": .6555,
+            "NCR1": .0840, "XCL1": .3109, "XCL2": .3109, "ZBTB16": .2605,
+            "TRAV10": .0168, "TCF7": .6891, "LEF1": .7731, "SELL": .3782,
+            "CCR7": .1681, "IL7R": .6975, "BCL2": .6050, "SATB1": .4118,
+            "MCM6": .25, "MCM7": .22,
+            "GNLY": .0504, "GZMB": .0168, "PRF1": .1765, "FGFBP2": .0168,
+        },
+        "9_like": {
+            "CD3D": .8855, "CD3E": .8626, "CD3G": .9237, "TRAC": .9084,
+            "TRDC": .0267, "TRGC1": .0038, "TRGC2": .1031,
+            "CD8A": .8244, "CD8B": .8626, "TCF7": .8626, "LEF1": .9809,
+            "SELL": .9084, "CCR7": .8092, "IL7R": .9695,
+        },
+        "true_nkt": {
+            "CD3D": .80, "CD3E": .75, "CD3G": .72, "TRAC": .82,
+            "KLRD1": .85, "NKG7": .88, "NCR1": .55, "XCL1": .70,
+            "XCL2": .65, "ZBTB16": .76, "TRAV10": .70, "PRF1": .60,
+            "TRDC": .01, "TRGC1": .01, "TRGC2": .01,
+        },
+        "true_gdt": {
+            "CD3D": .82, "CD3E": .78, "CD3G": .74, "TRAC": .05,
+            "TRBC1": .03, "TRBC2": .04, "TRDC": .82, "TRGC1": .66,
+            "TRGC2": .75, "TCF7": .72, "LEF1": .69, "SELL": .58,
+            "CCR7": .44, "IL7R": .61, "CD8A": .03, "CD8B": .02,
+        },
+        "true_nk": {
+            "NKG7": .90, "KLRD1": .85, "NCR1": .80, "GNLY": .75,
+            "FCGR3A": .70, "KLRF1": .65, "CD3D": .03, "CD3E": .02,
+            "CD3G": .03, "TRAC": .02, "TRBC1": .02, "TRBC2": .02,
+            "TRDC": .02, "TRGC1": .01, "TRGC2": .02,
+        },
+        "reference": {},
+    }
+    write_ratio_values(nkt_gdt_path, nkt_gdt_values)
+    nkt_gdt = enrich_evidence(
+        evidence(nkt_gdt_values), ratio_path=nkt_gdt_path,
+        annotation_level="subcluster", species="Human", tissue="fetal lung",
+        parent_population="T_NK", parent_kind="lineage",
+    )["deterministic_annotation_evidence"]
+    assert nkt_gdt["14_like"]["stable_id"] == "CD8_Tn"
+    assert nkt_gdt["14_like"]["primary_evidence_label"] == "CD8_Tn"
+    receptor_gate = nkt_gdt["14_like"]["decision_trace"]["mutually_exclusive_program_gate"]
+    assert receptor_gate["rule_id"] == "ARBITRATE_ALPHA_BETA_VS_GAMMA_DELTA_TCR"
+    assert receptor_gate["candidate_side"] == "alpha_beta"
+    assert receptor_gate["candidate_dominant"] is True
+    assert receptor_gate["candidate_program"]["mean_detection"] > receptor_gate["rival_program"]["mean_detection"]
+    assert len(receptor_gate["assessments"]) == 2
+    assert receptor_gate["all_applicable_rules_passed"] is True
+    assert nkt_gdt["14_like"]["primary_state"] != "Cycling"
+    assert nkt_gdt["true_gdt"]["stable_id"] == "Naive_like_gdT"
+    assert nkt_gdt["true_gdt"]["decision_trace"]["mutually_exclusive_program_gate"]["candidate_side"] == "gamma_delta"
+    assert nkt_gdt["true_nk"]["primary_major_label"] == "NK_cell"
+    nkt_gate_config = json.loads((ROOT / "annotation-evidence-config.v1.json").read_text(encoding="utf-8"))
+    nkt_gate_values = {
+        cluster: {gene: {"ratio": ratio} for gene, ratio in values.items()}
+        for cluster, values in nkt_gdt_values.items()
+    }
+    blocked_nkt = _absolute_program_gate("NKT", nkt_gate_config, "14_like", nkt_gate_values, True)
+    assert blocked_nkt["required"] is True
+    assert blocked_nkt["passed"] is False
+    assert blocked_nkt["forbidden_program_hits"][0]["program"] == "coherent_gamma_delta_tcr"
+    true_nkt_gate = _absolute_program_gate("NKT", nkt_gate_config, "true_nkt", nkt_gate_values, True)
+    assert true_nkt_gate["passed"] is True
+    assert not true_nkt_gate["forbidden_program_hits"]
 
     tn_dnt_path = work / "tn_dnt.tsv"
     tn_dnt_programs = {
@@ -374,6 +554,8 @@ def main():
         "0": ["nk"],
         "1": ["t"],
         "2": ["t", "nk"],
+        "3": ["t"],
+        "4": ["t"],
     }
     write_ratios(off_parent_path, off_parent_programs)
     off_parent = enrich_evidence(
@@ -417,7 +599,7 @@ def main():
             "CD79A": .74, "CD79B": .61, "EBF1": .782, "PAX5": .579, "MS4A1": .481,
             "CD24A": .820, "CD93": .271, "VPREB3": .692, "IGHM": .609,
             "MZB1": .053, "PRDM1": .06, "XBP1": .08, "SDC1": .04,
-            "MKI67": .820, "TOP2A": .835,
+            "MKI67": .820, "TOP2A": .835, "UBE2C": .790,
         },
         "plasma_epcam_1": {
             "PRDM1": .70, "XBP1": .76, "SDC1": .55, "MZB1": .82, "DERL3": .78,
@@ -540,6 +722,53 @@ def main():
     version = json.loads((ROOT / "VERSION.json").read_text(encoding="utf-8"))
     runtime_config = json.loads((ROOT / "annotation-evidence-config.v1.json").read_text(encoding="utf-8"))
     assert runtime_config["config_version"] == version["config_version"]
+
+    # Regression: a dominant NK leaf must not become Multi_cell merely because
+    # broadly detected CD3/TCR genes clear an absolute floor.  This synthetic
+    # audit reproduces the de-identified score pattern of a large NK island:
+    # the T program has two review-level anchors but zero strong anchors and
+    # low dataset-relative specificity.
+    tnk_config = dict(runtime_config)
+    tnk_config.update(build_runtime_config(
+        kb, species="Human", tissue="fetal lung", annotation_level="subcluster",
+        parent_population="T_NK", parent_kind="lineage",
+    ))
+    gate = {"rule_id": "REQUIRE_COHERENT_TCR_PROGRAM", "assessed": True, "passed": True}
+    primary_nk = {
+        "label": "CD56dim_NK", "score": 0.900, "core_review": 3, "core_strong": 3,
+        "core_fraction": 1.0, "specificity": 0.6915, "required_core_markers": 2,
+        "identity_branch_gate": {"rule_id": "", "assessed": True, "passed": True},
+        "absolute_negative_blocked": False, "absolute_program_gate": {}, "full_ratio_evidence": True,
+        "supporting_core": [], "supporting_supportive": [],
+    }
+    background_t = {
+        "label": "T_cell", "score": 0.380, "core_review": 2, "core_strong": 0,
+        "core_fraction": 1.0, "specificity": 0.0600, "required_core_markers": 2,
+        "identity_branch_gate": gate, "absolute_negative_blocked": False,
+        "absolute_program_gate": {}, "full_ratio_evidence": True,
+        "supporting_core": [{"gene": "CD3D"}, {"gene": "CD3G"}], "supporting_supportive": [],
+    }
+    generic_nk = {
+        "label": "NK_cell", "score": 0.502, "core_review": 4, "core_strong": 1,
+        "core_fraction": 1.0, "specificity": 0.3140, "required_core_markers": 2,
+        "identity_branch_gate": {"rule_id": "", "assessed": True, "passed": True},
+        "absolute_negative_blocked": False, "absolute_program_gate": {}, "full_ratio_evidence": True,
+        "supporting_core": [{"gene": "NCR1"}], "supporting_supportive": [],
+    }
+    background_audit = _tnk_arbitration(
+        [primary_nk, generic_nk, background_t], tnk_config, tnk_config["thresholds"]
+    )
+    assert background_audit["status"] == "NK_supported"
+    assert background_audit["T_competitor_audit"]["eligible"] is False
+    assert background_audit["T_competitor_audit"]["checks"]["minimum_core_strong"] is False
+    assert background_audit["T_competitor_audit"]["checks"]["minimum_specificity"] is False
+    assert background_audit["NK_competitor_audit"]["checks"]["not_primary_ancestor"] is False
+
+    true_t = dict(background_t, score=0.90, core_review=4, core_strong=4, specificity=0.70)
+    true_nk = dict(generic_nk, score=0.85, core_review=4, core_strong=4, specificity=0.65)
+    mixed_audit = _tnk_arbitration([true_t, true_nk], tnk_config, tnk_config["thresholds"])
+    assert mixed_audit["status"] == "unresolved_T_NK"
+    assert mixed_audit["possible_components"] == ["T_cell", "NK_cell"]
 
     b_runtime = build_runtime_config(
         kb,
@@ -669,7 +898,40 @@ def main():
     assert cd4_tem["deterministic_annotation_evidence"]["1"]["stable_id"] == "CD4_Tn"
     assert cd4_tem["deterministic_annotation_evidence"]["0"]["cross_species_inference"] is False
 
-    print(json.dumps({"status": "pass", "tests": 161, "work_dir": str(work)}))
+    complete_ratio_path = work / "complete_ratio.tsv"
+    complete_ratio_path.write_text(
+        "gene\tgroup\texpr_ratio\nA\t0\t0.8\nB\t0\t0.1\nA\t1\t0.2\nB\t1\t0.7\n",
+        encoding="utf-8",
+    )
+    complete_ratio = load_ratio_table(
+        complete_ratio_path, ["0", "1"], {}, expected_genes=["A", "B"], require_complete=True
+    )
+    assert complete_ratio["0"]["A"]["ratio"] == 0.8
+    incomplete_ratio_path = work / "incomplete_ratio.tsv"
+    incomplete_ratio_path.write_text(
+        "gene\tgroup\texpr_ratio\nA\t0\t0.8\nA\t1\t0.2\n",
+        encoding="utf-8",
+    )
+    try:
+        load_ratio_table(
+            incomplete_ratio_path, ["0", "1"], {}, expected_genes=["A", "B"], require_complete=True
+        )
+    except ValueError as error:
+        assert "incomplete" in str(error).lower()
+    else:
+        raise AssertionError("Strict full-ratio validation accepted an incomplete matrix")
+
+    constrained = enrich_evidence(
+        evidence({"0": ["epi"], "1": ["endo"]}), ratio_path=split_path,
+        annotation_level="major", tissue="blood",
+        user_constraints={"exclude_labels": ["Epithelial_cell"], "conflict_markers": ["EPCAM"]},
+    )["deterministic_annotation_evidence"]
+    assert constrained["0"]["user_constraint_audit"]["final_identity_excluded"] is False
+    assert constrained["0"]["user_constraint_audit"]["excluded_ranked_candidates"]
+    assert constrained["0"]["user_conflict_markers"] == ["EPCAM"]
+    assert constrained["0"]["auto_merge_allowed"] is False
+
+    print(json.dumps({"status": "pass", "tests": 197, "work_dir": str(work)}))
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ def main():
                 writer.writerow([gene, cluster, 0.8 if gene in active else 0.01])
     evidence = {
         "clusters": list(PROGRAMS),
+        "average_gene_names": genes,
         "cluster_profiles": {
             cluster: {
                 "top_markers": [], "qc_state_fraction_top50": 0.0,
@@ -68,7 +69,7 @@ def main():
     }
     evidence = enrich_evidence(
         evidence, ratio_path=ratio, annotation_level="subcluster", species="Human", tissue="blood",
-        parent_population="T_cell", parent_kind="lineage",
+        parent_population="T_cell", parent_kind="lineage", require_complete_ratio=True,
     )
     assert evidence["deterministic_annotation_evidence"]["0"]["stable_id"] == "CD8_Tem"
     assert evidence["deterministic_annotation_evidence"]["1"]["stable_id"] == "CD8_Tem"
@@ -411,6 +412,7 @@ def main():
             "same_label_topology": "disconnected",
             "separation_explanation": "state_dominant",
             "separation_evidence": "Cluster 0 has a dominant Cycling program that separates it from cluster 1.",
+            "evidence_ids": ["cluster0_vs_cluster1_cycling_program"],
         })
     validate_umap_audit(
         disconnected_state_audit, list(PROGRAMS), formal=True, records=disconnected_state_records
@@ -421,6 +423,18 @@ def main():
     apply_umap_audit(disconnected_state_records, validated_disconnected)
     assert disconnected_state_records[0]["auto_merge_allowed"] is False
     assert disconnected_state_records[1]["auto_merge_allowed"] is False
+    disconnected_without_evidence_ids = copy.deepcopy(disconnected_state_audit)
+    for cluster in ("0", "1"):
+        disconnected_without_evidence_ids["clusters"][cluster]["evidence_ids"] = []
+    try:
+        validate_umap_audit(
+            disconnected_without_evidence_ids, list(PROGRAMS), formal=True,
+            records=disconnected_state_records,
+        )
+    except ValueError as exc:
+        assert "requires concrete evidence_ids" in str(exc)
+    else:
+        raise AssertionError("Generic disconnected-label explanations without evidence IDs must fail")
     unexplained_disconnected = copy.deepcopy(disconnected_state_audit)
     for cluster in ("0", "1"):
         unexplained_disconnected["clusters"][cluster].update({
@@ -489,7 +503,7 @@ def main():
         for cluster in ("0", "1", "2"):
             for gene in myeloid_genes:
                 if cluster == "0":
-                    value = 0.8 if gene not in {"CSF3R", "FCGR3B"} else 0.05
+                    value = 0.8 if gene not in {"CSF3R", "FCGR3B", "C1QA", "C1QB", "C1QC", "MERTK", "FOLR2"} else 0.05
                 elif cluster == "1":
                     value = 0.8 if gene in {"CD14", "FCN1", "VCAN", "LST1", "LYZ", "TYROBP"} else 0.02
                 else:
@@ -521,11 +535,12 @@ def main():
     )
     aggregate_decision = aggregate_myeloid["deterministic_annotation_evidence"]["0"]
     assert aggregate_decision["boundary_validation_required"] is True
-    assert aggregate_decision["stable_id"] == "Multi_cell"
-    assert aggregate_decision["formal_identity_fallback"] == "multi_cell_annotation"
-    assert aggregate_decision["mixed_population"] is True
+    assert aggregate_decision["stable_id"] == "DC3"
+    assert aggregate_decision["formal_identity_fallback"] == "dc3_boundary_best_fit"
+    assert aggregate_decision["mixed_population"] is False
     assert aggregate_decision["suspected_doublet"] is False
     assert aggregate_decision["auto_merge_allowed"] is False
+    assert aggregate_decision["possible_components"] == []
 
     myeloid_cell_evidence = work / "myeloid_cell_evidence.json"
     myeloid_cell_evidence.write_text(json.dumps({
@@ -554,7 +569,7 @@ def main():
     assert validated_decision["suspected_doublet"] is False
     assert validated_decision["auto_merge_allowed"] is False
     assert validated_decision["possible_components"] == ["cDC2", "Monocyte", "Macrophage"]
-    print(json.dumps({"status": "pass", "checks": 64, "output": str(output)}))
+    print(json.dumps({"status": "pass", "checks": 65, "output": str(output)}))
 
 
 if __name__ == "__main__":

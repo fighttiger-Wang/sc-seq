@@ -1246,6 +1246,20 @@
     "approval_status": "Approve"
   },
   {
+    "cell_id": "DC3",
+    "target_species": "Human",
+    "panel_species": "Human",
+    "cross_species_inference": "No",
+    "core_markers": "CD1C;CLEC10A;CD14;FCGR3A",
+    "supportive_markers": "FCER1A;FCN1;VCAN;CD163;CST3;HLA-DRA;CD74",
+    "exclusion_markers": "CLEC9A/XCR1/WDFY4 coherent cDC1 program;C1QC/MERTK dominant macrophage program",
+    "confounders": "cDC2 with weak monocyte background; monocytes with nonspecific MHC-II activation; aggregate data cannot establish cluster purity",
+    "decision_rule": "Require the registered APC plus DC-specific plus competitive monocyte-specific boundary gate. Use DC3 as the best-fit terminal identity with reduced confidence and blocked automatic merging; reserve Multi_cell for demonstrated component populations or incompatible lineages.",
+    "evidence_ids": "SRC_DC3_DUTERTRE;SRC_DC3_BOURDELY;SRC_DC3_CYTLAK",
+    "evidence_gate": "Meets",
+    "approval_status": "Approve"
+  },
+  {
     "cell_id": "cDC2",
     "target_species": "Mouse",
     "panel_species": "Human",

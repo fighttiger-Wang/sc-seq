@@ -155,6 +155,10 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
                     errors.append(
                         f"Cluster {cluster} disconnected same-label explanation lacks separation_evidence"
                     )
+                if not item.get("evidence_ids"):
+                    errors.append(
+                        f"Cluster {cluster} disconnected same-label explanation requires concrete evidence_ids"
+                    )
                 if separation_explanation == "state_dominant" and record_context:
                     group = [cluster] + same_label_clusters
                     states = {

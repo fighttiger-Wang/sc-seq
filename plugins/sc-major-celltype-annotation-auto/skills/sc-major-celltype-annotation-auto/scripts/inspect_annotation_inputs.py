@@ -305,6 +305,7 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
         "schema_version": "2.4", "average_reader": reader,
         "average_gene_header": original_gene_header,
         "average_gene_header_normalized_to": "GeneName",
+        "average_gene_names": list(expression),
         "average_shape": [len(average) - 1, len(clusters)], "clusters": clusters,
         "marker_cluster_ids": sorted(by_cluster, key=cluster_sort_key), "missing_marker_clusters": missing,
         "extra_marker_clusters": extra, "cluster_profiles": profiles,

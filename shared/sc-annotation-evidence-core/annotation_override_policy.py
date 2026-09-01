@@ -14,6 +14,7 @@ OVERRIDE_METHODS = {
     "quantitative_qc",
     "sample_metadata",
     "trajectory_metric",
+    "project_marker_program",
 }
 
 

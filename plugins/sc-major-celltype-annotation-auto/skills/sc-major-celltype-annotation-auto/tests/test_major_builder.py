@@ -37,6 +37,7 @@ def base_evidence(programs):
         }
     return {
         "clusters": list(programs), "cluster_profiles": profiles,
+        "average_gene_names": sorted({g for panel in PANELS.values() for g in panel}),
         "average_shape": [len({g for panel in PANELS.values() for g in panel}), len(programs)],
         "average_reader": "test", "confirmed_metadata": {"species": "test", "tissue": "test", "annotation_level": "major", "parent_population": "All_cells", "parent_kind": "mixed", "interpretation_rule": "test"},
         "source_paths": {"cell_avg_exp": "test", "marker_table": "test"},
@@ -75,7 +76,7 @@ def record(cluster, label, evidence, mixed=False):
 def build(work, name, programs, labels):
     ratio = work / f"{name}.tsv"
     write_ratios(ratio, programs)
-    evidence = enrich_evidence(base_evidence(programs), ratio_path=ratio, annotation_level="major")
+    evidence = enrich_evidence(base_evidence(programs), ratio_path=ratio, annotation_level="major", require_complete_ratio=True)
     records = [record(cluster, labels[cluster], evidence, evidence["deterministic_annotation_evidence"][cluster]["tnk_provisional"] == "unresolved_T_NK") for cluster in programs]
     evidence_path, records_path, output = work / f"{name}.evidence.json", work / f"{name}.records.json", work / f"{name}.xlsx"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -117,13 +118,13 @@ def main():
     mixed_evidence, _, _ = build(work, "mixed", mixed_programs, mixed_labels)
     assert mixed_evidence["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
     assert mixed_evidence["deterministic_annotation_evidence"]["0"]["auto_merge_allowed"] is False
-    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["stable_id"] == "Multi_cell"
+    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["stable_id"] != "Multi_cell"
+    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["mixed_evidence"] is True
+    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["mixed_population"] is False
     mixed_workbook = load_workbook(work / "mixed.xlsx", data_only=False)
     mixed_result = mixed_workbook["注释结果"]
     mixed_headers = {cell.value: cell.column for cell in mixed_result[1]}
-    assert mixed_result.cell(2, mixed_headers["中文名称"]).value == "多细胞"
-    assert mixed_result.cell(2, mixed_headers["Celltype_EN"]).value == "Multi_cell"
-    assert mixed_result.cell(2, mixed_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    assert mixed_result.cell(2, mixed_headers["Celltype_EN"]).value == "T_cell"
     assert (work / "mixed.qa.json").read_text(encoding="utf-8").find('"multi_cell_chinese_static_red": true') >= 0
 
     minimal_evidence = json.loads(json.dumps(split_evidence))

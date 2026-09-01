@@ -27,6 +27,9 @@ Read `references/context-and-level-routing.md`. Confirm species, tissue, experim
 - Keep identity, state, disease role, developmental stage, and tissue specialization in separate fields and separate workbook columns.
 - Use the short canonical identity alone as the displayed cell-type label. Preserve all states in `state_list` and one `primary_state`; never prefix or suffix the identity with state.
 - Treat TAM, CAF, M1/M2, and malignancy as roles/states, not stable base identities.
+- Use `major_identity_first` for mixed/all-cell collections: assign the best coherent major identity first, then carry contamination, ambient RNA, cross-lineage programs, and possible doublets into explicit downstream-review fields.
+- Accept a project-specific major vocabulary and an auditable cluster-label prior. Use the prior only as a supported tiebreaker or ancestor/output projection; never let it bypass failed identity or parent-lineage gates.
+- Allow only narrow, explicitly supported `debris`/`Low_quality` QC buckets. Do not perform broad cell removal during major annotation; defer removal and purity decisions to QC or the relevant subcluster workflow.
 
 ## 3. Resolve T/NK per cluster
 
@@ -34,7 +37,7 @@ Read `references/context-and-level-routing.md`. Confirm species, tissue, experim
 - Do not collapse unrelated T and NK clusters because one cluster is unresolved.
 - Prefer `T_cell` when CD3/TCR evidence is coherent and NK-like evidence is limited to shared cytotoxic genes.
 - Prefer `NK_cell` only with a coherent NK-specific program and weak/absent CD3/TCR evidence.
-- When coherent T and NK programs coexist, output `Multi_cell` / `多细胞`, set `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`; list both components and require cell-level review.
+- When coherent T and NK programs coexist, retain the best coherent major identity in major mode, set `mixed_evidence=true`, `review_in_subcluster=true`, `manual_review=true`, and `auto_merge_allowed=false`, list both components, and require cell-level review. Use `Multi_cell` only when no coherent identity dominates or cell-level evidence confirms mixture/doublets.
 - Never use `T_NK_cell` as a dataset-wide fallback.
 
 ## 4. Load rules
@@ -54,7 +57,7 @@ Treat the knowledge base, evidence core, configuration, and snapshot hashes as o
 
 ## 5. Normalize and preflight
 
-Accept paired tables or a Seurat object. Preserve raw inputs. Missing genes are unknown in positive-marker-only mode and zero only in a verified full ratio table.
+Accept paired tables or a Seurat object. Preserve raw inputs. Missing genes are unknown in positive-marker-only mode and zero only in a verified complete full-ratio table. The normal `--ratios` path now requires every average-expression gene for every cluster; use `--allow-partial-ratios` only for provisional review, never formal delivery. Supply `--context-json` when age, sex, disease, treatment, anatomy, platform, depth, or doublet metadata are available.
 
 ```bash
 python3 scripts/prepare_annotation_auto.py \
@@ -62,10 +65,18 @@ python3 scripts/prepare_annotation_auto.py \
   [--ratios <full-gene-cluster-ratio.tsv>] \
   [--gene-map <source-to-canonical.tsv>] \
   [--cell-evidence <per-cluster-validation.json>] \
+  [--project-prior <cluster-label-prior.xlsx>] \
+  [--project-major-label <allowed-label> ...] \
   --workspace-root <workspace-root> --output-dir <run-dir> \
   --species <confirmed> --tissue <confirmed> \
-  --annotation-level major --parent-population <confirmed> --parent-kind <mixed|lineage|state>
+  --annotation-level major --parent-population <confirmed> --parent-kind <mixed|lineage|state> \
+  [--umap <umap.png>] [--annotation-constraints <constraints.json>] \
+  [--exclude-label <label> ...] [--exclude-marker <gene> ...]
 ```
+
+Input contract: the minimum usable input is the paired cluster marker table plus average-expression table, with confirmed annotation level, species, tissue, and parent scope. Add a complete `--ratios` matrix, `--umap`, and RData/Seurat-derived cell evidence when available. Use `--annotation-constraints <json>`, repeated `--exclude-label <label>`, or repeated `--exclude-marker <gene>` for explicit user constraints. The JSON schema is `{"exclude_labels":[],"conflict_markers":[],"clusters":{"cluster_id":{"exclude_labels":[],"conflict_markers":[]}}}`. Excluded labels are hard final-label constraints; excluded markers remain in the audit but cannot add positive identity/state support. If no allowed coherent identity remains, block formal delivery.
+
+Major output contract: return usable approved major identities with standardized English/Chinese names. Keep state, disease role, tissue specialization, contamination, and uncertainty in separate fields. Repeated major labels are valid; never invent marker-prefixed names to distinguish clusters.
 
 The preflight must record knowledge-base/core/config versions, snapshot hashes, active tissue modules, evidence mode, matrix semantics, cluster order, and source paths.
 
@@ -84,7 +95,7 @@ For every cluster:
 7. Populate `state_list` and the lineage-specific `primary_state`, while keeping `display_label` equal to the identity.
 8. Require `manual_review=true` for every non-R0 risk. Do not assign high confidence in minimal mode.
 9. Never output `Cell`. If no candidate is coherent and there is no mixed-population evidence, run targeted ontology/atlas/literature resolution; block formal delivery when no defensible identity can be established.
-10. Mark coherent cross-lineage conflicts as `Multi_cell` / `多细胞`, retain concrete identities in `possible_components`, flag mixed/suspected-doublet risk, and block automatic merging.
+10. In major mode, retain a coherent primary identity when cross-lineage evidence appears; set `mixed_evidence=true`, `review_in_subcluster=true`, retain concrete identities in `possible_components`, and block automatic merging. Emit `Multi_cell` / `多细胞` only when no coherent primary dominates or cell-level evidence confirms mixture/doublets.
 11. Use `label_basis=canonical_subtype`; do not use marker-prefixed fallback labels in major mode.
 12. If the approved knowledge base lacks a plausible identity, generate additional candidates and validate them against coherent positive and competing programs. Use `validated_external_candidate` only with at least two independent sources, reduced confidence, manual review, and later multi-case regression before promotion into the approved standard. Every external or manual identity override additionally requires at least two supporting markers, inclusion of the final identity in `candidate_labels`, and structured current-case `override_validation`; it cannot bypass deterministic mixed/off-parent conflicts or failed identity gates.
 
@@ -111,6 +122,7 @@ After QA passes, the builder must register the de-identified case in the shared 
 - Confirm all clusters are present in identical order on result sheets.
 - Confirm all labels are approved ontology IDs or enabled tissue-module major outputs.
 - Reject `Cell` unconditionally in both major and subcluster output. Permit `Multi_cell` only when `mixed_population=true`, `possible_components` is populated, manual review is required, and automatic merging is blocked.
+- Confirm cluster-level competing programs that retain a major identity use `mixed_evidence=true`, `review_in_subcluster=true`, `mixed_population=false`, `suspected_doublet=false` unless cell-level evidence supports a doublet, and `auto_merge_allowed=false`.
 - Confirm repeated labels have no artificial top-marker prefix.
 - Confirm unresolved T/NK clusters are isolated for review and do not alter clear T/NK clusters.
 - Confirm `stable_id`, `parent_path`, `tissue_module`, `disease_role`, `state_list`, `primary_state`, panel species, and cross-species provenance are populated.

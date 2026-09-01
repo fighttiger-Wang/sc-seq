@@ -4,25 +4,25 @@
   "source": "shared/sc-annotation-evidence-core/knowledge-base",
   "source_workbook": "cell_annotation_standard_evidence_review.xlsx",
   "counts": {
-    "ontology_nodes": 132,
-    "alias_records": 416,
-    "marker_panels": 226,
+    "ontology_nodes": 133,
+    "alias_records": 419,
+    "marker_panels": 227,
     "tissue_modules": 12,
     "state_rules": 9,
     "decision_rules": 15,
-    "evidence_sources": 27,
+    "evidence_sources": 30,
     "legacy_migrations": 25
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "4a79994c150a9b27525ae211471b3351918cbac2cf314079246d512ff163e0f7",
-    "ontology.v2.json": "4cc44074dfed8f27c9848b7e72550c60c5024ccf3bbafabcc476dea840270772",
-    "aliases.v2.json": "e8de46b0cea29c32686efb8555aa0b221dbf0d119459b9c095e5ecfbb2ec3559",
-    "marker-panels.v2.json": "00eb3809ca5e0e21f20eba06e4c285c636de802db31a4aeabb707457bc27dace",
+    "cell-annotation-knowledge-base.v2.json": "b4484d6e593f3e82bf0e296550e07824e958f277f8e371d18f5d3e7439737ba8",
+    "ontology.v2.json": "e73407d20fd919935bf60a12bd441b51c452da3cfc1b14b8315ffae981830399",
+    "aliases.v2.json": "e51150be3709c6e7edd49b274963705e42f3c6ad8134c4553b86a1666a3a5232",
+    "marker-panels.v2.json": "8cf3b9cbc43054526685535e47045ea1c1ddcbab7393f548a41f604979d771cc",
     "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
     "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
     "decision-rules.v2.json": "55efef88f90bf4bd2fe0784535d4e3b3db1e4b365892552d11259cb94535ab72",
-    "evidence-sources.v2.json": "04ea3106bc37f9c8e16ecd224dd7d53c263aa9e8aaaf33f8d1fd6d2863832f6c",
+    "evidence-sources.v2.json": "3b6b868f6016598d006642780b5ef78075147f80b79f31d22d5d67bc6e1c5631",
     "legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1"
   },
-  "knowledge_base_version": "2.8.0"
+  "knowledge_base_version": "2.9.0"
 }

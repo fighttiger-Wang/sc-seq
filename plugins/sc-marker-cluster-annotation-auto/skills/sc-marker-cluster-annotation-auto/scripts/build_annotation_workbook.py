@@ -21,7 +21,7 @@ from annotation_override_policy import validate_identity_override
 
 
 SKILL_NAME = "sc-marker-cluster-annotation-auto"
-SKILL_VERSION = "0.6.0"
+SKILL_VERSION = "0.6.1"
 
 
 def nonproduction_output(output):
@@ -184,14 +184,14 @@ EVIDENCE_FIELDS.extend([
     "umap_same_label_clusters", "umap_same_label_topology",
     "umap_separation_explanation", "umap_separation_evidence", "umap_conflict_resolution_basis",
     "identity_boundary_audit", "boundary_validation_required", "boundary_validation_resolved",
-    "literature_details", "override_validation", "override_audit",
+    "literature_details", "override_validation", "override_audit", "user_constraint_audit",
 ])
 EVIDENCE_HEADERS.extend([
     "UMAP复核状态", "UMAP近邻Cluster", "UMAP拓扑摘要", "Marker与UMAP关系",
     "UMAP复核动作", "UMAP触发研究状态", "UMAP证据ID",
     "同标签Cluster", "同标签拓扑", "空间分离解释", "空间分离证据",
     "Conflict resolution basis", "Identity boundary audit", "Boundary validation required", "Boundary validation resolved",
-    "Structured literature details", "Override validation", "Override audit",
+    "Structured literature details", "Override validation", "Override audit", "User Constraint Audit",
 ])
 
 
@@ -217,6 +217,9 @@ def inject_deterministic_evidence(records, evidence):
         )
         record["boundary_validation_required"] = bool(decision.get("boundary_validation_required", False))
         record["boundary_validation_resolved"] = bool(decision.get("boundary_validation_resolved", False))
+        record["user_constraint_audit"] = json.dumps(
+            decision.get("user_constraint_audit", {}), ensure_ascii=False, sort_keys=True
+        )
         for field in (
             "stable_id", "formal_identity_fallback", "developmental_stage", "ontology_node_kind",
             "expected_parent_id", "off_parent_detected", "off_parent_reassignment", "off_parent_candidate", "off_parent_candidate_score",
@@ -342,7 +345,7 @@ def hierarchy_depth_conflicts(records):
     def is_blocked_mixed_parent_fallback(record):
         return (
             str(record.get("formal_identity_fallback", "")) in {
-                "mixed_incompatible_sublineages", "mixed_parent_off_parent_lineages"
+                "mixed_incompatible_sublineages", "mixed_parent_off_parent_lineages",
             }
             and bool(record.get("mixed_population"))
             and not bool(record.get("auto_merge_allowed", True))
@@ -368,6 +371,12 @@ def hierarchy_depth_conflicts(records):
 
 def validate(records, clusters, evidence):
     errors = []
+    ratio_validation = evidence.get("annotation_evidence_policy", {}).get("ratio_validation", {})
+    if ratio_validation.get("provided") and not ratio_validation.get("complete"):
+        errors.append(
+            "Formal subcluster annotation requires a complete full-ratio table; "
+            "partial-ratio evidence is provisional only"
+        )
     record_clusters = [str(r.get("cluster_id", "")) for r in records]
     expected_clusters = sorted((str(c) for c in clusters), key=cluster_sort_key)
     if record_clusters != expected_clusters:
@@ -451,6 +460,19 @@ def validate(records, clusters, evidence):
         ]
         branch_fallback = str(record.get("formal_identity_fallback", "")) == "branch_identity_no_supported_leaf"
         deterministic_decision = evidence.get("deterministic_annotation_evidence", {}).get(cluster_id, {})
+        constraint_audit = deterministic_decision.get("user_constraint_audit", {})
+        if constraint_audit.get("final_identity_excluded"):
+            errors.append(
+                f"Cluster {cluster_id} final identity violates an explicit user exclusion: "
+                f"{constraint_audit.get('selected_final_identity', '')}"
+            )
+        try:
+            recorded_constraints = json.loads(str(record.get("user_constraint_audit", "{}")))
+        except json.JSONDecodeError:
+            recorded_constraints = {}
+        excluded_labels = {str(item).strip() for item in recorded_constraints.get("exclude_labels", []) if str(item).strip()}
+        if str(record.get("stable_id", "")).strip() in excluded_labels or str(record.get("celltype_en", "")).strip() in excluded_labels:
+            errors.append(f"Cluster {cluster_id} final record uses an explicitly excluded identity")
         override_audit = validate_identity_override(record, deterministic_decision)
         record["override_audit"] = override_audit
         errors.extend(override_audit["errors"])
@@ -552,8 +574,10 @@ def validate(records, clusters, evidence):
                 errors.append(f"Cluster {cluster_id} noncanonical tissue identity requires manual_review=true")
             if record["confidence"] == "high":
                 errors.append(f"Cluster {cluster_id} noncanonical tissue identity confidence cannot be high")
-        if record.get("mixed_population") and (record.get("auto_merge_allowed") or not record.get("mixed_or_doublet")):
-            errors.append(f"Cluster {cluster_id} mixed population must block automatic merging and carry mixed_or_doublet=true")
+        if record.get("mixed_population") and record.get("auto_merge_allowed"):
+            errors.append(f"Cluster {cluster_id} mixed/boundary review must block automatic merging")
+        if record.get("mixed_population") and not record.get("mixed_or_doublet"):
+            errors.append(f"Cluster {cluster_id} mixed population must carry mixed_or_doublet=true")
         if record.get("mixed_population") and stable_id != "Multi_cell":
             errors.append(f"Cluster {cluster_id} mixed population must use final label Multi_cell")
         if str(record.get("risk_level", "")).startswith(("R1_", "R2_", "R3_")) and not record.get("manual_review"):
@@ -592,21 +616,32 @@ def validate(records, clusters, evidence):
                 )
             if not dc3_boundary.get("cell_level_validated") and record.get("auto_merge_allowed"):
                 errors.append(f"Cluster {cluster_id} provisional DC3/monocyte boundary must block automatic merging")
-        unresolved_boundary_as_blocked_mixture = bool(
+            if str(record.get("formal_identity_fallback", "")) not in {
+                "dc3_boundary_best_fit", "dc3_boundary_cell_validated", ""
+            }:
+                errors.append(f"Cluster {cluster_id} DC3 boundary uses an invalid formal_identity_fallback")
+            if record.get("mixed_population") or record.get("mixed_or_doublet") or record.get("suspected_doublet"):
+                errors.append(f"Cluster {cluster_id} DC3 boundary must not be encoded as Multi_cell/doublet without cell-level component evidence")
+        unresolved_boundary_as_best_fit = bool(
             deterministic_decision.get("boundary_validation_required")
             and not deterministic_decision.get("boundary_validation_resolved")
-            and record.get("mixed_population")
+            and stable_id == "DC3"
+            and english_label == "DC3"
+            and str(record.get("formal_identity_fallback", "")) == "dc3_boundary_best_fit"
+            and record.get("manual_review")
             and not record.get("auto_merge_allowed")
-            and str(record.get("formal_identity_fallback", "")) == "mixed_incompatible_sublineages"
+            and not record.get("mixed_population")
+            and not record.get("mixed_or_doublet")
+            and not record.get("suspected_doublet")
         )
         if (
             deterministic_decision.get("boundary_validation_required")
             and not deterministic_decision.get("boundary_validation_resolved")
-            and not unresolved_boundary_as_blocked_mixture
+            and not unresolved_boundary_as_best_fit
         ):
             errors.append(
-                f"Cluster {cluster_id} has an unresolved DC3/monocyte identity boundary; literature review alone "
-                "cannot satisfy the required cell-level coexpression or reclustering gate for formal delivery"
+                f"Cluster {cluster_id} has a DC3/monocyte identity boundary but lacks the required best-fit DC3 "
+                "terminal annotation with manual review and blocked automatic merging"
             )
         if record.get("umap_same_label_topology") == "disconnected" and record.get("auto_merge_allowed"):
             errors.append(f"Cluster {cluster_id} disconnected repeated identity must block automatic merging")
@@ -746,7 +781,12 @@ def main():
     minimum_quality = min(quality_scores) if quality_scores else None
     multi_cell_red = PatternFill("solid", fgColor="FFF8696B")
     for row_index, record in enumerate(records, start=2):
-        if record.get("mixed_population") or record.get("stable_id") == "Multi_cell" or float(record["quality_score"]) == minimum_quality:
+        if (
+            record.get("mixed_population")
+            or record.get("stable_id") == "Multi_cell"
+            or str(record.get("formal_identity_fallback", "")) == "dc3_boundary_best_fit"
+            or float(record["quality_score"]) == minimum_quality
+        ):
             name_cell = ws.cell(row_index, MAIN_FIELDS.index("celltype_cn") + 1)
             name_cell.fill = multi_cell_red
             name_cell.font = Font(bold=True, color="FFFFFFFF")
@@ -808,8 +848,13 @@ def main():
         "status": "pass", "workbook": str(output), "sheets": check.sheetnames,
         "record_count": len(records), "review_clusters": [str(r["cluster_id"]) for r in records if r["manual_review"]],
         "mixed_or_doublet_clusters": [str(r["cluster_id"]) for r in records if r["mixed_or_doublet"]],
+        "identity_boundary_clusters": [
+            str(r["cluster_id"]) for r in records
+            if str(r.get("formal_identity_fallback", "")) == "dc3_boundary_best_fit"
+        ],
         "multi_cell_clusters": [str(r["cluster_id"]) for r in records if str(r.get("stable_id")) == "Multi_cell"],
         "multi_cell_chinese_static_red": True,
+        "identity_boundary_chinese_static_red": True,
         "formula_cells": 0, "source_files_unchanged": True,
         "visual_qa": "compact_human_record_layout",
         "auto_filter_enabled": False,
@@ -832,6 +877,7 @@ def main():
         "label_basis_counts": {
             "canonical_subtype": sum(r["label_basis"] == "canonical_subtype" for r in records),
             "validated_external_candidate": sum(r["label_basis"] == "validated_external_candidate" for r in records),
+            "identity_boundary_fallback": 0,
             "top_marker_fallback": sum(r["label_basis"] == "top_marker_fallback" for r in records),
             "feature_gene_fallback": sum(r["label_basis"] == "feature_gene_fallback" for r in records),
         },

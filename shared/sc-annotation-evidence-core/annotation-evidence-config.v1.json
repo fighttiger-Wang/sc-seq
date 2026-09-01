@@ -1,5 +1,5 @@
 {
-  "config_version": "2.14.0",
+  "config_version": "2.21.0",
   "thresholds": {
     "minimum_detection_floor": 0.05,
     "primary_detection_floor": 0.20,
@@ -18,29 +18,141 @@
     "B_cell": "B_cell", "plasma": "B_cell", "T_cell": "T_cell", "NK": "NK_cell",
     "neutrophil": "Myeloid_cell", "monocyte": "Myeloid_cell", "macrophage": "Myeloid_cell",
     "lipid_macrophage": "Myeloid_cell", "mast": "Myeloid_cell", "cDC1": "Myeloid_cell",
-    "cDC2": "Myeloid_cell", "pDC": "Myeloid_cell", "migratory_DC": "Myeloid_cell",
+    "cDC2": "Myeloid_cell", "DC3": "Myeloid_cell", "pDC": "Myeloid_cell", "migratory_DC": "Myeloid_cell",
     "epithelial": "Epithelial_cell", "endothelial": "Endothelial_cell", "stromal": "Stromal_cell",
     "neural": "Neural_cell", "erythroid": "Erythroid", "megakaryocyte_platelet": "Megakaryocyte"
   },
   "broad_groups": {
     "B_cell": "lymphoid", "plasma": "lymphoid", "T_cell": "lymphoid", "NK": "lymphoid",
     "neutrophil": "myeloid", "monocyte": "myeloid", "macrophage": "myeloid", "lipid_macrophage": "myeloid",
-    "mast": "myeloid", "cDC1": "myeloid", "cDC2": "myeloid", "pDC": "myeloid", "migratory_DC": "myeloid",
+    "mast": "myeloid", "cDC1": "myeloid", "cDC2": "myeloid", "DC3": "myeloid", "pDC": "myeloid", "migratory_DC": "myeloid",
     "epithelial": "epithelial", "endothelial": "vascular", "stromal": "stromal", "neural": "neural",
     "erythroid": "erythroid", "megakaryocyte_platelet": "platelet"
   },
+  "major_identity_policy": {
+    "mode": "major_identity_first",
+    "interpretation": "In a mixed/all-cell major run, retain the best coherent major identity and move cross-lineage, ambient, contamination, and doublet risk to explicit downstream review fields. Multi_cell requires no coherent dominant identity or cell-level validated mixture/doublet evidence.",
+    "qc_exception": {
+      "enabled_with_project_prior": true,
+      "allowed_labels": ["debris", "Low_quality"],
+      "minimum_qc_state_fraction_top50": 0.30
+    }
+  },
+  "project_major_vocabulary_policy": {
+    "minimum_candidate_score_ratio": 0.35,
+    "interpretation": "A project label is a tiebreaker or output projection, never a replacement for a coherent identity program.",
+    "identity_equivalences": {
+      "Mesothelial_cell": ["Mesothelial_cell", "Stromal_cell"]
+    }
+  },
+  "major_parent_identity_gates": [
+    {
+      "rule_id": "REQUIRE_B_PARENT_PROGRAM_FOR_B_DESCENDANTS",
+      "ancestors": ["B_cell"],
+      "descendants_only": true,
+      "required_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "EBF1"],
+      "minimum_required_anchors": 3,
+      "anchor_detection_floor": 0.10,
+      "interpretation": "A memory/naive/activated B child program cannot compete in major mode without a coherent B-lineage parent program."
+    },
+    {
+      "rule_id": "REQUIRE_T_PARENT_PROGRAM_FOR_T_DESCENDANTS",
+      "ancestors": ["T_cell"],
+      "descendants_only": true,
+      "required_anchors": ["CD3D", "CD3E", "CD3G", "TRAC"],
+      "minimum_required_anchors": 2,
+      "anchor_detection_floor": 0.10,
+      "interpretation": "T-state or subtype programs require a coherent CD3/TCR parent program."
+    },
+    {
+      "rule_id": "REQUIRE_EPITHELIAL_PARENT_PROGRAM_FOR_EPITHELIAL_DESCENDANTS",
+      "ancestors": ["Epithelial_cell", "Lung_epithelial"],
+      "descendants_only": true,
+      "required_anchors": ["EPCAM", "KRT8", "KRT18", "KRT19", "CLDN18"],
+      "minimum_required_anchors": 2,
+      "anchor_detection_floor": 0.10,
+      "interpretation": "Tissue-secreted genes alone do not establish an epithelial child identity without structural epithelial support."
+    }
+  ],
+  "project_prior_identity_rules": [
+    {
+      "rule_id": "VALIDATE_PROJECT_PRIOR_ILC2_PROGRAM",
+      "label": "ILC2",
+      "parent_path": ["Cell", "Immune_cell", "Innate_lymphoid_cell", "ILC2"],
+      "core_markers": {"IL1RL1": 0.10, "GATA3": 0.10, "RORA": 0.10, "IL7R": 0.10},
+      "minimum_core_markers": 3,
+      "supportive_markers": {"AREG": 0.10, "CALCA": 0.10, "IL2RA": 0.10},
+      "minimum_supportive_markers": 1,
+      "forbidden_markers": {"CD3D": 0.20, "CD3E": 0.20, "TRAC": 0.20, "NKG7": 0.30, "MS4A1": 0.20},
+      "maximum_forbidden_markers": 1,
+      "interpretation": "A project-prior ILC2 call requires a coherent IL1RL1/GATA3/RORA/IL7R type-2 innate program with supportive effector genes and without a competing T, NK, or B parent program.",
+      "evidence_ids": ["SRC_CL", "SRC_USER_MAP"]
+    }
+  ],
   "tnk_rules": {
     "nk_specific_anchors": ["NCR1", "NCR3", "FCGR3A", "KLRF1"]
+  },
+  "competing_program_policy": {
+    "minimum_core_review": 3,
+    "minimum_core_strong": 2,
+    "minimum_score_ratio": 0.35,
+    "minimum_specificity": 0.10,
+    "interpretation": "A second identity program must be directionally enriched above dataset background and competitive with the primary; absolute detection or an ontology ancestor is not a mixed-population signal."
   },
   "off_parent_audit": {
     "enabled_with_full_ratio": true,
     "minimum_core_review": 3,
-    "minimum_core_strong": 0,
+    "minimum_core_strong": 2,
+    "minimum_specificity": 0.10,
     "minimum_score_ratio": 1.25,
     "minimum_score_margin": 0.15,
     "conflict_score_ratio": 0.70
   },
   "negative_conflict_relative_reference_min_fraction": 0.50,
+  "mutually_exclusive_program_rules": [
+    {
+      "rule_id": "ARBITRATE_ALPHA_BETA_VS_GAMMA_DELTA_TCR",
+      "sides": {
+        "alpha_beta": {
+          "ancestors": ["CD4_T", "CD8_T"],
+          "anchors": ["TRAC", "TRBC1", "TRBC2"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        },
+        "gamma_delta": {
+          "ancestors": ["gdT"],
+          "anchors": ["TRDC", "TRGC1", "TRGC2"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        }
+      },
+      "minimum_dominance_ratio": 1.25,
+      "minimum_absolute_margin": 0.10,
+      "biological_invariant": "Conventional alpha-beta and gamma-delta T-cell identities are defined by competing receptor programs; aggregate dual detection cannot establish dual identity.",
+      "validation_ladder": ["cluster_prevalence", "marker_differential_enrichment", "cell_level_coexpression", "paired_scTCR_or_protein"]
+    },
+    {
+      "rule_id": "ARBITRATE_TCR_VS_NK_IDENTITY",
+      "sides": {
+        "t_cell": {
+          "ancestors": ["T_cell"],
+          "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        },
+        "nk_cell": {
+          "ancestors": ["NK_cell"],
+          "anchors": ["NKG7", "KLRD1", "NCR1", "GNLY"],
+          "minimum_anchors": 3,
+          "detection_floor": 0.10
+        }
+      },
+      "minimum_dominance_ratio": 1.25,
+      "minimum_absolute_margin": 0.10,
+      "biological_invariant": "Shared cytotoxic genes do not define NK identity when a broad coherent TCR program dominates and NK-specific receptors are absent.",
+      "validation_ladder": ["cluster_prevalence", "marker_differential_enrichment", "cell_level_coexpression", "paired_scTCR_or_protein"]
+    }
+  ],
   "identity_branch_gates": [
     {
       "rule_id": "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR",
@@ -75,7 +187,7 @@
       "required_anchors": ["CD8A", "CD8B", "CD8B1"],
       "minimum_required_anchors": 1,
       "anchor_detection_floor": 0.10,
-      "relative_reference_min_fraction": 0.50,
+      "relative_reference_min_fraction": 0.20,
       "minimum_relative_anchors": 1
     },
     {
@@ -106,11 +218,33 @@
   ],
   "descendant_projection_rules": [
     {
+      "rule_id": "PREFER_SUPPORTED_GDT_BRANCH_OVER_GENERIC_T",
+      "ancestor": "T_cell",
+      "descendants": ["Naive_like_gdT", "IL17A_gdT", "gdT"],
+      "minimum_score_ratio_to_ancestor": 0.75,
+      "minimum_core_review": 3
+    },
+    {
+      "rule_id": "PREFER_SUPPORTED_NAIVE_ALPHA_BETA_BRANCH_OVER_GENERIC_T",
+      "ancestor": "T_cell",
+      "descendants": ["CD4_Tn", "CD8_Tn"],
+      "minimum_score_ratio_to_ancestor": 0.75,
+      "minimum_core_review": 3
+    },
+    {
       "rule_id": "PREFER_DNT_WHEN_DOUBLE_NEGATIVE_PHENOTYPE_SUPPORTED",
       "ancestor": "Tn",
       "descendants": ["DNT"],
       "minimum_score_ratio_to_ancestor": 0.10,
       "minimum_core_review": 0,
+      "gate_only": true
+    },
+    {
+      "rule_id": "PREFER_SUPPORTED_NAIVE_ALPHA_BETA_BRANCH",
+      "ancestor": "Tn",
+      "descendants": ["CD4_Tn", "CD8_Tn"],
+      "minimum_score_ratio_to_ancestor": 0.10,
+      "minimum_core_review": 2,
       "gate_only": true
     },
     {
@@ -151,6 +285,51 @@
     }
   ],
   "absolute_program_rules": [
+    {
+      "rule_id": "REQUIRE_DC3_APC_DC2_MONOCYTE_BOUNDARY_PROGRAM",
+      "label": "DC3",
+      "required": true,
+      "core_anchors": ["HLA-DRA", "HLA-DPA1", "HLA-DPB1", "CD74"],
+      "minimum_core_anchors": 3,
+      "core_detection_floor": 0.20,
+      "supportive_anchors": ["CD1C", "CLEC10A", "FCER1A"],
+      "minimum_supportive_anchors": 2,
+      "supportive_detection_floor": 0.10,
+      "parent_anchors": ["CD14", "FCN1", "VCAN", "FCGR3A"],
+      "minimum_parent_anchors": 3,
+      "parent_detection_floor": 0.20,
+      "forbidden_programs": [
+        {
+          "program": "coherent_cDC1",
+          "anchors": ["CLEC9A", "XCR1", "WDFY4", "CADM1"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10
+        }
+      ]
+    },
+    {
+      "rule_id": "REQUIRE_NKT_TCR_PLUS_NK_PROGRAM_AND_EXCLUDE_GDT",
+      "label": "NKT",
+      "required": true,
+      "core_anchors": ["CD3D", "TRAC"],
+      "minimum_core_anchors": 2,
+      "core_detection_floor": 0.10,
+      "supportive_anchors": ["KLRD1", "NKG7", "NCR1", "XCL1", "XCL2", "ZBTB16", "TRAV10"],
+      "minimum_supportive_anchors": 2,
+      "supportive_detection_floor": 0.10,
+      "parent_anchors": ["GNLY", "GZMB", "PRF1", "FGFBP2"],
+      "minimum_parent_anchors": 1,
+      "parent_detection_floor": 0.10,
+      "forbidden_programs": [
+        {
+          "program": "coherent_gamma_delta_tcr",
+          "anchors": ["TRDC", "TRGC1", "TRGC2"],
+          "minimum_anchors": 2,
+          "detection_floor": 0.10,
+          "minimum_dataset_fraction": 0.50
+        }
+      ]
+    },
     {
       "rule_id": "NAIVE_B_ABSOLUTE_PROGRAM_FOR_REPEATED_CANONICAL_CLUSTERS",
       "label": "Naive_B",
@@ -208,6 +387,19 @@
     }
   ],
   "sibling_projection_rules": [
+    {
+      "rule_id": "PREFER_CD8_TN_WHEN_NAIVE_PROGRAM_IS_COHERENT_AND_ACTIVATION_HISTORY_IS_ABSENT",
+      "preferred": "CD8_Tn",
+      "over": "CD8_Tcm",
+      "minimum_score_ratio": 0.80,
+      "minimum_core_review": 3,
+      "required_anchors": ["TCF7", "LEF1", "IL7R"],
+      "minimum_required_anchors": 3,
+      "anchor_detection_floor": 0.30,
+      "forbidden_anchors": ["CD44", "IFNG", "GZMB", "PRF1"],
+      "forbidden_detection_floor": 0.20,
+      "maximum_forbidden_anchors": 0
+    },
     {
       "rule_id": "PREFER_TRANSITIONAL_B_WHEN_MATURATION_BRIDGE_PROGRAM_IS_COMPARABLE",
       "preferred": "Transitional_B",
@@ -298,6 +490,12 @@
         "markers": {"CSF3R": 0.20, "FCGR3B": 0.10},
         "minimum_markers": 2
       },
+      "alternative_program_can_complete_commitment": {
+        "enabled": true,
+        "required_anchor_markers": {"CSF3R": 0.20},
+        "minimum_required_anchors": 1,
+        "interpretation": "In species such as mouse where FCGR3B is not a reliable commitment requirement, CSF3R plus a coherent mature, granule-development, or inflammatory neutrophil program is sufficient."
+      },
       "borderline_activated_neutrophil": {
         "required_anchor_markers": {"CSF3R": 0.20},
         "borderline_marker": "FCGR3B",
@@ -355,9 +553,32 @@
         "markers": {"CD1C": 0.10, "CLEC10A": 0.10, "FCER1A": 0.10},
         "minimum_markers": 2
       },
-      "monocyte_program": {
-        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "FCGR3A": 0.20, "LST1": 0.20},
-        "minimum_markers": 3
+      "monocyte_specific_program": {
+        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "FCGR3A": 0.20},
+        "minimum_markers": 3,
+        "two_marker_competitive_exception": {
+          "minimum_markers": 2,
+          "minimum_mean_detection": 0.25,
+          "minimum_ratio_to_dc": 0.80
+        }
+      },
+      "pan_myeloid_support": {
+        "markers": {"LST1": 0.20, "TYROBP": 0.20}
+      },
+      "macrophage_exclusion": {
+        "markers": {"C1QA": 0.20, "C1QB": 0.20, "C1QC": 0.20, "MERTK": 0.20},
+        "minimum_markers": 3,
+        "minimum_mean_detection": 0.35,
+        "minimum_ratio_to_dc_specific": 1.00,
+        "interpretation": "A coherent macrophage program that is at least as strong as the DC-specific program blocks the DC3 boundary call; retain macrophage identity and Cycling as state."
+      },
+      "cdc2_dominance_review": {
+        "minimum_dc_specific_markers": 3,
+        "maximum_monocyte_specific_markers": 2,
+        "minimum_dominance_ratio": 1.50,
+        "minimum_absolute_margin": 0.20,
+        "manual_review": true,
+        "auto_merge_allowed": false
       }
     }
   },
@@ -469,5 +690,15 @@
     "angiogenic": ["ESM1", "ANGPT2", "PGF", "KDR", "PLVAP", "CXCR4"],
     "emt": ["VIM", "SNAI1", "SNAI2", "ZEB1", "ZEB2", "FN1"],
     "myofibroblastic": ["ACTA2", "TAGLN", "MYL9", "TPM2", "COL1A1", "COL3A1"]
+  },
+  "state_program_rules": {
+    "S_phase": {
+      "minimum_markers": 4,
+      "required_any": ["PCNA", "TYMS", "RRM1", "RRM2", "PCLAF"]
+    },
+    "G2M_phase": {
+      "minimum_markers": 3,
+      "required_any": ["MKI67", "TOP2A", "UBE2C", "CENPF", "TPX2", "CCNB1", "CCNB2", "BIRC5"]
+    }
   }
 }

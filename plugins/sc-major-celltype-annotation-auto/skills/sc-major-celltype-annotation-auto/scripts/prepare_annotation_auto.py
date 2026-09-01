@@ -45,8 +45,16 @@ def main() -> None:
     parser.add_argument("--ratios")
     parser.add_argument("--gene-map")
     parser.add_argument("--cell-evidence")
+    parser.add_argument("--umap")
     parser.add_argument("--evidence-config")
     parser.add_argument("--knowledge-base")
+    parser.add_argument("--project-prior")
+    parser.add_argument("--project-major-label", action="append", default=[])
+    parser.add_argument("--context-json")
+    parser.add_argument("--annotation-constraints")
+    parser.add_argument("--exclude-label", action="append", default=[])
+    parser.add_argument("--exclude-marker", action="append", default=[])
+    parser.add_argument("--allow-partial-ratios", action="store_true")
     parser.add_argument("--top-n", type=int, default=60)
     parser.add_argument("--informative-n", type=int, default=25)
     args = parser.parse_args()
@@ -67,12 +75,26 @@ def main() -> None:
     ]
     for source in args.context_source:
         command.extend(["--context-source", source])
+    for label in args.project_major_label:
+        command.extend(["--project-major-label", label])
+    if args.context_json:
+        command.extend(["--context-json", args.context_json])
+    if args.annotation_constraints:
+        command.extend(["--annotation-constraints", args.annotation_constraints])
+    for label in args.exclude_label:
+        command.extend(["--exclude-label", label])
+    for marker in args.exclude_marker:
+        command.extend(["--exclude-marker", marker])
+    if args.allow_partial_ratios:
+        command.append("--allow-partial-ratios")
     for flag, value in (
         ("--ratios", args.ratios),
         ("--gene-map", args.gene_map),
         ("--cell-evidence", args.cell_evidence),
+        ("--umap", args.umap),
         ("--evidence-config", args.evidence_config),
         ("--knowledge-base", args.knowledge_base),
+        ("--project-prior", args.project_prior),
     ):
         if value:
             command.extend([flag, value])

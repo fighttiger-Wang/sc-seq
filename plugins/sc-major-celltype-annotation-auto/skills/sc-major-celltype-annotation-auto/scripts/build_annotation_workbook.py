@@ -20,7 +20,7 @@ from annotation_override_policy import validate_identity_override
 
 
 SKILL_NAME = "sc-major-celltype-annotation-auto"
-SKILL_VERSION = "0.3.1"
+SKILL_VERSION = "0.3.2"
 
 
 def register_shared_case(workspace, records_path, evidence_path, qa_path, output):
@@ -74,13 +74,15 @@ STRUCTURED_FIELDS = [
     "stable_id", "parent_path", "tissue_module", "developmental_stage", "ontology_node_kind",
     "tissue_scope", "tissue_scope_match", "tissue_context_review", "disease_role", "state_list", "primary_state",
     "cross_species_inference", "panel_species", "marker_panel_evidence_ids", "display_label",
-    "mixed_population", "suspected_doublet", "auto_merge_allowed",
+    "mixed_evidence", "review_in_subcluster", "mixed_population", "suspected_doublet", "auto_merge_allowed",
+    "user_constraint_audit",
 ]
 STRUCTURED_HEADERS = [
     "Stable_ID", "Parent_Path", "Tissue_Module", "Developmental_Stage", "Ontology_Node_Kind",
     "Tissue_Scope", "Tissue_Scope_Match", "Tissue_Context_Review", "Disease_Role", "State_List", "Primary_State",
     "Cross_Species_Inference", "Panel_Species", "Marker_Panel_Evidence", "Display_Label",
-    "Mixed_Population", "Suspected_Doublet", "Auto_Merge_Allowed",
+    "Mixed_Evidence", "Review_In_Subcluster", "Mixed_Population", "Suspected_Doublet", "Auto_Merge_Allowed",
+    "User_Constraint_Audit",
 ]
 FIELDS[6:6] = STRUCTURED_FIELDS
 HEADERS[6:6] = STRUCTURED_HEADERS
@@ -118,10 +120,10 @@ EVIDENCE_FIELDS = [
     "evidence_completeness", "primary_evidence_label", "primary_major_label", "primary_evidence_score",
     "runner_up_evidence_label", "runner_up_major_label", "runner_up_evidence_score", "score_margin",
     "positive_marker_coverage", "detection_specificity", "rival_lineage", "rival_major_label",
-    "rival_lineage_score", "tnk_provisional", "risk_level", "recommended_action", "mixed_population",
-    "suspected_doublet", "auto_merge_allowed", "label_basis", "canonical_subtype", "literature_source",
+    "rival_lineage_score", "tnk_provisional", "risk_level", "recommended_action", "mixed_evidence",
+    "review_in_subcluster", "mixed_population", "suspected_doublet", "auto_merge_allowed", "label_basis", "canonical_subtype", "literature_source",
     "naming_grammar",
-    "literature_details", "override_validation", "override_audit",
+    "literature_details", "override_validation", "override_audit", "user_constraint_audit",
 ]
 EVIDENCE_HEADERS = [
     "Cluster", "Stable_ID", "精细类型", "本体路径", "组织模块", "本体节点类型",
@@ -129,9 +131,9 @@ EVIDENCE_HEADERS = [
     "参考物种", "Marker 证据", "证据模式", "证据完整度", "主候选", "主候选大类",
     "主候选评分", "次候选", "次候选大类", "次候选评分", "评分差", "核心 Marker 覆盖",
     "检测特异性", "竞争谱系", "竞争大类", "竞争评分", "T/NK 判定", "风险等级",
-    "处置建议", "混合群", "疑似双细胞", "允许自动合并", "命名依据", "标准亚型",
+    "处置建议", "混合证据", "亚群阶段复核", "混合群", "疑似双细胞", "允许自动合并", "命名依据", "标准亚型",
     "文献依据", "命名规则",
-    "Structured literature details", "Override validation", "Override audit",
+    "Structured literature details", "Override validation", "Override audit", "User Constraint Audit",
 ]
 
 
@@ -155,6 +157,8 @@ def inject_deterministic_evidence(records, evidence):
             "stable_id", "developmental_stage", "ontology_node_kind", "tissue_scope_match",
             "tissue_context_review", "primary_state", "cross_species_inference", "panel_species",
             "display_label", "mixed_population", "suspected_doublet", "auto_merge_allowed",
+            "mixed_evidence", "review_in_subcluster",
+            "user_constraint_audit",
         ):
             preserve_explicit_false = (
                 external_candidate
@@ -164,6 +168,9 @@ def inject_deterministic_evidence(records, evidence):
             )
             if (not external_candidate or not record.get(field)) and not preserve_explicit_false:
                 record[field] = decision.get(field, "")
+        record["user_constraint_audit"] = json.dumps(
+            decision.get("user_constraint_audit", {}), ensure_ascii=False, sort_keys=True
+        )
         for field in ("parent_path", "tissue_module", "tissue_scope", "disease_role", "state_list", "marker_panel_evidence_ids"):
             if not external_candidate or not record.get(field):
                 record[field] = json.dumps(decision.get(field, []), ensure_ascii=False)
@@ -250,6 +257,12 @@ def within(path, root, role):
 
 def validate(records, clusters, evidence):
     errors = []
+    ratio_validation = evidence.get("annotation_evidence_policy", {}).get("ratio_validation", {})
+    if ratio_validation.get("provided") and not ratio_validation.get("complete"):
+        errors.append(
+            "Formal major annotation requires a complete full-ratio table; "
+            "partial-ratio evidence is provisional only"
+        )
     record_clusters = [str(r.get("cluster_id", "")) for r in records]
     expected_clusters = sorted((str(c) for c in clusters), key=cluster_sort_key)
     if record_clusters != expected_clusters:
@@ -272,6 +285,19 @@ def validate(records, clusters, evidence):
             continue
         cluster_id = str(record["cluster_id"])
         deterministic_decision = evidence.get("deterministic_annotation_evidence", {}).get(cluster_id, {})
+        constraint_audit = deterministic_decision.get("user_constraint_audit", {})
+        if constraint_audit.get("final_identity_excluded"):
+            errors.append(
+                f"Cluster {cluster_id} final identity violates an explicit user exclusion: "
+                f"{constraint_audit.get('selected_final_identity', '')}"
+            )
+        try:
+            recorded_constraints = json.loads(str(record.get("user_constraint_audit", "{}")))
+        except json.JSONDecodeError:
+            recorded_constraints = {}
+        excluded_labels = {str(item).strip() for item in recorded_constraints.get("exclude_labels", []) if str(item).strip()}
+        if str(record.get("stable_id", "")).strip() in excluded_labels or str(record.get("celltype_en", "")).strip() in excluded_labels:
+            errors.append(f"Cluster {cluster_id} final record uses an explicitly excluded identity")
         override_audit = validate_identity_override(record, deterministic_decision)
         record["override_audit"] = override_audit
         errors.extend(override_audit["errors"])
@@ -404,13 +430,13 @@ def validate(records, clusters, evidence):
         cluster_id = str(record["cluster_id"])
         origin = provisional.get(cluster_id, "not_T_NK")
         final_label = str(record["celltype_en"]).strip()
-        if origin == "T_supported" and final_label != "T_cell":
+        if origin == "T_supported" and not record.get("mixed_population") and final_label != "T_cell":
             errors.append(f"Cluster {cluster_id} deterministic T-supported evidence requires T_cell")
-        if origin == "NK_supported" and final_label != "NK_cell":
+        if origin == "NK_supported" and not record.get("mixed_population") and final_label != "NK_cell":
             errors.append(f"Cluster {cluster_id} deterministic NK-supported evidence requires NK_cell")
         if origin == "unresolved_T_NK":
-            if not record.get("mixed_population") or record.get("auto_merge_allowed"):
-                errors.append(f"Cluster {cluster_id} unresolved T/NK must be marked mixed and blocked from automatic merging")
+            if not (record.get("mixed_population") or record.get("mixed_evidence")) or record.get("auto_merge_allowed"):
+                errors.append(f"Cluster {cluster_id} unresolved T/NK must carry mixed evidence and be blocked from automatic merging")
             if not record.get("manual_review"):
                 errors.append(f"Cluster {cluster_id} unresolved T/NK requires manual_review=true")
     if len(grammars) > 1:

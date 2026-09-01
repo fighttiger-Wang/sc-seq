@@ -34,13 +34,15 @@ A cluster-level combination of:
 
 - APC program: `HLA-DRA/HLA-DPA1/HLA-DPB1/CD74`;
 - DC-specific program: at least two of `CD1C/CLEC10A/FCER1A`;
-- monocyte program: at least three of `CD14/FCN1/VCAN/FCGR3A/LST1`;
+- monocyte-specific program: at least three of `CD14/FCN1/VCAN/FCGR3A`, or two anchors whose complete-program mean is sufficiently high and competitive with the cDC2 program;
 
-is a `DC3` boundary candidate, not proof of DC3. Aggregate ratios cannot determine whether the programs coexist within the same cells or occupy separate cells.
+is a `DC3` boundary candidate. This registered combination supports `DC3` as the best-fit terminal identity, while aggregate ratios still cannot determine whether the cluster is pure or whether all programs coexist within the same cells.
 
-Literature may nominate DC3 and define the expected program, but aggregate evidence cannot prove a homogeneous DC3 population or same-cell coexpression. Without cell-level evidence, prefer a conservative likely-mixed `Myeloid_cell` fallback with `possible_components=cDC2_or_DC3_like;Monocyte`, require manual review, and block automatic merging. This mixed fallback may be formally delivered because it does not overclaim DC3 or doublets.
+`LST1` and `TYROBP` are pan-myeloid support and must not be counted as independent monocyte-specific anchors. When all three cDC2 anchors pass, the cDC2 program mean is at least 1.5-fold higher with an absolute margin of at least 0.20, and no more than two monocyte-specific anchors pass, retain `cDC2` as `R1_REVIEW_RETAIN`, require manual review, and block automatic merging without labeling the cluster `Multi_cell`.
 
-Cell-level coexpression or resolving reclustering is optional refinement: use it to separate true mixed subpopulations from same-cell boundary biology or doublets. Do not promote DC3 into the shared standard without that validation.
+When all three programs pass, use `stable_id=DC3`, `formal_identity_fallback=dc3_boundary_best_fit`, `mixed_population=false`, `suspected_doublet=false`, require manual review, and block automatic merging. Do not escape to `Myeloid_cell` or label `Multi_cell` merely because DC3 combines dendritic and monocyte-like features.
+
+Cell-level coexpression or resolving reclustering is optional refinement: use it to test cluster purity, separate true mixed subpopulations from intrinsic DC3 boundary biology, and assess doublets. If cell-level evidence demonstrates distinct component populations, replace the aggregate DC3 judgment with the appropriate `Multi_cell` or resolved reclustered identities.
 
 ## UMAP use
 

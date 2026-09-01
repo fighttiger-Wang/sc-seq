@@ -976,6 +976,24 @@
       "review_note": ""
     },
     {
+      "cell_id": "DC3",
+      "name_en": "DC3",
+      "name_cn": "3型树突状细胞",
+      "parent_id": "Myeloid_cell",
+      "branch": "myeloid",
+      "node_kind": "identity",
+      "tissue_scope": "blood;tissue",
+      "major_output_allowed": "No",
+      "subcluster_output_allowed": "Yes",
+      "external_ontology_id": "",
+      "ontology_lookup_name": "DC3 dendritic cell",
+      "aliases": "CD1c CD163 dendritic cell; inflammatory DC3",
+      "evidence_ids": "SRC_DC3_DUTERTRE;SRC_DC3_BOURDELY;SRC_DC3_CYTLAK",
+      "evidence_gate": "Meets",
+      "proposed_status": "Approve",
+      "review_note": "Require coherent APC, CD1C/CLEC10A/FCER1A, and monocyte-like CD14/FCN1/VCAN/FCGR3A programs. Aggregate evidence supports a best-fit DC3 identity but does not by itself prove cluster purity or same-cell coexpression."
+    },
+    {
       "cell_id": "pDC",
       "name_en": "pDC",
       "name_cn": "浆细胞样树突状细胞",
@@ -3602,6 +3620,27 @@
       "alias": "DC2",
       "alias_type": "synonym",
       "maps_to": "cDC2"
+    },
+    {
+      "cell_id": "DC3",
+      "language": "en",
+      "alias": "DC3",
+      "alias_type": "standard_id",
+      "maps_to": "DC3"
+    },
+    {
+      "cell_id": "DC3",
+      "language": "zh",
+      "alias": "3型树突状细胞",
+      "alias_type": "standard_cn",
+      "maps_to": "DC3"
+    },
+    {
+      "cell_id": "DC3",
+      "language": "en",
+      "alias": "CD1c CD163 dendritic cell",
+      "alias_type": "synonym",
+      "maps_to": "DC3"
     },
     {
       "cell_id": "pDC",
@@ -6560,6 +6599,20 @@
       "approval_status": "Approve"
     },
     {
+      "cell_id": "DC3",
+      "target_species": "Human",
+      "panel_species": "Human",
+      "cross_species_inference": "No",
+      "core_markers": "CD1C;CLEC10A;CD14;FCGR3A",
+      "supportive_markers": "FCER1A;FCN1;VCAN;CD163;CST3;HLA-DRA;CD74",
+      "exclusion_markers": "CLEC9A/XCR1/WDFY4 coherent cDC1 program;C1QC/MERTK dominant macrophage program",
+      "confounders": "cDC2 with weak monocyte background; monocytes with nonspecific MHC-II activation; aggregate data cannot establish cluster purity",
+      "decision_rule": "Require the registered APC plus DC-specific plus competitive monocyte-specific boundary gate. Use DC3 as the best-fit terminal identity with reduced confidence and blocked automatic merging; reserve Multi_cell for demonstrated component populations or incompatible lineages.",
+      "evidence_ids": "SRC_DC3_DUTERTRE;SRC_DC3_BOURDELY;SRC_DC3_CYTLAK",
+      "evidence_gate": "Meets",
+      "approval_status": "Approve"
+    },
+    {
       "cell_id": "cDC2",
       "target_species": "Mouse",
       "panel_species": "Human",
@@ -9023,6 +9076,42 @@
       "authority_gate": "Yes"
     },
     {
+      "source_id": "SRC_DC3_DUTERTRE",
+      "short_name": "Human DC3 / inflammatory DC study",
+      "source_type": "primary_study",
+      "title": "Single-Cell Analysis of Human Mononuclear Phagocytes Reveals Subset-Defining Markers and Identifies Circulating Inflammatory Dendritic Cells",
+      "year": 2019,
+      "journal": "Immunity",
+      "doi": "10.1016/j.immuni.2019.08.008",
+      "url_or_path": "https://doi.org/10.1016/j.immuni.2019.08.008",
+      "relevance": "Defines human CD1c-positive inflammatory dendritic populations with monocyte-like CD14/CD163 features that underpin the DC3 boundary program.",
+      "authority_gate": "Yes"
+    },
+    {
+      "source_id": "SRC_DC3_BOURDELY",
+      "short_name": "Human CD163-positive DC3 functional study",
+      "source_type": "primary_study",
+      "title": "Transcriptional and Functional Analysis of CD1c+ Human Dendritic Cells Identifies a CD163+ Subset Priming CD8+CD103+ T Cells",
+      "year": 2020,
+      "journal": "Immunity",
+      "doi": "10.1016/j.immuni.2020.06.002",
+      "url_or_path": "https://doi.org/10.1016/j.immuni.2020.06.002",
+      "relevance": "Supports a distinct CD1c-positive, CD163-positive DC3 population carrying both dendritic and monocyte-like features.",
+      "authority_gate": "Yes"
+    },
+    {
+      "source_id": "SRC_DC3_CYTLAK",
+      "short_name": "Human DC3 developmental pathway study",
+      "source_type": "primary_study",
+      "title": "Differential IRF8 Transcription Factor Requirement Defines Two Pathways of Dendritic Cell Development in Humans",
+      "year": 2020,
+      "journal": "Immunity",
+      "doi": "10.1016/j.immuni.2020.07.003",
+      "url_or_path": "https://doi.org/10.1016/j.immuni.2020.07.003",
+      "relevance": "Provides developmental evidence that human DC3 follows a pathway distinguishable from conventional cDC1/cDC2 while retaining monocyte-related features.",
+      "authority_gate": "Yes"
+    },
+    {
       "source_id": "SRC_FIBRO",
       "short_name": "Cross-tissue fibroblast atlas",
       "source_type": "authoritative_atlas",
@@ -9584,5 +9673,5 @@
       "maximum_absolute_negative_hits": 1
     }
   },
-  "knowledge_base_version": "2.8.0"
+  "knowledge_base_version": "2.9.0"
 }

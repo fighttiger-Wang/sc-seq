@@ -53,6 +53,29 @@ def infer_parent_kind(parent, requested):
     return "state" if any(token in lower for token in STATE_PARENT_TOKENS) else "lineage"
 
 
+def load_sample_context(path):
+    if path is None:
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("Sample context must be a JSON object")
+    return data
+
+
+def load_annotation_constraints(path, exclude_labels, conflict_markers):
+    constraints = {}
+    if path is not None:
+        constraints = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(constraints, dict):
+            raise ValueError("Annotation constraints must be a JSON object")
+    constraints = dict(constraints)
+    constraints["exclude_labels"] = list(constraints.get("exclude_labels", [])) + list(exclude_labels or [])
+    constraints["conflict_markers"] = list(
+        constraints.get("conflict_markers", constraints.get("exclude_markers", []))
+    ) + list(conflict_markers or [])
+    return constraints
+
+
 def template_record(cluster):
     return {
         "cluster_id": cluster, "celltype_cn": "", "celltype_en": "",
@@ -64,6 +87,7 @@ def template_record(cluster):
         "label_basis": "", "canonical_subtype": "", "top_marker_gene": "",
         "literature_source": "", "naming_grammar": "",
         "contextually_excluded_naming_markers": [],
+        "user_constraint_audit": {},
         "broad_type": "", "fine_type": "", "state": "",
         "supporting_markers": "", "conflicting_markers": "",
         "candidate_labels": "", "confidence": "", "quality_score": None,
@@ -103,6 +127,7 @@ def evidence_digest(evidence):
         "source_paths": evidence["source_paths"],
         "naming_marker_policy": evidence.get("naming_marker_policy", {}),
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
+        "user_constraints": evidence.get("annotation_evidence_policy", {}).get("user_constraints", {}),
         "full_evidence_pack": "annotation_evidence_pack.json",
         "usage": "Annotate from this digest first; open the full evidence pack only for a targeted conflict.",
     }
@@ -125,6 +150,11 @@ def main():
     parser.add_argument("--umap", help="Optional UMAP/embedding image; formal delivery requires an all-cluster audit.")
     parser.add_argument("--evidence-config", help="Optional versioned deterministic evidence configuration JSON.")
     parser.add_argument("--knowledge-base", help="Optional approved shared annotation knowledge-base JSON.")
+    parser.add_argument("--context-json", help="Optional sample context JSON: age, sex, disease, treatment, anatomy, platform, depth, and doublet metadata.")
+    parser.add_argument("--annotation-constraints", help="Optional JSON with exclude_labels/conflict_markers and per-cluster constraints.")
+    parser.add_argument("--exclude-label", action="append", default=[], help="Hard-exclude a final identity label; repeat as needed.")
+    parser.add_argument("--exclude-marker", action="append", default=[], help="Treat a marker as conflict/contamination evidence, not positive identity/state evidence; repeat as needed.")
+    parser.add_argument("--allow-partial-ratios", action="store_true", help="Allow a marker-only ratio table for provisional review; formal full-ratio claims remain disabled.")
     parser.add_argument("--top-n", type=int, default=60)
     parser.add_argument("--informative-n", type=int, default=25)
     args = parser.parse_args()
@@ -138,10 +168,12 @@ def main():
     umap = assert_e_drive(args.umap, "UMAP input") if args.umap else None
     evidence_config = assert_e_drive(args.evidence_config, "evidence config") if args.evidence_config else None
     knowledge_base = assert_e_drive(args.knowledge_base, "knowledge base") if args.knowledge_base else None
+    context_path = assert_e_drive(args.context_json, "sample context") if args.context_json else None
+    constraints_path = assert_e_drive(args.annotation_constraints, "annotation constraints") if args.annotation_constraints else None
     output_dir = assert_within(assert_e_drive(args.output_dir, "output directory"), workspace, "output directory")
     if not avg.is_file() or not markers.is_file():
         raise FileNotFoundError(f"Input file missing: avg={avg.exists()}, markers={markers.exists()}")
-    for role, optional in (("ratios", ratios), ("gene map", gene_map), ("cell evidence", cell_evidence), ("UMAP", umap), ("evidence config", evidence_config), ("knowledge base", knowledge_base)):
+    for role, optional in (("ratios", ratios), ("gene map", gene_map), ("cell evidence", cell_evidence), ("UMAP", umap), ("evidence config", evidence_config), ("knowledge base", knowledge_base), ("sample context", context_path), ("annotation constraints", constraints_path)):
         if optional is not None and not optional.is_file():
             raise FileNotFoundError(f"Optional {role} input missing: {optional}")
     reparse = has_reparse_component(output_dir.parent, workspace)
@@ -150,6 +182,10 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     parent_kind = infer_parent_kind(args.parent_population, args.parent_kind)
+    sample_context = load_sample_context(context_path)
+    annotation_constraints = load_annotation_constraints(
+        constraints_path, args.exclude_label, args.exclude_marker
+    )
     evidence = build_evidence(avg, markers, args.top_n, args.informative_n, args.species)
     if evidence["missing_marker_clusters"] or evidence["extra_marker_clusters"]:
         raise ValueError("Average-expression clusters and marker-table clusters do not match")
@@ -165,11 +201,17 @@ def main():
         parent_population=args.parent_population,
         parent_kind=parent_kind,
         knowledge_base_path=knowledge_base,
+        require_complete_ratio=bool(ratios and not args.allow_partial_ratios),
+        sample_context=sample_context,
+        user_constraints=annotation_constraints,
     )
     metadata = {
         "species": args.species, "tissue": args.tissue,
         "annotation_level": args.annotation_level,
         "parent_population": args.parent_population, "parent_kind": parent_kind,
+        "sample_context": sample_context,
+        "annotation_constraints": annotation_constraints,
+        "ratio_mode": "full_ratio" if ratios and not args.allow_partial_ratios else ("partial_ratio" if ratios else "positive_markers_only"),
         "interpretation_rule": (
             "Parent population is a state-based bucket; resolve every coherent lineage and keep state separate from identity."
             if parent_kind == "state" else
@@ -184,6 +226,8 @@ def main():
         "cell_evidence": str(cell_evidence) if cell_evidence else "",
         "umap": str(umap) if umap else "",
         "knowledge_base": str(knowledge_base) if knowledge_base else evidence.get("annotation_evidence_policy", {}).get("knowledge_base_source", ""),
+        "context_json": str(context_path) if context_path else "",
+        "annotation_constraints": str(constraints_path) if constraints_path else "",
     }
     evidence_path = output_dir / "annotation_evidence_pack.json"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")

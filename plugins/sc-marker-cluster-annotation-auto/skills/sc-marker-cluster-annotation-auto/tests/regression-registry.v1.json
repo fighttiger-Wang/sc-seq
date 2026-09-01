@@ -7,7 +7,7 @@
       "group": "T_B_myeloid_stromal_mixed_boundaries",
       "script": "shared/sc-annotation-evidence-core/tests/test_evidence_core.py",
       "work_subdir": "shared_evidence_core",
-      "expected_assertions": 161,
+      "expected_assertions": 193,
       "protects": [
         "CD4_Tem canonical reuse",
         "CD4/CD8/gamma-delta arbitration",
@@ -19,6 +19,16 @@
         ,"myeloid neutrophil/monocyte program gates"
         ,"DC3/monocyte cell-level boundary validation"
         ,"borderline activated-neutrophil retention and DC-like state separation"
+        ,"dataset-relative competing-program gate for ubiquitous background expression"
+        ,"ontology ancestors support descendants but cannot act as mixture rivals"
+        ,"dominance-first alpha-beta versus gamma-delta TCR arbitration"
+        ,"dominant TCR program blocks shared-cytotoxic NK misclassification"
+        ,"all applicable mutually exclusive boundary rules execute before ranking"
+        ,"two isolated MCM transcripts cannot create a Cycling state"
+        ,"N135 fetal-lung cluster 14 resolves to CD8_Tn while true gamma-delta remains gamma-delta"
+        ,"N135 fetal-lung Myeloid_05 cluster 7 retains cDC2 when its complete cDC2 program dominates monocyte background"
+        ,"N135 fetal-lung Myeloid_05 cluster 8 retains monocyte identity when off-parent ECM background remains below the conflict threshold"
+        ,"aggregate DC3-like/monocyte boundaries receive a blocked best-fit DC3 terminal identity rather than Myeloid_cell or Multi_cell"
       ]
     },
     {
@@ -26,7 +36,7 @@
       "group": "formal_and_temporary_delivery",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_subcluster_builder_v2.py",
       "work_subdir": "subcluster_workbook_and_umap",
-      "expected_assertions": 64,
+      "expected_assertions": 65,
       "protects": [
         "strict hierarchy consistency",
         "all-cluster UMAP audit with repeated-label cross-island gating",
@@ -37,7 +47,8 @@
         "disconnected repeated-label automatic-merge blocking",
         "manual/external identity override evidence gate",
         "Mature_neutrophil and DC identity-program boundary coverage",
-        "external-label UMAP independence gate"
+        "external-label UMAP independence gate",
+        "disconnected repeated-label explanations require concrete evidence IDs"
       ]
     }
   ]
