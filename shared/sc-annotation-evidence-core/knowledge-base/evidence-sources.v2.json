@@ -7,7 +7,7 @@
     "year": "",
     "journal": "",
     "doi": "",
-    "url_or_path": "E:/Desktop/Marker gene/细胞注释参考文档.pdf",
+    "url_or_path": "user_reference_attachment: cell_annotation_reference.pdf (local attachment; not part of the repository)",
     "relevance": "层级骨架；部分节点仅有单 Marker，需要校正",
     "authority_gate": "No"
   },
@@ -19,7 +19,7 @@
     "year": "",
     "journal": "",
     "doi": "",
-    "url_or_path": "E:/A005-飞书/下载/亚类Marker积累.pdf",
+    "url_or_path": "user_reference_attachment: subtype_marker_collection.pdf (local attachment; not part of the repository)",
     "relevance": "含人、小鼠、牛、鱼材料；需区分物种与身份/状态",
     "authority_gate": "No"
   },
@@ -355,7 +355,7 @@
     "year": 2024,
     "journal": "Cancer Cell",
     "doi": "10.1016/j.ccell.2024.08.020",
-    "url_or_path": "E:/Desktop/参考文献/张泽民/成纤维-附表2.xlsx",
+    "url_or_path": "user_reference_attachment: fibroblast_supplementary_table.xlsx (local attachment; not part of the repository)",
     "relevance": "成纤维/平滑肌 cluster DEG 与 signatures",
     "authority_gate": "No"
   }

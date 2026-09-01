@@ -20,8 +20,18 @@
   },
   "background_model": {
     "global_prevalence": "downweight programs elevated across most clusters",
-    "ambient_candidates": ["immunoglobulin", "keratin", "ribosomal", "mitochondrial", "housekeeping"],
-    "local_contamination_requires": ["multiple_program_genes", "target_relative_enrichment", "nontrivial_prevalence"],
+    "ambient_candidates": [
+      "immunoglobulin",
+      "keratin",
+      "ribosomal",
+      "mitochondrial",
+      "housekeeping"
+    ],
+    "local_contamination_requires": [
+      "multiple_program_genes",
+      "target_relative_enrichment",
+      "nontrivial_prevalence"
+    ],
     "single_shared_marker": "never_sufficient_for_off_parent_or_doublet"
   },
   "decision_order": [
@@ -36,15 +46,33 @@
     "literature_or_atlas_resolution"
   ],
   "abnormality": {
-    "allowed_coexisting_flags": ["low_quality", "background_interference", "abnormal_state", "debris", "suspected_doublet", "mixed_population"],
+    "allowed_coexisting_flags": [
+      "low_quality",
+      "background_interference",
+      "abnormal_state",
+      "debris",
+      "suspected_doublet",
+      "mixed_population"
+    ],
     "preserve_primary_identity": true,
     "red_cell_when": "cluster_is_not_a_normal_pure_plotting_unit",
-    "multi_cell_requires": ["complete_competing_programs", "concrete_components", "manual_review"],
+    "multi_cell_requires": [
+      "complete_competing_programs",
+      "concrete_components",
+      "manual_review"
+    ],
     "handling_output": "annotate_only_do_not_filter_or_modify_object"
   },
   "umap": {
     "required_review": "every_cluster",
-    "audit_items": ["same_label_islands", "interleaving", "neighbor_lineages", "transition_axis", "marker_umap_conflict", "isolated_state_or_cycle_island"],
+    "audit_items": [
+      "same_label_islands",
+      "interleaving",
+      "neighbor_lineages",
+      "transition_axis",
+      "marker_umap_conflict",
+      "isolated_state_or_cycle_island"
+    ],
     "conflict_action": "reassess_integrated_evidence_and_record_reason",
     "hard_gate": false
   },

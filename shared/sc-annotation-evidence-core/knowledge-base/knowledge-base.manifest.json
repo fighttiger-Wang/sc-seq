@@ -17,18 +17,18 @@
     "calibration_policy": 1
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "4de70ebc0e002d6e2f874e5727fb95be9de8c2592baba3a6a0dbb90e2c2036da",
+    "cell-annotation-knowledge-base.v2.json": "a47f728dcc26b4e80dc6efe63e3ededa0475c1c0896609f807add1858687ba7d",
     "ontology.v2.json": "e73407d20fd919935bf60a12bd441b51c452da3cfc1b14b8315ffae981830399",
     "aliases.v2.json": "e51150be3709c6e7edd49b274963705e42f3c6ad8134c4553b86a1666a3a5232",
     "marker-panels.v2.json": "8cf3b9cbc43054526685535e47045ea1c1ddcbab7393f548a41f604979d771cc",
     "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
     "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
     "decision-rules.v2.json": "55efef88f90bf4bd2fe0784535d4e3b3db1e4b365892552d11259cb94535ab72",
-    "evidence-sources.v2.json": "9d5db122e7bdf2b4a260649a808b104a655b4723d81c1e8541ecef94bd0cdc35",
+    "evidence-sources.v2.json": "bce75a21a8d5d78bd794b99fd4d2acd645cf9fe5841e59870fc360da813805a9",
     "legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
-    "decision-rules.v3.json": "6383b64dea8452820ac47a94726704d30f6bc04d2228a0ce5d128ec9a21b6046",
-    "naming-dictionary.v1.json": "d9f96a31c0c890358f7d2dad41e18af842b2eefb643f0859cbce6a550263b2d3",
-    "calibration-policy.v1.json": "4ab34846cbd51eb33dbd1cbb5e16a4d606d70e07cb3b0a410df4a520ca558abf"
+    "decision-rules.v3.json": "2a7cbbc9402eec98deae71cd402c2d219453916dd06e9eba0d343077961afb30",
+    "naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
+    "calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"
   },
-  "knowledge_base_version": "3.0.0"
+  "knowledge_base_version": "3.0.1"
 }

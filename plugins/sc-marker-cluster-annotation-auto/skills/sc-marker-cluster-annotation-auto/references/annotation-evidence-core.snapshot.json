@@ -1,7 +1,7 @@
 {
   "core_version": "3.0.0",
   "config_version": "3.0.0",
-  "knowledge_base_version": "3.0.0",
+  "knowledge_base_version": "3.0.1",
   "snapshot_contract": "sha256-v1",
   "canonical_source": "shared/sc-annotation-evidence-core",
   "files": {
@@ -10,11 +10,11 @@
     "knowledge_base.py": "263aa24abda67eea417a258b3579f400cc3b8848a44ffe7e99248751f0a226f6",
     "annotation-evidence-config.v1.json": "ba3d3b04b6636a63fe651a4dd15bd5e473a59c4f7de1dc917bbae7ce22f9eb89",
     "evidence-scoring-policy.md": "e7a78a4f6a8dfbfddfc7bdd908eba46487d096b80779486fd903253d735fddf9",
-    "knowledge-base/cell-annotation-knowledge-base.v2.json": "4de70ebc0e002d6e2f874e5727fb95be9de8c2592baba3a6a0dbb90e2c2036da",
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": "a47f728dcc26b4e80dc6efe63e3ededa0475c1c0896609f807add1858687ba7d",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
-    "knowledge-base/knowledge-base.manifest.json": "fb23026dca9c61a1419ebb0ed0ac57848e14758c12c67e5795ac8021c862268c",
-    "knowledge-base/decision-rules.v3.json": "6383b64dea8452820ac47a94726704d30f6bc04d2228a0ce5d128ec9a21b6046",
-    "knowledge-base/naming-dictionary.v1.json": "d9f96a31c0c890358f7d2dad41e18af842b2eefb643f0859cbce6a550263b2d3",
-    "knowledge-base/calibration-policy.v1.json": "4ab34846cbd51eb33dbd1cbb5e16a4d606d70e07cb3b0a410df4a520ca558abf"
+    "knowledge-base/knowledge-base.manifest.json": "4254a817028bbdada50f3b02211d1dd419a655a41d5c079883c801ce97345203",
+    "knowledge-base/decision-rules.v3.json": "2a7cbbc9402eec98deae71cd402c2d219453916dd06e9eba0d343077961afb30",
+    "knowledge-base/naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
+    "knowledge-base/calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"
   }
 }
