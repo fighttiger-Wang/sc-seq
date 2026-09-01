@@ -136,7 +136,7 @@ def main():
     assert qa["umap_all_clusters_reviewed"] is True
     assert qa["umap_conflict_clusters"] == []
     workbook = load_workbook(output, data_only=False)
-    assert workbook.sheetnames == ["注释结果", "详细证据", "说明与数据来源"]
+    assert workbook.sheetnames == ["注释结果", "详细证据", "说明与数据来源", "细胞类型与文献"]
     assert "简化映射" not in workbook.sheetnames
     for sheet in workbook.worksheets:
         assert sheet.auto_filter.ref is None
@@ -147,7 +147,9 @@ def main():
     assert isinstance(result.cell(2, headers["质量评分"]).value, (int, float))
     lowest_score = min(result.cell(row, headers["质量评分"]).value for row in range(2, result.max_row + 1))
     lowest_rows = [row for row in range(2, result.max_row + 1) if result.cell(row, headers["质量评分"]).value == lowest_score]
-    assert all(result.cell(row, headers["中文名称"]).fill.fgColor.rgb == "FFF8696B" for row in lowest_rows)
+    # Red is reserved for an explicit impurity/quality/state warning, not for
+    # the mathematically lowest score in an otherwise interpretable table.
+    assert all(result.cell(row, headers["中文名称"]).fill.fgColor.rgb != "FFF8696B" for row in lowest_rows)
     assert max((row.height or 15) for row in result.row_dimensions.values()) <= 54
     main_values = [cell.value for row in result.iter_rows() for cell in row]
     assert not any(isinstance(value, str) and value.lstrip().startswith(("{", "[")) for value in main_values)

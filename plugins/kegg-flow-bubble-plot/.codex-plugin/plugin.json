@@ -1,6 +1,6 @@
 {
   "name": "kegg-flow-bubble-plot",
-  "version": "0.1.0+codex.20260901015123",
+  "version": "0.1.0+codex.20260901135627",
   "description": "Generate publication-ready KEGG gene-pathway flow-bubble plots.",
   "author": {
     "name": "fight"

@@ -22,6 +22,7 @@ KB = SHARED / "knowledge-base"
 VERSION_PATH = SHARED / "VERSION.json"
 MONOLITH = KB / "cell-annotation-knowledge-base.v2.json"
 SECTIONS = rebuild_tool.SECTIONS
+SUPPLEMENTARY = rebuild_tool.SUPPLEMENTARY
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -46,7 +47,9 @@ def discover_workspace_root() -> Path:
 
 def default_source() -> Path:
     runtime = discover_workspace_root() / ".sc-annotation-knowledge" / "published" / "current" / MONOLITH.name
-    return runtime if runtime.is_file() else MONOLITH
+    # The repository checkout is authoritative; never import a stale runtime
+    # copy over newer canonical source files.
+    return MONOLITH if MONOLITH.is_file() else runtime
 
 
 def validate_bundle(bundle: dict, source: Path) -> None:
@@ -65,6 +68,7 @@ def validate_bundle(bundle: dict, source: Path) -> None:
 def affected_paths() -> list[Path]:
     paths = [VERSION_PATH, MONOLITH, KB / "knowledge-base.manifest.json"]
     paths.extend(KB / filename for filename in SECTIONS.values())
+    paths.extend(KB / filename for filename in SUPPLEMENTARY.values())
     for target in sync_tool.TARGETS:
         paths.append(target / "references" / "annotation-evidence-core.snapshot.json")
         for _, (folder, destination_name) in sync_tool.FILES.items():
@@ -114,6 +118,9 @@ def release(source: Path, backup_root: Path | None = None) -> dict:
     atomic_json(MONOLITH, canonical)
     for section, filename in SECTIONS.items():
         atomic_json(KB / filename, canonical[section])
+    for section, filename in SUPPLEMENTARY.items():
+        if section in canonical:
+            atomic_json(KB / filename, canonical[section])
     version = load_json(VERSION_PATH)
     version["knowledge_base_version"] = canonical["knowledge_base_version"]
     atomic_json(VERSION_PATH, version)

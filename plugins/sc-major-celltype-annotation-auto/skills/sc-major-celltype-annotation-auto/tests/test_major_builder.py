@@ -88,7 +88,7 @@ def build(work, name, programs, labels):
     qa = json.loads(output.with_suffix(".qa.json").read_text(encoding="utf-8"))
     assert qa["status"] == "pass"
     workbook = load_workbook(output, data_only=False)
-    assert workbook.sheetnames == ["注释结果", "详细证据", "说明与数据来源"]
+    assert workbook.sheetnames == ["注释结果", "详细证据", "说明与数据来源", "细胞类型与文献"]
     assert "简化映射" not in workbook.sheetnames
     for sheet in workbook.worksheets:
         assert sheet.auto_filter.ref is None

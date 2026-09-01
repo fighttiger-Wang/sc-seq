@@ -14,9 +14,9 @@ from openpyxl import Workbook
 def normalize_average(source: Path, output_dir: Path) -> Path:
     if source.suffix.lower() == ".xlsx":
         return source
-    if source.suffix.lower() not in {".tsv", ".csv"}:
-        raise ValueError("Average expression must be .xlsx, .tsv, or .csv")
-    delimiter = "\t" if source.suffix.lower() == ".tsv" else ","
+    if source.suffix.lower() not in {".txt", ".tsv", ".csv"}:
+        raise ValueError("Average expression must be .xlsx, .txt, .tsv, or .csv")
+    delimiter = "\t" if source.suffix.lower() in {".txt", ".tsv"} else ","
     normalized_dir = output_dir / "normalized_input"
     normalized_dir.mkdir(parents=True, exist_ok=True)
     destination = normalized_dir / "cell_avg_exp.xlsx"
@@ -87,8 +87,14 @@ def main() -> None:
         command.extend(["--exclude-marker", marker])
     if args.allow_partial_ratios:
         command.append("--allow-partial-ratios")
+    auto_ratio = args.ratios
+    if not auto_ratio and Path(args.avg).suffix.lower() in {".txt", ".tsv", ".csv"}:
+        with Path(args.avg).open("r", encoding="utf-8-sig") as handle:
+            header = handle.readline().lower()
+        if "expr_ratio" in header or "detection_ratio" in header:
+            auto_ratio = str(Path(args.avg).resolve())
     for flag, value in (
-        ("--ratios", args.ratios),
+        ("--ratios", auto_ratio),
         ("--gene-map", args.gene_map),
         ("--cell-evidence", args.cell_evidence),
         ("--umap", args.umap),

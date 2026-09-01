@@ -8855,7 +8855,7 @@
       "year": "",
       "journal": "",
       "doi": "",
-      "url_or_path": "E:/Desktop/Marker gene/细胞注释参考文档.pdf",
+      "url_or_path": "user_reference_attachment: cell_annotation_reference.pdf (local attachment; not part of the repository)",
       "relevance": "层级骨架；部分节点仅有单 Marker，需要校正",
       "authority_gate": "No"
     },
@@ -8867,7 +8867,7 @@
       "year": "",
       "journal": "",
       "doi": "",
-      "url_or_path": "E:/A005-飞书/下载/亚类Marker积累.pdf",
+      "url_or_path": "user_reference_attachment: subtype_marker_collection.pdf (local attachment; not part of the repository)",
       "relevance": "含人、小鼠、牛、鱼材料；需区分物种与身份/状态",
       "authority_gate": "No"
     },
@@ -8879,7 +8879,7 @@
       "year": "",
       "journal": "",
       "doi": "",
-      "url_or_path": "E:/A002-Codex/codex-home/plugins/cache/workspace-local/sc-major-celltype-annotation-auto/0.1.1+codex.20260813094000/skills/sc-major-celltype-annotation-auto/references/annotation-evidence-config.v1.json",
+      "url_or_path": "legacy_cache_reference: sc-major-celltype-annotation-auto@0.1.1 (historical provenance only; never load as runtime source)",
       "relevance": "现有 broad panels 与固定阈值",
       "authority_gate": "No"
     },
@@ -9203,7 +9203,7 @@
       "year": 2024,
       "journal": "Cancer Cell",
       "doi": "10.1016/j.ccell.2024.08.020",
-      "url_or_path": "E:/Desktop/参考文献/张泽民/成纤维-附表2.xlsx",
+      "url_or_path": "user_reference_attachment: fibroblast_supplementary_table.xlsx (local attachment; not part of the repository)",
       "relevance": "成纤维/平滑肌 cluster DEG 与 signatures",
       "authority_gate": "No"
     }
@@ -9324,7 +9324,7 @@
       "area": "validation",
       "current_rule": "以结构 QA 为主",
       "proposed_rule": "增加真实项目回归验证",
-      "impact": "从 E:/Desktop/售后选择代表项目",
+      "impact": "derived from approved representative project material; customer files excluded",
       "priority": "High",
       "user_decision": "Approve",
       "user_comment": "User approved all proposals and recommendations on 2026-08-16."
@@ -9673,5 +9673,203 @@
       "maximum_absolute_negative_hits": 1
     }
   },
-  "knowledge_base_version": "2.9.0"
+  "knowledge_base_version": "3.0.1",
+  "annotation_decision_rules": {
+    "version": "3.0.0",
+    "principles": [
+      "identity_first_then_interpretation",
+      "global_background_before_local_candidate",
+      "programs_over_single_markers",
+      "prevalence_and_intensity_jointly",
+      "umap_global_audit_supports_but_does_not_gate_identity",
+      "fixed_annotation_level_per_run",
+      "retain_primary_identity_on_impurity",
+      "aggregate_evidence_cannot_prove_same_cell_coexpression"
+    ],
+    "input_semantics": {
+      "mean_expr": "cluster_mean_expression",
+      "expr_ratio": "cluster_detection_ratio",
+      "norm_expr": "secondary_derived_expression_do_not_double_count",
+      "log2FC": "target_vs_background_relative_specificity",
+      "pct.1": "target_cluster_prevalence",
+      "pct.2": "other_cluster_background_prevalence"
+    },
+    "background_model": {
+      "global_prevalence": "downweight programs elevated across most clusters",
+      "ambient_candidates": [
+        "immunoglobulin",
+        "keratin",
+        "ribosomal",
+        "mitochondrial",
+        "housekeeping"
+      ],
+      "local_contamination_requires": [
+        "multiple_program_genes",
+        "target_relative_enrichment",
+        "nontrivial_prevalence"
+      ],
+      "single_shared_marker": "never_sufficient_for_off_parent_or_doublet"
+    },
+    "decision_order": [
+      "major_or_parent_scope",
+      "coherent_identity_program",
+      "sibling_competitor_exclusions",
+      "mean_expression_and_detection_ratio",
+      "global_relative_specificity",
+      "tissue_and_species_context",
+      "umap_topology_audit",
+      "abnormality_interpretation",
+      "literature_or_atlas_resolution"
+    ],
+    "abnormality": {
+      "allowed_coexisting_flags": [
+        "low_quality",
+        "background_interference",
+        "abnormal_state",
+        "debris",
+        "suspected_doublet",
+        "mixed_population"
+      ],
+      "preserve_primary_identity": true,
+      "red_cell_when": "cluster_is_not_a_normal_pure_plotting_unit",
+      "multi_cell_requires": [
+        "complete_competing_programs",
+        "concrete_components",
+        "manual_review"
+      ],
+      "handling_output": "annotate_only_do_not_filter_or_modify_object"
+    },
+    "umap": {
+      "required_review": "every_cluster",
+      "audit_items": [
+        "same_label_islands",
+        "interleaving",
+        "neighbor_lineages",
+        "transition_axis",
+        "marker_umap_conflict",
+        "isolated_state_or_cycle_island"
+      ],
+      "conflict_action": "reassess_integrated_evidence_and_record_reason",
+      "hard_gate": false
+    },
+    "naming": {
+      "canonical_plot_label": "one_stable_identity_spelling",
+      "states_separate": true,
+      "controlled_abbreviation": true,
+      "ad_hoc_marker_prefix": false,
+      "ancestor_descendant_mixing": false
+    }
+  },
+  "naming_dictionary": {
+    "version": "1.0.0-reconstruction-20260901",
+    "policy": {
+      "plot_label_is_canonical_identity_only": true,
+      "states_are_separate": true,
+      "allow_established_abbreviations": true,
+      "forbid_ad_hoc_marker_prefixes": true,
+      "one_spelling_per_identity": true
+    },
+    "entries": [
+      {
+        "stable_id": "T_cell",
+        "full_name": "T cell",
+        "plot_label": "T_cell",
+        "chinese_name": "T细胞",
+        "aliases": []
+      },
+      {
+        "stable_id": "B_cell",
+        "full_name": "B cell",
+        "plot_label": "B_cell",
+        "chinese_name": "B细胞",
+        "aliases": []
+      },
+      {
+        "stable_id": "NK_cell",
+        "full_name": "Natural killer cell",
+        "plot_label": "NK_cell",
+        "chinese_name": "NK细胞",
+        "aliases": [
+          "NK"
+        ]
+      },
+      {
+        "stable_id": "gdT",
+        "full_name": "Gamma-delta T cell",
+        "plot_label": "gdT",
+        "chinese_name": "γδT细胞",
+        "aliases": [
+          "gamma-delta T"
+        ]
+      },
+      {
+        "stable_id": "Tn",
+        "full_name": "Naive T cell",
+        "plot_label": "Tn",
+        "chinese_name": "幼稚T细胞",
+        "aliases": [
+          "Naive_T"
+        ]
+      },
+      {
+        "stable_id": "mDC",
+        "full_name": "Migratory dendritic cell",
+        "plot_label": "mDC",
+        "chinese_name": "迁移型树突状细胞",
+        "aliases": [
+          "Migratory_DC"
+        ]
+      },
+      {
+        "stable_id": "Multi_cell",
+        "full_name": "Mixed or multiple-cell population",
+        "plot_label": "Multi_cell",
+        "chinese_name": "多细胞",
+        "aliases": [
+          "Doublet",
+          "Debris"
+        ]
+      }
+    ],
+    "review_rule": "New abbreviations require a stable community usage and literature/atlas support; add the full name, Chinese name, scope, aliases, and forbidden variants before use."
+  },
+  "calibration_policy": {
+    "version": "1.0.0-reconstruction-20260901",
+    "counters": {
+      "sc-major-celltype-annotation-auto": {
+        "required_online_verification_uses": 5,
+        "current_count": 0
+      },
+      "sc-marker-cluster-annotation-auto": {
+        "required_online_verification_uses": 5,
+        "current_count": 0
+      }
+    },
+    "reset_on": [
+      "skill_revision",
+      "knowledge_base_revision",
+      "decision_rule_revision",
+      "naming_dictionary_revision"
+    ],
+    "after_calibration": {
+      "retrieve_when": [
+        "marker_conflict",
+        "species_or_tissue_conflict",
+        "umap_conflict",
+        "unsupported_candidate",
+        "knowledge_base_gap"
+      ],
+      "reuse_allowed_when": "species_tissue_program_and_scope_match",
+      "required_source_fields": [
+        "title",
+        "doi_or_pmid_or_url",
+        "retrieval_date",
+        "species",
+        "tissue",
+        "supported_program",
+        "exclusions",
+        "adoption_or_rejection_reason"
+      ]
+    }
+  }
 }

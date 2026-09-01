@@ -25,6 +25,11 @@ SECTIONS = {
     "evidence_sources": "evidence-sources.v2.json",
     "legacy_migration": "legacy-migration.v2.json",
 }
+SUPPLEMENTARY = {
+    "annotation_decision_rules": "decision-rules.v3.json",
+    "naming_dictionary": "naming-dictionary.v1.json",
+    "calibration_policy": "calibration-policy.v1.json",
+}
 
 
 def load(path: Path):
@@ -56,9 +61,11 @@ def rebuild() -> dict:
         if not isinstance(value, list):
             raise ValueError(f"Knowledge-base section must be a JSON array: {filename}")
         bundle[section] = value
+    for section, filename in SUPPLEMENTARY.items():
+        bundle[section] = load(KB / filename)
     atomic_json(MONOLITH, bundle)
 
-    files = ["cell-annotation-knowledge-base.v2.json", *SECTIONS.values()]
+    files = ["cell-annotation-knowledge-base.v2.json", *SECTIONS.values(), *SUPPLEMENTARY.values()]
     hashes = {filename: sha256(KB / filename) for filename in files}
     previous_manifest = load(MANIFEST) if MANIFEST.is_file() else {}
     source_workbook = str(previous_manifest.get("source_workbook") or "").replace("\\", "/")
@@ -76,6 +83,9 @@ def rebuild() -> dict:
             "decision_rules": len(bundle["decision_rules"]),
             "evidence_sources": len(bundle["evidence_sources"]),
             "legacy_migrations": len(bundle["legacy_migration"]),
+            "annotation_decision_rules": 1,
+            "naming_dictionary": 1,
+            "calibration_policy": 1,
         },
         "sha256": hashes,
         "knowledge_base_version": version["knowledge_base_version"],

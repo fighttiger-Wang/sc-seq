@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0-reconstruction-20260901",
+  "policy": {
+    "plot_label_is_canonical_identity_only": true,
+    "states_are_separate": true,
+    "allow_established_abbreviations": true,
+    "forbid_ad_hoc_marker_prefixes": true,
+    "one_spelling_per_identity": true
+  },
+  "entries": [
+    {
+      "stable_id": "T_cell",
+      "full_name": "T cell",
+      "plot_label": "T_cell",
+      "chinese_name": "T细胞",
+      "aliases": []
+    },
+    {
+      "stable_id": "B_cell",
+      "full_name": "B cell",
+      "plot_label": "B_cell",
+      "chinese_name": "B细胞",
+      "aliases": []
+    },
+    {
+      "stable_id": "NK_cell",
+      "full_name": "Natural killer cell",
+      "plot_label": "NK_cell",
+      "chinese_name": "NK细胞",
+      "aliases": [
+        "NK"
+      ]
+    },
+    {
+      "stable_id": "gdT",
+      "full_name": "Gamma-delta T cell",
+      "plot_label": "gdT",
+      "chinese_name": "γδT细胞",
+      "aliases": [
+        "gamma-delta T"
+      ]
+    },
+    {
+      "stable_id": "Tn",
+      "full_name": "Naive T cell",
+      "plot_label": "Tn",
+      "chinese_name": "幼稚T细胞",
+      "aliases": [
+        "Naive_T"
+      ]
+    },
+    {
+      "stable_id": "mDC",
+      "full_name": "Migratory dendritic cell",
+      "plot_label": "mDC",
+      "chinese_name": "迁移型树突状细胞",
+      "aliases": [
+        "Migratory_DC"
+      ]
+    },
+    {
+      "stable_id": "Multi_cell",
+      "full_name": "Mixed or multiple-cell population",
+      "plot_label": "Multi_cell",
+      "chinese_name": "多细胞",
+      "aliases": [
+        "Doublet",
+        "Debris"
+      ]
+    }
+  ],
+  "review_rule": "New abbreviations require a stable community usage and literature/atlas support; add the full name, Chinese name, scope, aliases, and forbidden variants before use."
+}

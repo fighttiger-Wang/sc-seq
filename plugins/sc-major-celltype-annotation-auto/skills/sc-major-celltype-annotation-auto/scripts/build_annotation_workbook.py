@@ -517,6 +517,7 @@ def main():
     ws.title = "注释结果"
     detail = wb.create_sheet("详细证据")
     source = wb.create_sheet("说明与数据来源")
+    research = wb.create_sheet("细胞类型与文献")
     ws.append(MAIN_HEADERS)
     for record in records:
         ws.append([human_value(record.get(field, "")) for field in MAIN_FIELDS])
@@ -549,11 +550,28 @@ def main():
     ws.conditional_formatting.add(f"{mixed_col}2:{mixed_col}{ws.max_row}", FormulaRule(formula=[f'{mixed_col}2="是"'], fill=PatternFill("solid", fgColor="F8CBAD")))
     ws.conditional_formatting.add(f"{review_col}2:{review_col}{ws.max_row}", FormulaRule(formula=[f'{review_col}2="是"'], fill=PatternFill("solid", fgColor="FFF2CC")))
     ws.conditional_formatting.add(f"{confidence_col}2:{confidence_col}{ws.max_row}", FormulaRule(formula=[f'{confidence_col}2="low"'], fill=PatternFill("solid", fgColor="FCE4D6")))
-    quality_scores = [float(record["quality_score"]) for record in records]
-    minimum_quality = min(quality_scores) if quality_scores else None
     multi_cell_red = PatternFill("solid", fgColor="FFF8696B")
+    warning_fields = (
+        "mixed_population", "mixed_or_doublet", "suspected_doublet", "debris",
+        "low_quality", "background_interference", "abnormal_state", "abnormality_flags",
+        "interpretation_flags", "plotting_warning", "remove_cluster", "needs_decontamination",
+    )
+
+    def has_annotation_warning(record):
+        if record.get("stable_id") == "Multi_cell":
+            return True
+        for field in warning_fields:
+            value = record.get(field)
+            if isinstance(value, (list, tuple, set, dict)) and value:
+                return True
+            if isinstance(value, str) and value.strip().lower() not in {"", "no", "false", "否", "none", "nan"}:
+                return True
+            if isinstance(value, bool) and value:
+                return True
+        return False
+
     for row_index, record in enumerate(records, start=2):
-        if record.get("mixed_population") or record.get("stable_id") == "Multi_cell" or float(record["quality_score"]) == minimum_quality:
+        if has_annotation_warning(record):
             name_cell = ws.cell(row_index, MAIN_FIELDS.index("celltype_cn") + 1)
             name_cell.fill = multi_cell_red
             name_cell.font = Font(bold=True, color="FFFFFFFF")
@@ -593,10 +611,36 @@ def main():
         source.row_dimensions[row[0].row].height = 28
     style_header(source, "A1:B1")
 
+    research_headers = ["cluster", "细胞类型", "用于注释的特征基因", "候选/竞争类型", "文献来源", "证据来源ID", "UMAP判断"]
+    research.append(research_headers)
+    source_registry = evidence.get("annotation_evidence_policy", {}).get("evidence_source_registry", {})
+    for record in records:
+        source_text = record.get("literature_source", "")
+        evidence_ids = record.get("marker_panel_evidence_ids", [])
+        if not source_text and evidence_ids:
+            source_text = "；".join(str(source_registry.get(item, {}).get("title", item)) for item in evidence_ids)
+        research.append([
+            record.get("cluster_id", ""),
+            record.get("celltype_en", ""),
+            record.get("supporting_markers", ""),
+            record.get("candidate_labels", ""),
+            source_text,
+            "；".join(map(str, evidence_ids)),
+            record.get("rationale", ""),
+        ])
+    research.sheet_view.showGridLines = False
+    set_widths(research, [12, 24, 48, 36, 72, 28, 72])
+    style_header(research, "A1:G1")
+    for row in research.iter_rows(min_row=2, max_row=research.max_row, min_col=1, max_col=7):
+        for cell in row:
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = Border(bottom=thin)
+        research.row_dimensions[row[0].row].height = 42
+
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
     check = load_workbook(output, read_only=False, data_only=False)
-    expected_sheets = ["注释结果", "详细证据", "说明与数据来源"]
+    expected_sheets = ["注释结果", "详细证据", "说明与数据来源", "细胞类型与文献"]
     if check.sheetnames != expected_sheets:
         raise RuntimeError(f"Workbook sheet verification failed: {check.sheetnames}")
     if check["注释结果"].max_row != len(records) + 1 or check["详细证据"].max_row != len(records) + 1:
@@ -611,6 +655,7 @@ def main():
     qa = {
         "status": "pass", "workbook": str(output), "sheets": check.sheetnames,
         "record_count": len(records), "review_clusters": [str(r["cluster_id"]) for r in records if r["manual_review"]],
+        "research_sheet": "细胞类型与文献",
         "mixed_or_doublet_clusters": [str(r["cluster_id"]) for r in records if r["mixed_or_doublet"]],
         "multi_cell_clusters": [str(r["cluster_id"]) for r in records if str(r.get("stable_id")) == "Multi_cell"],
         "multi_cell_chinese_static_red": True,
