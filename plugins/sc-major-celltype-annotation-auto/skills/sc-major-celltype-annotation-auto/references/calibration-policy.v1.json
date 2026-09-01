@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0-reconstruction-20260901",
+  "counters": {
+    "sc-major-celltype-annotation-auto": {"required_online_verification_uses": 5, "current_count": 0},
+    "sc-marker-cluster-annotation-auto": {"required_online_verification_uses": 5, "current_count": 0}
+  },
+  "reset_on": ["skill_revision", "knowledge_base_revision", "decision_rule_revision", "naming_dictionary_revision"],
+  "after_calibration": {
+    "retrieve_when": ["marker_conflict", "species_or_tissue_conflict", "umap_conflict", "unsupported_candidate", "knowledge_base_gap"],
+    "reuse_allowed_when": "species_tissue_program_and_scope_match",
+    "required_source_fields": ["title", "doi_or_pmid_or_url", "retrieval_date", "species", "tissue", "supported_program", "exclusions", "adoption_or_rejection_reason"]
+  }
+}

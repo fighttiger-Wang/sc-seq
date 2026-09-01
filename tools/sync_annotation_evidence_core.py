@@ -27,6 +27,9 @@ FILES = {
     "knowledge-base/cell-annotation-knowledge-base.v2.json": ("references", "cell-annotation-knowledge-base.v2.json"),
     "knowledge-base/legacy-migration.v2.json": ("references", "legacy-migration.v2.json"),
     "knowledge-base/knowledge-base.manifest.json": ("references", "knowledge-base.manifest.json"),
+    "knowledge-base/decision-rules.v3.json": ("references", "decision-rules.v3.json"),
+    "knowledge-base/naming-dictionary.v1.json": ("references", "naming-dictionary.v1.json"),
+    "knowledge-base/calibration-policy.v1.json": ("references", "calibration-policy.v1.json"),
 }
 
 

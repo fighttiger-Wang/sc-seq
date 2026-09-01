@@ -9,7 +9,7 @@ from statistics import median
 from knowledge_base import build_runtime_config, load_knowledge_base
 
 
-CORE_VERSION = "2.21.0"
+CORE_VERSION = "3.0.0"
 LEGACY_STATEFUL_IDENTITY_IDS = {"CD4_Tex", "CD8_Tex"}
 _LOCAL_CONFIG = Path(__file__).resolve().parent / "annotation-evidence-config.v1.json"
 _VENDORED_CONFIG = Path(__file__).resolve().parent.parent / "references" / "annotation-evidence-config.v1.json"

@@ -1,0 +1,58 @@
+{
+  "version": "3.0.0",
+  "principles": [
+    "identity_first_then_interpretation",
+    "global_background_before_local_candidate",
+    "programs_over_single_markers",
+    "prevalence_and_intensity_jointly",
+    "umap_global_audit_supports_but_does_not_gate_identity",
+    "fixed_annotation_level_per_run",
+    "retain_primary_identity_on_impurity",
+    "aggregate_evidence_cannot_prove_same_cell_coexpression"
+  ],
+  "input_semantics": {
+    "mean_expr": "cluster_mean_expression",
+    "expr_ratio": "cluster_detection_ratio",
+    "norm_expr": "secondary_derived_expression_do_not_double_count",
+    "log2FC": "target_vs_background_relative_specificity",
+    "pct.1": "target_cluster_prevalence",
+    "pct.2": "other_cluster_background_prevalence"
+  },
+  "background_model": {
+    "global_prevalence": "downweight programs elevated across most clusters",
+    "ambient_candidates": ["immunoglobulin", "keratin", "ribosomal", "mitochondrial", "housekeeping"],
+    "local_contamination_requires": ["multiple_program_genes", "target_relative_enrichment", "nontrivial_prevalence"],
+    "single_shared_marker": "never_sufficient_for_off_parent_or_doublet"
+  },
+  "decision_order": [
+    "major_or_parent_scope",
+    "coherent_identity_program",
+    "sibling_competitor_exclusions",
+    "mean_expression_and_detection_ratio",
+    "global_relative_specificity",
+    "tissue_and_species_context",
+    "umap_topology_audit",
+    "abnormality_interpretation",
+    "literature_or_atlas_resolution"
+  ],
+  "abnormality": {
+    "allowed_coexisting_flags": ["low_quality", "background_interference", "abnormal_state", "debris", "suspected_doublet", "mixed_population"],
+    "preserve_primary_identity": true,
+    "red_cell_when": "cluster_is_not_a_normal_pure_plotting_unit",
+    "multi_cell_requires": ["complete_competing_programs", "concrete_components", "manual_review"],
+    "handling_output": "annotate_only_do_not_filter_or_modify_object"
+  },
+  "umap": {
+    "required_review": "every_cluster",
+    "audit_items": ["same_label_islands", "interleaving", "neighbor_lineages", "transition_axis", "marker_umap_conflict", "isolated_state_or_cycle_island"],
+    "conflict_action": "reassess_integrated_evidence_and_record_reason",
+    "hard_gate": false
+  },
+  "naming": {
+    "canonical_plot_label": "one_stable_identity_spelling",
+    "states_separate": true,
+    "controlled_abbreviation": true,
+    "ad_hoc_marker_prefix": false,
+    "ancestor_descendant_mixing": false
+  }
+}

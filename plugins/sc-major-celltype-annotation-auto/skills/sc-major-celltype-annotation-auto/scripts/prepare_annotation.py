@@ -198,6 +198,11 @@ def main():
     avg = assert_e_drive(args.avg, "average-expression input")
     markers = assert_e_drive(args.markers, "marker input")
     ratios = assert_e_drive(args.ratios, "expression-ratio input") if args.ratios else None
+    if ratios is None and avg.suffix.lower() in {".txt", ".tsv", ".csv"}:
+        with avg.open("r", encoding="utf-8-sig") as handle:
+            header = handle.readline().lower()
+        if "expr_ratio" in header or "detection_ratio" in header:
+            ratios = avg
     gene_map = assert_e_drive(args.gene_map, "gene-map input") if args.gene_map else None
     cell_evidence = assert_e_drive(args.cell_evidence, "cell-evidence input") if args.cell_evidence else None
     umap = assert_e_drive(args.umap, "UMAP input") if args.umap else None
@@ -320,6 +325,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

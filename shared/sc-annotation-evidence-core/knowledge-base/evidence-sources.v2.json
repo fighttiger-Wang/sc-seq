@@ -31,7 +31,7 @@
     "year": "",
     "journal": "",
     "doi": "",
-    "url_or_path": "E:/A002-Codex/codex-home/plugins/cache/workspace-local/sc-major-celltype-annotation-auto/0.1.1+codex.20260813094000/skills/sc-major-celltype-annotation-auto/references/annotation-evidence-config.v1.json",
+    "url_or_path": "legacy_cache_reference: sc-major-celltype-annotation-auto@0.1.1 (historical provenance only; never load as runtime source)",
     "relevance": "现有 broad panels 与固定阈值",
     "authority_gate": "No"
   },

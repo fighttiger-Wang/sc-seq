@@ -6,6 +6,7 @@ import csv
 import json
 import math
 import re
+import statistics
 import zipfile
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
@@ -121,14 +122,10 @@ def _parse_sheet_xml(path):
 
 
 def load_average(path):
-    path = Path(path)
-    if path.suffix.lower() in {".tsv", ".txt", ".csv"}:
-        delimiter = "," if path.suffix.lower() == ".csv" else "\t"
-        with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            rows = list(csv.reader(handle, delimiter=delimiter))
-        if len(rows) > 1 and len(rows[0]) > 1:
-            return rows, "delimited_text"
-        raise ValueError(f"Average-expression text file is empty or malformed: {path}")
+    if Path(path).suffix.lower() in {".txt", ".tsv", ".csv"}:
+        delimiter = "\t" if Path(path).suffix.lower() in {".txt", ".tsv"} else ","
+        with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+            return [list(row) for row in csv.reader(handle, delimiter=delimiter)], "delimited_text"
     try:
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
         ws = wb[wb.sheetnames[0]]
@@ -170,30 +167,106 @@ def load_markers(path):
     return records
 
 
-def _signature_score(expression, genes, cluster_index):
+def classify_average_matrix(expression):
+    """Classify whether average values look expression-like or gene-centered/scaled."""
+    rows = [values for values in expression.values() if values]
+    flattened = [float(value) for values in rows for value in values]
+    if not flattened:
+        return {
+            "classification": "unknown_empty",
+            "negative_fraction": 0.0,
+            "median_abs_gene_mean": 0.0,
+            "median_gene_sd": 0.0,
+            "signature_score_policy": "disabled",
+            "canonical_expression_policy": "do_not_use",
+        }
+    negative_fraction = sum(value < 0 for value in flattened) / len(flattened)
+    gene_means = [statistics.fmean(values) for values in rows]
+    gene_sds = [statistics.pstdev(values) for values in rows if len(values) > 1]
+    median_abs_gene_mean = statistics.median(abs(value) for value in gene_means)
+    median_gene_sd = statistics.median(gene_sds) if gene_sds else 0.0
+    if negative_fraction >= 0.05 and median_abs_gene_mean <= 0.25:
+        classification = "gene_centered_or_scaled"
+        signature_policy = "mean_relative_scaled_value_prioritization_only"
+        canonical_policy = "relative_rank_only_require_de_marker_support"
+    elif negative_fraction >= 0.05:
+        classification = "contains_negative_values_unknown_transform"
+        signature_policy = "relative_priority_only"
+        canonical_policy = "do_not_treat_as_absolute_expression"
+    else:
+        classification = "nonnegative_expression_like"
+        signature_policy = "mean_log1p_nonnegative_expression"
+        canonical_policy = "supporting_evidence_only"
+    return {
+        "classification": classification,
+        "negative_fraction": round(negative_fraction, 4),
+        "median_abs_gene_mean": round(median_abs_gene_mean, 4),
+        "median_gene_sd": round(median_gene_sd, 4),
+        "signature_score_policy": signature_policy,
+        "canonical_expression_policy": canonical_policy,
+    }
+
+
+def _signature_score(expression, genes, cluster_index, matrix_semantics):
     lookup = {gene.upper(): vals for gene, vals in expression.items()}
-    values = [math.log1p(max(float(lookup[g.upper()][cluster_index]), 0.0)) for g in genes if g.upper() in lookup]
+    raw_values = [float(lookup[g.upper()][cluster_index]) for g in genes if g.upper() in lookup]
+    if matrix_semantics["classification"] == "gene_centered_or_scaled":
+        values = raw_values
+    else:
+        values = [math.log1p(max(value, 0.0)) for value in raw_values]
     return round(sum(values) / len(values), 4) if values else 0.0
+
+
+def _signature_marker_support(ranked, genes, limit=100):
+    wanted = {gene.upper() for gene in genes}
+    hits = [record for record in ranked[:limit] if record["gene"].upper() in wanted and record["log2FC"] > 0]
+    return {
+        "count": len(hits),
+        "genes": [record["gene"] for record in hits],
+        "best_log2FC": round(max((record["log2FC"] for record in hits), default=0.0), 4),
+    }
 
 
 def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""):
     average, reader = load_average(Path(avg_path))
     if not average:
         raise ValueError("Average-expression file is empty")
+    headers = [str(value or "").strip().lower() for value in average[0]]
+    long_format = {"gene", "group", "mean_expr", "expr_ratio"}.issubset(set(headers))
     original_gene_header = str(average[0][0]).strip()
+    if long_format:
+        gene_i = headers.index("gene")
+        cluster_i = headers.index("group")
+        mean_i = headers.index("mean_expr")
+        clusters = sorted({str(row[cluster_i]).strip() for row in average[1:] if row and row[cluster_i] not in (None, "")}, key=cluster_sort_key)
+        cluster_index = {cluster: index for index, cluster in enumerate(clusters)}
+        expression = {}
+        for row in average[1:]:
+            if not row or row[gene_i] in (None, ""):
+                continue
+            gene = str(row[gene_i]).strip()
+            values = expression.setdefault(gene, [0.0] * len(clusters))
+            values[cluster_index[str(row[cluster_i]).strip()]] = float(row[mean_i] or 0)
+        matrix_semantics = classify_average_matrix(expression)
+        matrix_shape = [len(expression), len(clusters)]
+    else:
+        matrix_shape = None
     accepted_gene_headers = {"genename", "gene", "features", "feature", "cluster"}
     if original_gene_header.lower() not in accepted_gene_headers:
         raise ValueError(
             "Average-expression column A must identify genes using one of: "
             "GeneName, Gene, features, feature, Cluster"
         )
-    raw_clusters = [str(x) for x in average[0][1:]]
-    cluster_order = sorted(range(len(raw_clusters)), key=lambda index: cluster_sort_key(raw_clusters[index]))
-    clusters = [raw_clusters[index] for index in cluster_order]
-    expression = {
-        str(row[0]): [float(row[index + 1] or 0) for index in cluster_order]
-        for row in average[1:] if row and row[0]
-    }
+    if not long_format:
+        raw_clusters = [str(x) for x in average[0][1:]]
+        cluster_order = sorted(range(len(raw_clusters)), key=lambda index: cluster_sort_key(raw_clusters[index]))
+        clusters = [raw_clusters[index] for index in cluster_order]
+        expression = {
+            str(row[0]): [float(row[index + 1] or 0) for index in cluster_order]
+            for row in average[1:] if row and row[0]
+        }
+        matrix_semantics = classify_average_matrix(expression)
+        matrix_shape = [len(average) - 1, len(clusters)]
     markers = load_markers(Path(marker_path))
     by_cluster = defaultdict(list)
     for record in markers:
@@ -219,7 +292,14 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
             if naming_exclusion_reason(record["gene"]) is not None
         ]
         qc_fraction = sum(bool(STATE_QC_RE.match(r["gene"])) for r in top[:50]) / max(min(len(top), 50), 1)
-        scores = {name: _signature_score(expression, genes, cluster_index) for name, genes in SIGNATURES.items()}
+        scores = {
+            name: _signature_score(expression, genes, cluster_index, matrix_semantics)
+            for name, genes in SIGNATURES.items()
+        }
+        marker_support = {
+            name: _signature_marker_support(ranked, genes)
+            for name, genes in SIGNATURES.items()
+        }
         lineages = sorted(((k, v) for k, v in scores.items() if k not in state_names), key=lambda x: x[1], reverse=True)
         alerts = []
         if len(ranked) < 10:
@@ -230,33 +310,44 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
             alerts.append("no_standardized_informative_naming_marker")
         if len(lineages) >= 2 and lineages[0][1] > 0 and lineages[1][1] >= lineages[0][1] * 0.85:
             alerts.append("competing_lineage_signatures")
+        if (
+            matrix_semantics["classification"] != "nonnegative_expression_like"
+            and lineages
+            and marker_support[lineages[0][0]]["count"] < 2
+        ):
+            alerts.append("top_lineage_score_lacks_de_marker_support")
         profiles[cluster] = {
             "marker_count": len(ranked), "top_markers": top,
             "raw_top_marker": top[0] if top else None,
             "naming_top_marker": naming_top_marker,
             "excluded_naming_markers": excluded_naming_markers,
             "top_informative_markers": informative, "signature_scores": scores,
+            "signature_marker_support": marker_support,
             "ranked_lineage_signatures": lineages[:5],
             "qc_state_fraction_top50": round(qc_fraction, 3), "alerts": alerts,
         }
 
     return {
-        "schema_version": "2.3", "average_reader": reader,
+        "schema_version": "2.4", "average_reader": reader,
         "average_gene_header": original_gene_header,
         "average_gene_header_normalized_to": "GeneName",
         "average_gene_names": list(expression),
-        "average_shape": [len(average) - 1, len(clusters)], "clusters": clusters,
+        "average_shape": matrix_shape, "clusters": clusters,
         "marker_cluster_ids": sorted(by_cluster, key=cluster_sort_key), "missing_marker_clusters": missing,
         "extra_marker_clusters": extra, "cluster_profiles": profiles,
         "canonical_expression_by_gene": canonical_expression,
+        "average_matrix_semantics": matrix_semantics,
         "signature_definitions": SIGNATURES,
         "notes": [
-            "Scores summarize log1p average expression and are prioritization aids, not final labels.",
+            "Signature scores are prioritization aids, not final labels; interpret them according to average_matrix_semantics.",
+            "Centered/scaled averages are relative ranks only and must not override positive DE-marker support.",
+            "Consequential off-parent lineage calls require at least two coherent positive DE markers and negative-evidence review.",
             "Fallback naming uses naming_top_marker: the highest-log2FC standardized informative GeneName.",
             "Ensembl stable IDs such as ENSSSCG.../ENSG..., LOC placeholders, and state/QC-only genes are retained as evidence but excluded from identity labels.",
             "Cell-cycle/QC genes are state evidence and are removed from top_informative_markers and fallback identity naming.",
             "Plasma calls require a coherent PRDM1/XBP1/SDC1/MZB1/DERL3 program; JCHAIN alone is insufficient.",
             "Cluster IDs are normalized to numeric ascending order when numeric, otherwise natural alphanumeric order.",
+            "Long-format gene/group/mean_expr/expr_ratio input is accepted and expr_ratio is reused as detection ratio.",
         ],
         "naming_marker_policy": {
             "species": species,
@@ -294,7 +385,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 

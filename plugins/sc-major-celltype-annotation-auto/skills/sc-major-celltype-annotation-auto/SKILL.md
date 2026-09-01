@@ -1,133 +1,74 @@
 ---
 name: sc-major-celltype-annotation-auto
-description: Evidence-first major-celltype annotation for mixed/all-cell single-cell datasets from average-expression plus marker tables or Seurat objects across tissues and species. Use for 大类注释、主要细胞类型注释 and mixed-lineage annotation requiring an approved multi-tissue ontology, exact-species panels or confidence-capped cross-species transfer, per-cluster T/NK resolution, mixed/doublet blocking, identity-state separation, deterministic QA, and compact Excel delivery.
+description: Expert-style major-celltype annotation for mixed/all-cell single-cell data using average expression, detection ratio, marker statistics, UMAP topology, tissue/species context, and versioned literature verification.
 ---
 
-# Single-cell major-celltype annotation
+# Major cell-type annotation
 
-Complete the workflow after one invocation. Ask one consolidated question only when mandatory metadata remains unresolved after scoped E-drive discovery.
+Use this skill only for mixed/all-cell collections. The complete table is
+annotated at one major-celltype level; never refine only one lineage because its
+markers are clearer.
 
-## 1. Route and confirm context
+## Inputs
 
-Read `references/context-and-level-routing.md`. Confirm species, tissue, experimental system, parent population, parent kind, and project vocabulary.
+Require species, tissue/organ, average-expression input, marker workbook, and a
+UMAP PNG with readable cluster IDs and legend. The quantitative file has
+`gene`, `group`, `mean_expr`, `expr_ratio`, and `norm_expr`; `expr_ratio` is
+detection ratio. Marker statistics may include `Target_Cluster_mean`,
+`Other_Cluster_mean`, `log2FC`, `pct.1`, and `pct.2`; interpret `pct.1/pct.2`
+as target/background prevalence. Preserve cluster order.
 
-- Use major mode only for genuine mixed/all-cell collections.
-- Route known-lineage or fine-subtype work to `$sc-marker-cluster-annotation-auto`.
-- Treat project `Markergene_list.xlsx` as observed sample evidence, never as the annotation standard.
-- Use `references/cell-annotation-knowledge-base.v2.json` as the approved runtime taxonomy and Marker source.
-- Enable `core_multi_tissue` plus tissue modules matching the confirmed tissue.
-
-## 2. Enforce the major boundary
-
-- Set `annotation_level=major`.
-- Start with core outputs `T_cell`, `NK_cell`, `B_cell`, `Myeloid_cell`, `Epithelial_cell`, `Endothelial_cell`, `Stromal_cell`, `Erythroid`, and `Megakaryocyte`.
-- Permit tissue-module major outputs when enabled, including hepatocyte/cholangiocyte, neural, muscle, marrow progenitor/MSC, mesothelial, and reproductive lineages.
-- Map every supported subtype to the nearest enabled major ancestor. Retain finer evidence in audit fields.
-- Allow repeated standard labels; `cluster_id` supplies uniqueness. Never add a top-marker prefix merely to distinguish clusters.
-- Keep identity, state, disease role, developmental stage, and tissue specialization in separate fields and separate workbook columns.
-- Use the short canonical identity alone as the displayed cell-type label. Preserve all states in `state_list` and one `primary_state`; never prefix or suffix the identity with state.
-- Treat TAM, CAF, M1/M2, and malignancy as roles/states, not stable base identities.
-- Use `major_identity_first` for mixed/all-cell collections: assign the best coherent major identity first, then carry contamination, ambient RNA, cross-lineage programs, and possible doublets into explicit downstream-review fields.
-- Accept a project-specific major vocabulary and an auditable cluster-label prior. Use the prior only as a supported tiebreaker or ancestor/output projection; never let it bypass failed identity or parent-lineage gates.
-- Allow only narrow, explicitly supported `debris`/`Low_quality` QC buckets. Do not perform broad cell removal during major annotation; defer removal and purity decisions to QC or the relevant subcluster workflow.
-
-## 3. Resolve T/NK per cluster
-
-- Resolve each cluster independently from coherent CD3/TCR and NK-specific programs.
-- Do not collapse unrelated T and NK clusters because one cluster is unresolved.
-- Prefer `T_cell` when CD3/TCR evidence is coherent and NK-like evidence is limited to shared cytotoxic genes.
-- Prefer `NK_cell` only with a coherent NK-specific program and weak/absent CD3/TCR evidence.
-- When coherent T and NK programs coexist, retain the best coherent major identity in major mode, set `mixed_evidence=true`, `review_in_subcluster=true`, `manual_review=true`, and `auto_merge_allowed=false`, list both components, and require cell-level review. Use `Multi_cell` only when no coherent identity dominates or cell-level evidence confirms mixture/doublets.
-- Never use `T_NK_cell` as a dataset-wide fallback.
-
-## 4. Load rules
-
-Read before annotation:
-
-- `references/marker-guidance.md`
-- `references/taxonomy-and-naming.md`
-- `references/evidence-scoring-policy.md`
-- `references/output-schema.md`
-- `references/automation-and-permissions.md`
-- `references/case-learning-registry.md`
-- `references/cell-annotation-knowledge-base.v2.json` for targeted node/panel lookup
-- `references/legacy-migration.v2.json` when migrating an old project
-
-Treat the knowledge base, evidence core, configuration, and snapshot hashes as one versioned contract. Do not hand-edit vendored files independently of the maintained shared source.
-
-## 5. Normalize and preflight
-
-Accept paired tables or a Seurat object. Preserve raw inputs. Missing genes are unknown in positive-marker-only mode and zero only in a verified complete full-ratio table. The normal `--ratios` path now requires every average-expression gene for every cluster; use `--allow-partial-ratios` only for provisional review, never formal delivery. Supply `--context-json` when age, sex, disease, treatment, anatomy, platform, depth, or doublet metadata are available.
-
-```bash
-python3 scripts/prepare_annotation_auto.py \
-  --avg <average.xlsx|tsv|csv> --markers <Markergene_list.xlsx> \
-  [--ratios <full-gene-cluster-ratio.tsv>] \
-  [--gene-map <source-to-canonical.tsv>] \
-  [--cell-evidence <per-cluster-validation.json>] \
-  [--project-prior <cluster-label-prior.xlsx>] \
-  [--project-major-label <allowed-label> ...] \
-  --workspace-root <workspace-root> --output-dir <run-dir> \
-  --species <confirmed> --tissue <confirmed> \
-  --annotation-level major --parent-population <confirmed> --parent-kind <mixed|lineage|state> \
-  [--umap <umap.png>] [--annotation-constraints <constraints.json>] \
-  [--exclude-label <label> ...] [--exclude-marker <gene> ...]
-```
-
-Input contract: the minimum usable input is the paired cluster marker table plus average-expression table, with confirmed annotation level, species, tissue, and parent scope. Add a complete `--ratios` matrix, `--umap`, and RData/Seurat-derived cell evidence when available. Use `--annotation-constraints <json>`, repeated `--exclude-label <label>`, or repeated `--exclude-marker <gene>` for explicit user constraints. The JSON schema is `{"exclude_labels":[],"conflict_markers":[],"clusters":{"cluster_id":{"exclude_labels":[],"conflict_markers":[]}}}`. Excluded labels are hard final-label constraints; excluded markers remain in the audit but cannot add positive identity/state support. If no allowed coherent identity remains, block formal delivery.
-
-Major output contract: return usable approved major identities with standardized English/Chinese names. Keep state, disease role, tissue specialization, contamination, and uncertainty in separate fields. Repeated major labels are valid; never invent marker-prefixed names to distinguish clusters.
-
-The preflight must record knowledge-base/core/config versions, snapshot hashes, active tissue modules, evidence mode, matrix semantics, cluster order, and source paths.
-
-## 6. Annotate
-
-Read `annotation_evidence_digest.json` first and open the full pack only for targeted conflicts.
+## Decision logic
 
 For every cluster:
 
-1. Treat deterministic scores, node-specific Marker requirements, risk level, provenance, and review action as immutable evidence output.
-2. Match the approved species/tissue panel using core, supportive, exclusion, and confounder evidence.
-3. Assign the nearest enabled major ancestor supported by a coherent program.
-4. Keep the finest supported node in `stable_id`/audit fields even when the displayed major label is broader.
-5. Preserve `parent_path`, `tissue_module`, panel species, evidence IDs, and `cross_species_inference`.
-6. Prefer an exact-species panel. When none exists, permit Human-panel or nearest-supported-species transfer only with ortholog/program conservation, `cross_species_inference=true`, retained panel provenance, reduced confidence, and manual review.
-7. Populate `state_list` and the lineage-specific `primary_state`, while keeping `display_label` equal to the identity.
-8. Require `manual_review=true` for every non-R0 risk. Do not assign high confidence in minimal mode.
-9. Never output `Cell`. If no candidate is coherent and there is no mixed-population evidence, run targeted ontology/atlas/literature resolution; block formal delivery when no defensible identity can be established.
-10. In major mode, retain a coherent primary identity when cross-lineage evidence appears; set `mixed_evidence=true`, `review_in_subcluster=true`, retain concrete identities in `possible_components`, and block automatic merging. Emit `Multi_cell` / `多细胞` only when no coherent primary dominates or cell-level evidence confirms mixture/doublets.
-11. Use `label_basis=canonical_subtype`; do not use marker-prefixed fallback labels in major mode.
-12. If the approved knowledge base lacks a plausible identity, generate additional candidates and validate them against coherent positive and competing programs. Use `validated_external_candidate` only with at least two independent sources, reduced confidence, manual review, and later multi-case regression before promotion into the approved standard. Every external or manual identity override additionally requires at least two supporting markers, inclusion of the final identity in `candidate_labels`, and structured current-case `override_validation`; it cannot bypass deterministic mixed/off-parent conflicts or failed identity gates.
+1. Build a dataset-wide background profile. Downweight programs elevated across
+   most clusters, housekeeping/ribosomal/mitochondrial programs, and
+   tissue-wide ambient signals. A globally elevated epithelial or immunoglobulin
+   program must not redefine every cluster.
+2. Score coherent major programs using multiple anchors, relative specificity,
+   mean expression, detection ratio, and explicit competing-lineage exclusions.
+   `norm_expr` is secondary and must not be counted twice.
+3. Use species and tissue as facts. Do not treat inferred disease, treatment,
+   age, sex, or anatomy as user-provided facts.
+4. Treat marker tables as candidate discovery evidence. A high `log2FC` with
+   low `pct.1` is a clue, not a decisive identity call.
+5. Review every cluster on the full UMAP: same-type islands, interleaving,
+   plausible transitions, neighboring lineages, and marker/UMAP conflicts.
+   UMAP is a global consistency check, not a hard identity gate.
+6. Resolve primary identity first, then separately classify
+   `low_quality`, `background_interference`, `abnormal_state`, `debris`,
+   `suspected_doublet`, and `mixed_population`; multiple flags may coexist.
+7. If two incompatible programs are complete and competitive, retain the
+   dominant identity when one clearly dominates; otherwise use `Multi_cell` and
+   list concrete components. Aggregate evidence cannot prove same-cell
+   coexpression.
 
-Populate `annotation_records.json` in normalized cluster order.
+## Output
 
-For every external candidate, retain structured `literature_details` containing title, DOI or PMID, species, tissue, and the supported conclusion. Unstructured citation strings alone do not satisfy the shared automatic-promotion gate.
+Produce a cluster-level mapping with one stable plotting label per cluster.
+Keep identity, state, abnormality, components, characteristic genes, UMAP
+judgment, confidence, evidence, literature, and handling recommendation in
+separate fields. For an impurity or non-pure plotting cluster, retain the most
+likely主体细胞类型 and mark its annotation cell red; do not replace the
+plotting identity with `Doublet` or `Debris`.
 
-## 7. Build and deliver
+Use the versioned naming dictionary. Established unambiguous abbreviations such
+as `gdT` or `Tn` are allowed; short common labels such as B cell and T cell
+remain full. Never mix a major label with a descendant subtype.
 
-```bash
-python3 scripts/build_annotation_workbook.py \
-  --records <run>/annotation_records.json \
-  --evidence <run>/annotation_evidence_pack.json \
-  --workspace-root <workspace-root> \
-  --output <run>/大类细胞注释结果.xlsx
-```
+## Retrieval and reproducibility
 
-Require structural QA for schema, order, portable labels, state grammar, provenance fields, confidence caps, mixed/doublet flags, and auto-merge blocking. Copy only the QA-passed final workbook to the unique original E-drive input directory without overwriting an existing file.
+This skill has an independent calibration counter. Its first five uses after
+this skill/core/dictionary revision must verify involved types against current
+literature and curated atlases. From use six onward retrieve only for
+marker/context/UMAP conflicts or knowledge-base gaps. Record source, retrieval
+date, species, tissue, defining program, exclusions, and adoption rationale.
 
-After QA passes, the builder must register the de-identified case in the shared E-drive case registry and write `<workbook>.case-registry.json`. A registration failure does not invalidate the workbook, but it must be reported explicitly and case accumulation must not be claimed.
+Write a reusable data-specific evidence sheet listing involved types, markers,
+definitions, and sources. Record versions, hashes, counter, input paths, cluster
+order, context, and UMAP audit. Deliver a timestamped Excel workbook to the
+supplied E-drive input directory. Do not automatically modify or filter data.
 
-## 8. Completion gate
-
-- Confirm all clusters are present in identical order on result sheets.
-- Confirm all labels are approved ontology IDs or enabled tissue-module major outputs.
-- Reject `Cell` unconditionally in both major and subcluster output. Permit `Multi_cell` only when `mixed_population=true`, `possible_components` is populated, manual review is required, and automatic merging is blocked.
-- Confirm cluster-level competing programs that retain a major identity use `mixed_evidence=true`, `review_in_subcluster=true`, `mixed_population=false`, `suspected_doublet=false` unless cell-level evidence supports a doublet, and `auto_merge_allowed=false`.
-- Confirm repeated labels have no artificial top-marker prefix.
-- Confirm unresolved T/NK clusters are isolated for review and do not alter clear T/NK clusters.
-- Confirm `stable_id`, `parent_path`, `tissue_module`, `disease_role`, `state_list`, `primary_state`, panel species, and cross-species provenance are populated.
-- Confirm every mixed/suspected-doublet cluster has `auto_merge_allowed=false`.
-- Confirm identity labels contain no state prefix and state remains visible in its own column.
-- Confirm the workbook contains only `注释结果`, `详细证据`, and `说明与数据来源`, with filters disabled and compact row heights.
-- Confirm the final workbook and `.qa.json` record knowledge-base/core/config versions and hashes.
-- Confirm the case-registry sidecar is `registered` or `duplicate`; report `failed` explicitly.
+Never output generic `Cell`, silently discard a cluster, use one marker or one
+UMAP location as sole proof, or claim confirmed doublet from aggregate evidence.
