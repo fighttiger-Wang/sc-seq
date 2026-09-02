@@ -4,7 +4,30 @@ import json
 import os
 import shutil
 import stat
+import sys
 from pathlib import Path
+
+from openpyxl import load_workbook
+
+
+def load_contract_module():
+    local = Path(__file__).resolve().parent
+    if (local / "qualitative_annotation_workbook.py").is_file():
+        if str(local) not in sys.path:
+            sys.path.insert(0, str(local))
+        import qualitative_annotation_workbook as module
+        return module
+    for parent in Path(__file__).resolve().parents:
+        shared = parent / "shared" / "sc-annotation-evidence-core"
+        if (shared / "qualitative_annotation_workbook.py").is_file():
+            if str(shared) not in sys.path:
+                sys.path.insert(0, str(shared))
+            import qualitative_annotation_workbook as module
+            return module
+    raise RuntimeError("Shared qualitative workbook contract module not found")
+
+
+CONTRACT = load_contract_module()
 
 
 def sha256(path: Path) -> str:
@@ -58,6 +81,54 @@ def infer_destination(inputs: list[str]) -> Path:
     return parents.pop()
 
 
+def validate_formal_workbook(source: Path) -> dict:
+    qa_path = source.with_suffix(".qa.json")
+    if not qa_path.is_file():
+        raise ValueError(f"formal workbook lacks builder QA sidecar: {qa_path}")
+    qa = json.loads(qa_path.read_text(encoding="utf-8"))
+    if qa.get("status") != "pass":
+        raise ValueError(f"formal workbook QA status is not pass: {qa.get('status')}")
+    actual_hash = sha256(source)
+    if qa.get("workbook_sha256") != actual_hash:
+        raise ValueError("formal workbook hash does not match its builder QA sidecar")
+
+    workbook = load_workbook(source, read_only=False, data_only=False)
+    expected = ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
+    if workbook.sheetnames != expected:
+        raise ValueError(f"formal workbook violates the five-sheet contract: {workbook.sheetnames}")
+    headers = {
+        "绘图列表": CONTRACT.PLOT_HEADERS,
+        "注释结果": CONTRACT.RESULT_HEADERS,
+        "详细证据": CONTRACT.EVIDENCE_HEADERS,
+        "细胞类型与文献": CONTRACT.LITERATURE_HEADERS,
+        "说明与数据来源": CONTRACT.SOURCE_HEADERS,
+    }
+    freezes = {"绘图列表": "A2", "注释结果": "D2", "详细证据": "D2", "细胞类型与文献": "B2", "说明与数据来源": "A2"}
+    forbidden = {"Confidence", "Quality_score", "置信度", "质量评分", "候选评分", "评分差值"}
+    red_rgb = {"FFF8696B", "F8696B"}
+    for name in expected:
+        sheet = workbook[name]
+        observed_headers = [cell.value for cell in sheet[1]]
+        if observed_headers != headers[name]:
+            raise ValueError(f"{name} header contract mismatch")
+        if forbidden.intersection(str(value) for value in observed_headers if value is not None):
+            raise ValueError(f"{name} contains forbidden score/confidence headers")
+        if sheet.auto_filter.ref is not None:
+            raise ValueError(f"{name} must not enable autofilter")
+        if str(sheet.freeze_panes) != freezes[name]:
+            raise ValueError(f"{name} freeze panes mismatch: {sheet.freeze_panes}")
+        for row in sheet.iter_rows():
+            if row[0].row > 1 and sheet.row_dimensions[row[0].row].height is None:
+                raise ValueError(f"{name} row {row[0].row} lacks fixed height")
+            for cell in row:
+                if cell.alignment.wrap_text or cell.alignment.shrink_to_fit:
+                    raise ValueError(f"{name}!{cell.coordinate} enables wrapping or shrink-to-fit")
+                rgb = str(cell.fill.fgColor.rgb or "").upper()
+                if rgb in red_rgb and not (name == "注释结果" and cell.column == 2 and cell.row > 1):
+                    raise ValueError(f"red warning fill is outside 注释结果/中文名称: {name}!{cell.coordinate}")
+    return qa
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Copy only a validated final annotation workbook to an E-drive destination.")
     parser.add_argument("--source", required=True)
@@ -73,6 +144,7 @@ def main() -> None:
     require_inside(source, workspace_root, "source")
     if source.suffix.lower() != ".xlsx" or not source.is_file():
         raise ValueError(f"source must be an existing .xlsx workbook: {source}")
+    qa = validate_formal_workbook(source)
     if not destination_arg.is_absolute():
         raise ValueError(f"destination must be an absolute E-drive path: {destination_arg}")
     require_e_drive(destination_arg, "destination")
@@ -96,7 +168,7 @@ def main() -> None:
     print(json.dumps({
         "status": "copied", "source": str(source), "destination": str(destination),
         "destination_mode": "explicit" if args.destination else "inferred_from_original_inputs",
-        "sha256": source_hash, "copied_files": 1,
+        "sha256": source_hash, "qa_status": qa.get("status"), "copied_files": 1,
     }, ensure_ascii=False))
 
 

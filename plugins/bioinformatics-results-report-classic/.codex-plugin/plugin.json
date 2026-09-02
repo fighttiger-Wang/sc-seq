@@ -1,6 +1,6 @@
 {
   "name": "bioinformatics-results-report-classic",
-  "version": "0.1.0+codex.20260902033122",
+  "version": "0.1.0+codex.20260902152211",
   "description": "Interpret completed bioinformatics result folders and generate a literature-grounded, self-contained classic scientific-document HTML report.",
   "author": {
     "name": "fight"

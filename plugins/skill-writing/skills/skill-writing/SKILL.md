@@ -31,6 +31,10 @@ Every maintained skill display name must use exactly this format:
 NN · Name
 ```
 
+`Name` must end with the current technical package version in the form `vX.Y.Z`, derived from that plugin's `.codex-plugin/plugin.json` version before any `+codex...` cachebuster suffix. For example: `03 · 单细胞大类注释（主要谱系） v0.3.3`. The same complete display name must be used in both metadata files; do not infer or manually type a different version.
+
+`Name` must end with the current technical package version in the form `vX.Y.Z`, derived from that plugin's `.codex-plugin/plugin.json` version before any `+codex...` cachebuster suffix. For example: `03 · 单细胞大类注释（主要谱系） v0.3.3`. The same complete display name must be used in both metadata files; do not infer or manually type a different version.
+
 - `NN` is the fixed two-digit workflow order, including a leading zero for 01–09.
 - The separator is the Unicode middle dot `·` (`U+00B7`) with exactly one ASCII space on each side.
 - Example: `03 · 单细胞大类注释（主要谱系）`.

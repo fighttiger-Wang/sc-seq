@@ -35,7 +35,7 @@ For each side:
 2. Compare mean/robust prevalence of the complete programs, not isolated genes.
 3. Require both a relative dominance ratio and an absolute prevalence margin before declaring one branch dominant.
 4. If one program dominates, block leaves from the rival branch even if individual rival genes are enriched.
-5. If both programs are coherent and neither dominates, retain a boundary conflict unless a registered boundary-defined identity explicitly requires the joint program. In that case, assign that terminal identity with reduced confidence and blocked merging; do not claim purity or doublets from aggregate data.
+5. If both programs are coherent and neither dominates, retain a boundary conflict unless a registered boundary-defined identity explicitly requires the joint program. In that case, assign that terminal identity with an explicit evidence gap and blocked merging; do not claim purity or doublets from aggregate data.
 6. If neither program is coherent, stop at the nearest defensible parent and trigger targeted resolution.
 
 The first implemented invariants are alpha-beta versus gamma-delta TCR and TCR-defined T versus NK identity. The same pattern must be used for other recurrent boundaries, including epithelial versus immune contamination, neutrophil versus monocyte, and lineage identity versus state programs.
@@ -70,7 +70,7 @@ Literature defines biological plausibility and the invariant; current-sample evi
 - When both programs are close, retain a T-cell boundary review and request cell-level coexpression or paired scTCR evidence.
 - Naive/memory/cytotoxic programs are evaluated only after receptor branch arbitration.
 
-For the N135 fetal-lung regression, cluster 14 has broader alpha-beta receptor prevalence (`TRAC/TRBC1/TRBC2`) than gamma-delta prevalence (`TRDC/TRGC1/TRGC2`), has `CD8A/CD8B`, and retains a coherent naive program. Therefore the gamma-delta branch is blocked before subtype scoring; the supported result is `CD8_Tn`, with UMAP overlap with cluster 9 used only as corroboration.
+For any cluster where alpha-beta and gamma-delta receptor signals are both detected, compare the complete receptor programs before assigning a leaf. A dominant alpha-beta program blocks gamma-delta descendants; a dominant gamma-delta program blocks conventional CD4/CD8 descendants. If the receptor programs are incomplete or near-balanced, retain the nearest supported identity and explicitly request cell-level or paired-receptor validation. A topology-separated island may strengthen a compatible unconventional-T interpretation, but it cannot rescue a missing identity program by itself.
 
 ## 7. Release gate
 

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from build_annotation_workbook import cluster_sort_key, resolved_e, within
-from umap_audit import load_umap_audit, validate_umap_audit
+from umap_audit import apply_umap_audit, load_umap_audit, validate_umap_audit
 
 
 def main():
@@ -41,8 +41,10 @@ def main():
             raise ValueError("UMAP was supplied; all-cluster --umap-audit is required before temporary mapping")
         audit_path = within(resolved_e(args.umap_audit, "UMAP audit"), workspace, "UMAP audit")
         audit_summary = validate_umap_audit(
-            load_umap_audit(audit_path), expected, formal=False, records=records
+            load_umap_audit(audit_path), expected, formal=False, records=records, evidence=evidence
         )
+        apply_umap_audit(records, audit_summary)
+        by_cluster = {str(record.get("cluster_id", "")): record for record in records}
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8-sig", newline="") as handle:

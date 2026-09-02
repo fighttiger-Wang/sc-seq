@@ -7,7 +7,7 @@ Use the account-independent registry at `<shared-workspace-root>\.sc-annotation-
 - Register only a final workbook whose `.qa.json` has `status=pass`.
 - The major skill is eligible from version `0.2.2`; this skill version writes its exact version into the registry call.
 - One identity counts at most once per independent dataset. Re-clustering, re-annotation, repeated clusters, or revised workbooks from the same dataset strengthen the stored observation but do not add independent-case count.
-- Store a de-identified evidence snapshot, hashes, species, tissue, parent, markers, exclusions, candidates, confidence, and literature metadata. Do not copy full expression matrices or customer names into the registry.
+- Store a de-identified evidence snapshot, hashes, species, tissue, parent, Markers, exclusions, candidate programs, qualitative gates, evidence gaps, and literature metadata. Do not copy full expression matrices or customer names into the registry.
 - Mixed/doublet, state, role, and ontology-root fallback records may be stored but cannot promote a stable identity.
 
 ## Literature metadata

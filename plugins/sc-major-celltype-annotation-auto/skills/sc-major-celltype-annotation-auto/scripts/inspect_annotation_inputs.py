@@ -177,7 +177,7 @@ def classify_average_matrix(expression):
             "negative_fraction": 0.0,
             "median_abs_gene_mean": 0.0,
             "median_gene_sd": 0.0,
-            "signature_score_policy": "disabled",
+            "identity_program_policy": "explicit_marker_support_only",
             "canonical_expression_policy": "do_not_use",
         }
     negative_fraction = sum(value < 0 for value in flattened) / len(flattened)
@@ -187,39 +187,29 @@ def classify_average_matrix(expression):
     median_gene_sd = statistics.median(gene_sds) if gene_sds else 0.0
     if negative_fraction >= 0.05 and median_abs_gene_mean <= 0.25:
         classification = "gene_centered_or_scaled"
-        signature_policy = "mean_relative_scaled_value_prioritization_only"
+        identity_policy = "relative_values_retained_per_gene_not_aggregated"
         canonical_policy = "relative_rank_only_require_de_marker_support"
     elif negative_fraction >= 0.05:
         classification = "contains_negative_values_unknown_transform"
-        signature_policy = "relative_priority_only"
+        identity_policy = "per_gene_relative_evidence_only"
         canonical_policy = "do_not_treat_as_absolute_expression"
     else:
         classification = "nonnegative_expression_like"
-        signature_policy = "mean_log1p_nonnegative_expression"
+        identity_policy = "per_gene_expression_evidence_only"
         canonical_policy = "supporting_evidence_only"
     return {
         "classification": classification,
         "negative_fraction": round(negative_fraction, 4),
         "median_abs_gene_mean": round(median_abs_gene_mean, 4),
         "median_gene_sd": round(median_gene_sd, 4),
-        "signature_score_policy": signature_policy,
+        "identity_program_policy": identity_policy,
         "canonical_expression_policy": canonical_policy,
     }
 
 
-def _signature_score(expression, genes, cluster_index, matrix_semantics):
-    lookup = {gene.upper(): vals for gene, vals in expression.items()}
-    raw_values = [float(lookup[g.upper()][cluster_index]) for g in genes if g.upper() in lookup]
-    if matrix_semantics["classification"] == "gene_centered_or_scaled":
-        values = raw_values
-    else:
-        values = [math.log1p(max(value, 0.0)) for value in raw_values]
-    return round(sum(values) / len(values), 4) if values else 0.0
-
-
-def _signature_marker_support(ranked, genes, limit=100):
+def _signature_marker_support(marker_records_by_de, genes, limit=100):
     wanted = {gene.upper() for gene in genes}
-    hits = [record for record in ranked[:limit] if record["gene"].upper() in wanted and record["log2FC"] > 0]
+    hits = [record for record in marker_records_by_de[:limit] if record["gene"].upper() in wanted and record["log2FC"] > 0]
     return {
         "count": len(hits),
         "genes": [record["gene"] for record in hits],
@@ -278,12 +268,10 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
     expr_lookup = {g.upper(): (g, vals) for g, vals in expression.items()}
     canonical_expression = {expr_lookup[g][0]: expr_lookup[g][1] for g in canonical if g in expr_lookup}
     profiles = {}
-    state_names = {"S_phase", "G2M_phase", "interferon", "activation_APC"}
-
     for cluster_index, cluster in enumerate(clusters):
-        ranked = sorted(by_cluster.get(cluster, []), key=lambda x: (x["log2FC"], x["pct1"] - x["pct2"]), reverse=True)
-        top = ranked[:top_n]
-        naming_eligible = [r for r in ranked if naming_exclusion_reason(r["gene"]) is None]
+        marker_records_by_de = sorted(by_cluster.get(cluster, []), key=lambda x: (x["log2FC"], x["pct1"] - x["pct2"]), reverse=True)
+        top = marker_records_by_de[:top_n]
+        naming_eligible = [r for r in marker_records_by_de if naming_exclusion_reason(r["gene"]) is None]
         informative = naming_eligible[:informative_n]
         naming_top_marker = naming_eligible[0] if naming_eligible else None
         excluded_naming_markers = [
@@ -292,38 +280,28 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
             if naming_exclusion_reason(record["gene"]) is not None
         ]
         qc_fraction = sum(bool(STATE_QC_RE.match(r["gene"])) for r in top[:50]) / max(min(len(top), 50), 1)
-        scores = {
-            name: _signature_score(expression, genes, cluster_index, matrix_semantics)
-            for name, genes in SIGNATURES.items()
-        }
         marker_support = {
-            name: _signature_marker_support(ranked, genes)
+            name: _signature_marker_support(marker_records_by_de, genes)
             for name, genes in SIGNATURES.items()
         }
-        lineages = sorted(((k, v) for k, v in scores.items() if k not in state_names), key=lambda x: x[1], reverse=True)
+        coherent_programs = [name for name, support in marker_support.items() if support["count"] >= 2]
         alerts = []
-        if len(ranked) < 10:
+        if len(marker_records_by_de) < 10:
             alerts.append("fewer_than_10_markers")
         if qc_fraction >= 0.6:
             alerts.append("state_or_qc_dominated")
         if naming_top_marker is None:
             alerts.append("no_standardized_informative_naming_marker")
-        if len(lineages) >= 2 and lineages[0][1] > 0 and lineages[1][1] >= lineages[0][1] * 0.85:
+        if len(coherent_programs) >= 2:
             alerts.append("competing_lineage_signatures")
-        if (
-            matrix_semantics["classification"] != "nonnegative_expression_like"
-            and lineages
-            and marker_support[lineages[0][0]]["count"] < 2
-        ):
-            alerts.append("top_lineage_score_lacks_de_marker_support")
         profiles[cluster] = {
-            "marker_count": len(ranked), "top_markers": top,
+            "marker_count": len(marker_records_by_de), "top_markers": top,
             "raw_top_marker": top[0] if top else None,
             "naming_top_marker": naming_top_marker,
             "excluded_naming_markers": excluded_naming_markers,
-            "top_informative_markers": informative, "signature_scores": scores,
+            "top_informative_markers": informative,
             "signature_marker_support": marker_support,
-            "ranked_lineage_signatures": lineages[:5],
+            "coherent_marker_programs": coherent_programs,
             "qc_state_fraction_top50": round(qc_fraction, 3), "alerts": alerts,
         }
 
@@ -339,7 +317,7 @@ def build_evidence(avg_path, marker_path, top_n=60, informative_n=25, species=""
         "average_matrix_semantics": matrix_semantics,
         "signature_definitions": SIGNATURES,
         "notes": [
-            "Signature scores are prioritization aids, not final labels; interpret them according to average_matrix_semantics.",
+            "No aggregate signature score or candidate ranking is calculated; programs retain explicit Marker support only.",
             "Centered/scaled averages are relative ranks only and must not override positive DE-marker support.",
             "Consequential off-parent lineage calls require at least two coherent positive DE markers and negative-evidence review.",
             "Fallback naming uses naming_top_marker: the highest-log2FC standardized informative GeneName.",
@@ -385,6 +363,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
 
