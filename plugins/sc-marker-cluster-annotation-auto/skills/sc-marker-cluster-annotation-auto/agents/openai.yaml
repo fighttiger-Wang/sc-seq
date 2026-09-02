@@ -1,5 +1,5 @@
 interface:
-  display_name: "04 · 单细胞亚群注释（精细分型）"
+  display_name: "04 · 单细胞亚群注释（精细分型） v0.6.1"
   short_description: "选择性复用证据并完成全cluster UMAP复核，先临时映射后正式三表交付"
   default_prompt: "Use $sc-marker-cluster-annotation-auto to annotate subclusters with selective evidence reuse, all-cluster UMAP review, a temporary two-column mapping when needed, and a formally validated level-consistent three-sheet result."
 

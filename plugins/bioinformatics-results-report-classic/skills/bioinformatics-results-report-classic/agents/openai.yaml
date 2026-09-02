@@ -1,5 +1,5 @@
 interface:
-  display_name: "14 · 生信结果智能解读报告（经典文档版）"
+  display_name: "14 · 生信结果智能解读报告（经典文档版） v0.1.0"
   short_description: "解读既有统计结果并生成经典论文式单文件 HTML 报告"
   brand_color: "#8B0000"
   default_prompt: "Use $bioinformatics-results-report-classic to interpret this bioinformatics results folder and generate a classic scientific-document HTML report."

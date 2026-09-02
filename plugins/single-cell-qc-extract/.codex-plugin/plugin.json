@@ -1,6 +1,6 @@
 {
   "name": "single-cell-qc-extract",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902033122",
   "description": "Extract single-cell project QC fields from Chinese project descriptions and report screenshots.",
   "author": {
     "name": "fight"
@@ -21,7 +21,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "01 · 单细胞质控提取",
+    "displayName": "01 · 单细胞质控提取 v0.1.0",
     "shortDescription": "从项目描述和截图中提取单细胞 QC 与细胞注释表。",
     "longDescription": "用于整理单细胞转录组项目质控信息：从中文项目标题、分析路径、组织来源、捕获细胞数、关注细胞类型和上机状态中提取项目字段，并从 Cell Ranger/Seurat/细胞注释截图中提取 Sample、Estimated number、Mean reads per cell、Mean genes per cell、Reads mapped to genome、Sequencing saturation 和 Cell type。",
     "developerName": "fight",
