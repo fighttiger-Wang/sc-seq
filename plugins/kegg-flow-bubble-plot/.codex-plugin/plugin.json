@@ -1,13 +1,13 @@
 {
   "name": "kegg-flow-bubble-plot",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902033122",
   "description": "Generate publication-ready KEGG gene-pathway flow-bubble plots.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "06 · KEGG流泡图",
+    "displayName": "06 · KEGG流泡图 v0.1.0",
     "shortDescription": "绘制基因-通路带状连接与KEGG富集气泡组合图",
     "longDescription": "从KEGG富集结果表生成节点高度与连接数量严格对应、交叉区域透明叠加变深、并带对齐气泡图的论文级组合图。",
     "developerName": "fight",

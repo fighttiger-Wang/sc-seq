@@ -1,13 +1,13 @@
 {
   "name": "sc-marker-cluster-annotation-auto",
-  "version": "0.6.1+codex.20260901135627",
+  "version": "0.6.1+codex.20260902033122",
   "description": "Accelerated evidence-first subcluster annotation with shared cross-account case learning, staged automatic knowledge promotion, full regression, strict hierarchy consistency, and deterministic QA.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "04 · 单细胞亚群注释（精细分型）",
+    "displayName": "04 · 单细胞亚群注释（精细分型） v0.6.1",
     "shortDescription": "在已知父群内完成层级一致的细分亚型注释、证据审计与结果交付",
     "longDescription": "面向已知父群内的亚群与亚型注释，从平均表达与 Marker Excel 或 Seurat 对象开始，沿批准的本体层级输出最细可靠身份；将发育阶段、细胞状态和组织语境与身份分离，禁止父级结构标签与其后代标签混用。B 细胞采用 Developing、Mature 与 Antibody-secreting 三分支及其文献成熟亚型。固定构建器完成结果 QA 后，仅将最终工作簿自动复制到原始输入目录。大类细胞注释由独立的大类 skill 处理。",
     "developerName": "fight",

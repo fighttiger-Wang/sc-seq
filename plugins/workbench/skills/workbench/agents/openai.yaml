@@ -1,5 +1,5 @@
 interface:
-  display_name: "08 · 工作台"
+  display_name: "08 · 工作台 v0.1.0"
   short_description: "把自然语言、文件或参考图变成可持续迭代的多页面工作台"
   default_prompt: "使用 $workbench，根据我现有的想法或项目搭建、改进并验证一个可继续维护的工作台。"
 

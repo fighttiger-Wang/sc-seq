@@ -1,13 +1,13 @@
 {
   "name": "sc-major-celltype-annotation-auto",
-  "version": "0.3.2+codex.20260901135627",
+  "version": "0.3.2+codex.20260902033122",
   "description": "Approved multi-tissue major-celltype annotation with shared cross-account case learning, staged knowledge promotion, deterministic QA, and delivery.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "03 · 单细胞大类注释（主要谱系）",
+    "displayName": "03 · 单细胞大类注释（主要谱系） v0.3.2",
     "shortDescription": "跨全细胞或混合谱系自动完成大类注释、审计与原目录交付",
     "longDescription": "从平均表达表与 Marker Excel 或 Seurat 对象开始，静默推断可确定的元数据与路径，按统一大类层级完成证据优先注释；经确定性 QA 后自动将唯一最终工作簿交付到原始 E 盘输入目录。",
     "developerName": "fight",

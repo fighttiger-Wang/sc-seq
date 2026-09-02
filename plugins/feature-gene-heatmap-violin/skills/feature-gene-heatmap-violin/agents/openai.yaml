@@ -1,5 +1,5 @@
 interface:
-  display_name: "05 · 特征基因热图及选定基因小提琴图"
+  display_name: "05 · 特征基因热图及选定基因小提琴图 v0.1.0"
   short_description: "固定绘制全marker特征基因热图及用户选定基因小提琴图"
   default_prompt: "Use $feature-gene-heatmap-violin to create the final marker heatmap and selected-gene violin plots from my Seurat data."
 

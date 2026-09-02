@@ -1,13 +1,13 @@
 {
   "name": "annotation-knowledge-release",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902033122",
   "description": "Validate, release, package, install, commit, and push the approved single-cell annotation knowledge base across Windows and macOS.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "12 · 注释知识库发布",
+    "displayName": "12 · 注释知识库发布 v0.1.0",
     "shortDescription": "更新、验证并推送大类/亚类注释知识库",
     "longDescription": "定位共享 skills 仓库和批准知识库，运行跨平台发布门禁，同步大类与亚类注释插件快照，完成回归、打包、本机重装，并在审查后普通提交和推送 GitHub。",
     "developerName": "fight",
