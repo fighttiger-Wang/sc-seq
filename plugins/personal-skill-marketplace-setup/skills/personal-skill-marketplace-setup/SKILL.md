@@ -47,6 +47,27 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 - `repair`: do not fetch or pull. Validate and reinstall the exact local versions.
 - relocation is an explicit install/update option, not an automatic recovery path.
 
+## GitHub transport and merge closeout
+
+Publication uses two separate network paths: Git Smart HTTP for `fetch`/`push`, and the GitHub API for PR creation, status checks, and merge. Diagnose them independently.
+
+When Git cannot reach `github.com` but browser, API, or raw-content requests work:
+
+1. Confirm the remote URL with `git remote -v` and check DNS/HTTPS reachability.
+2. On Windows, inspect the user proxy and local listener with `netsh winhttp show proxy`, the Internet Settings proxy values, and a loopback port test. Do not assume WinHTTP and user-level proxy settings are the same.
+3. If a verified local proxy is available, set `http.proxy` only in the candidate repository's local Git config, for example `git config --local http.proxy http://127.0.0.1:<port>`. Re-test `git ls-remote origin main` before rerunning publish.
+4. Never put credentials in Git config, source files, logs, command output, or handoff records. Reuse the configured credential helper only in memory.
+
+If `gh` is unavailable, use the authenticated GitHub REST API as the fallback. Obtain the GitHub credential through the configured credential helper without printing it, and send API requests through the verified proxy when needed. Use this sequence:
+
+1. `GET /repos/<owner>/<repo>/pulls/<number>` to confirm the PR is open, not draft, and `mergeable_state` is `clean`.
+2. `POST /repos/<owner>/<repo>/pulls` to create the PR when no PR exists for the pushed `codex/*` branch; capture only its number and URL.
+3. Merge only after a separate explicit user request. Use `PUT /repos/<owner>/<repo>/pulls/<number>/merge`, then require `merged=true` and record the returned merge commit SHA.
+4. Verify the remote stable channel after merging. Prefer `git fetch origin main` through the verified proxy and confirm the release commit is an ancestor of `origin/main`. If Git transport is flaky but the API works, query the PR's `merged`, `merged_at`, `merge_commit_sha`, and the repository `main` commit through the API; never rely on a stale local `origin/main` ref.
+5. Only after stable verification tell the user the release is merged. If the PR is merely open, provide the PR URL and state that stable `main` is unchanged.
+
+Record these as separate facts: branch pushed, PR created, PR merged, merge commit, stable `main` verification, and local installation sync. A successful push or merge API response alone does not prove that the local callable cache is updated.
+
 ## Clean-computer bootstrap boundary
 
 A clean computer cannot invoke a Skill that has not been installed. Do not claim one-step self-bootstrap from nothing.
