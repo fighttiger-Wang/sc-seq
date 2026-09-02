@@ -46,4 +46,4 @@ Cell-level coexpression or resolving reclustering is optional refinement: use it
 
 ## UMAP use
 
-Topology supports but never substitutes for the program gates. A Myeloid label that conflicts with its nearest UMAP neighborhood remains unresolved until cluster-specific cell, sample, trajectory, reference-mapping, or quantitative-QC evidence explains the conflict. Literature alone cannot resolve sample-specific topology.
+Topology supports but never substitutes for the program gates. A Myeloid label that conflicts with its nearest UMAP neighborhood remains unresolved until integrated review combines the topology with current-case Marker evidence. The review may retain the provisional identity or reject it and select an already-supported sibling candidate; it may not create an identity from topology alone. Literature alone cannot resolve sample-specific topology.

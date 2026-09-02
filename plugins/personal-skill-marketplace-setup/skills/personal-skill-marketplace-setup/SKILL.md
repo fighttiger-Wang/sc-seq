@@ -71,6 +71,7 @@ The bootstrap cannot log the user into GitHub, install Git/Python with an OS pac
 6. A passing doctor, unit test, or GitHub Actions run proves only those checks. It does not prove scientific interpretation, customer-facing output, R/Python packages, WPS, fonts, containers, credentials, or remote runtimes.
 7. After install, update, repair, bootstrap, or a preflight that changed installed plugins, tell the user to restart Codex and open a new task.
 8. Never batch-update or infer a coupled release for `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto`. They are independent Skills; update and publish only the explicitly named Skill(s). Do not invoke annotation knowledge-base publication as a side effect unless the user explicitly includes that scope.
+9. Every maintained plugin's `plugin.json.interface.displayName` and `agents/openai.yaml.interface.display_name` must end with the same technical package version, rendered as `vX.Y.Z` before any `+codex...` cachebuster suffix. Audit must report a mismatch as a release failure; do not silently repair it from a cache.
 
 ## Managed synchronization guidance
 

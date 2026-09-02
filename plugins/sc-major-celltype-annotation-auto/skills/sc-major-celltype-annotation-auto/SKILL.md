@@ -5,6 +5,8 @@ description: Expert-style major-celltype annotation for mixed/all-cell single-ce
 
 # Major cell-type annotation
 
+Before making any annotation decision, apply the shared [universal annotation contract](../../../../shared/annotation-universal-contract.md). This skill adds the major-level rules below; it does not replace the shared evidence, UMAP, naming, or workbook QA requirements.
+
 Use this skill only for mixed/all-cell collections. The complete table is
 annotated at one major-celltype level; never refine only one lineage because its
 markers are clearer.
@@ -16,7 +18,7 @@ UMAP PNG with readable cluster IDs and legend. The quantitative file has
 `gene`, `group`, `mean_expr`, `expr_ratio`, and `norm_expr`; `expr_ratio` is
 detection ratio. Marker statistics may include `Target_Cluster_mean`,
 `Other_Cluster_mean`, `log2FC`, `pct.1`, and `pct.2`; interpret `pct.1/pct.2`
-as target/background prevalence. Preserve cluster order.
+as target/background prevalence. Final output sorts numeric cluster IDs from small to large, then uses natural alphanumeric order for mixed IDs.
 
 ## Decision logic
 
@@ -26,9 +28,10 @@ For every cluster:
    most clusters, housekeeping/ribosomal/mitochondrial programs, and
    tissue-wide ambient signals. A globally elevated epithelial or immunoglobulin
    program must not redefine every cluster.
-2. Score coherent major programs using multiple anchors, relative specificity,
-   mean expression, detection ratio, and explicit competing-lineage exclusions.
-   `norm_expr` is secondary and must not be counted twice.
+2. Evaluate coherent major programs with explicit qualitative gates using
+   multiple anchors, relative specificity, mean expression, detection ratio,
+   and competing-lineage exclusions. Preserve per-gene values, but never turn
+   them into an aggregate score or ranking. `norm_expr` is secondary evidence.
 3. Use species and tissue as facts. Do not treat inferred disease, treatment,
    age, sex, or anatomy as user-provided facts.
 4. Treat marker tables as candidate discovery evidence. A high `log2FC` with
@@ -48,8 +51,8 @@ For every cluster:
 
 Produce a cluster-level mapping with one stable plotting label per cluster.
 Keep identity, state, abnormality, components, characteristic genes, UMAP
-judgment, confidence, evidence, literature, and handling recommendation in
-separate fields. For an impurity or non-pure plotting cluster, retain the most
+judgment, evidence, literature, and handling recommendation in separate
+fields. Do not create confidence or score fields. For an impurity or non-pure plotting cluster, retain the most
 likely主体细胞类型 and mark its annotation cell red; do not replace the
 plotting identity with `Doublet` or `Debris`.
 

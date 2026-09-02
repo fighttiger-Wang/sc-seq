@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Exercise major workbook QA for per-cluster T/NK, mixed blocking, and confidence caps."""
+"""Regression test for the qualitative major-celltype workbook contract."""
 
 import argparse
-import copy
-import csv
 import json
 import subprocess
 import sys
@@ -12,93 +10,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 
-SKILL = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(SKILL / "scripts"))
-from annotation_evidence_core import enrich_evidence  # noqa: E402
-from build_annotation_workbook import inject_deterministic_evidence, validate  # noqa: E402
-
-
-PANELS = {
-    "epi": ["EPCAM", "KRT8", "KRT18", "KRT19"],
-    "endo": ["PECAM1", "CDH5", "VWF", "KDR"],
-    "t": ["CD3D", "CD3E", "CD3G", "TRAC"],
-    "nk": ["NKG7", "KLRD1", "NCR1", "GNLY"],
-}
-
-
-def base_evidence(programs):
-    profiles = {}
-    for cluster, active in programs.items():
-        marker = PANELS[active[0]][0]
-        profiles[cluster] = {
-            "top_markers": [], "qc_state_fraction_top50": 0.0,
-            "naming_top_marker": {"gene": marker}, "raw_top_marker": {"gene": marker},
-            "top_informative_markers": [{"gene": marker}], "excluded_naming_markers": [],
-        }
-    return {
-        "clusters": list(programs), "cluster_profiles": profiles,
-        "average_gene_names": sorted({g for panel in PANELS.values() for g in panel}),
-        "average_shape": [len({g for panel in PANELS.values() for g in panel}), len(programs)],
-        "average_reader": "test", "confirmed_metadata": {"species": "test", "tissue": "test", "annotation_level": "major", "parent_population": "All_cells", "parent_kind": "mixed", "interpretation_rule": "test"},
-        "source_paths": {"cell_avg_exp": "test", "marker_table": "test"},
-    }
-
-
-def write_ratios(path, programs):
-    genes = sorted({gene for panel in PANELS.values() for gene in panel})
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
-        writer.writerow(["gene", "group", "expr_ratio"])
-        for cluster, active in programs.items():
-            active_genes = {gene for name in active for gene in PANELS[name]}
-            for gene in genes:
-                writer.writerow([gene, cluster, 0.8 if gene in active_genes else 0.01])
-
-
-def record(cluster, label, evidence, mixed=False):
-    decision = evidence["deterministic_annotation_evidence"][cluster]
-    marker = evidence["cluster_profiles"][cluster]["naming_top_marker"]["gene"]
-    supporting = "CD3D; CD3E; TRAC; NKG7; KLRD1; GNLY" if mixed else "; ".join(PANELS[{"Epithelial_cell": "epi", "Endothelial_cell": "endo", "T_cell": "t", "NK_cell": "nk"}.get(label, "t")])
-    return {
-        "cluster_id": cluster, "celltype_cn": label, "celltype_en": label,
-        "label_basis": "canonical_subtype", "canonical_subtype": label,
-        "top_marker_gene": marker, "literature_source": "Cell Ontology", "naming_grammar": "major_v1",
-        "contextually_excluded_naming_markers": [], "broad_type": label, "fine_type": "", "state": "",
-        "supporting_markers": supporting, "conflicting_markers": "",
-        "candidate_labels": "T_cell; NK_cell" if mixed else label,
-        "confidence": "medium-high", "quality_score": 80,
-        "mixed_or_doublet": False, "mixture_type": "none", "possible_components": "",
-        "rationale": "Deterministic major-lineage regression record.",
-        "manual_review": decision["risk_level"] != "R0_ACCEPT", "review_action": decision["recommended_action"],
-    }
-
-
-def build(work, name, programs, labels):
-    ratio = work / f"{name}.tsv"
-    write_ratios(ratio, programs)
-    evidence = enrich_evidence(base_evidence(programs), ratio_path=ratio, annotation_level="major", require_complete_ratio=True)
-    records = [record(cluster, labels[cluster], evidence, evidence["deterministic_annotation_evidence"][cluster]["tnk_provisional"] == "unresolved_T_NK") for cluster in programs]
-    evidence_path, records_path, output = work / f"{name}.evidence.json", work / f"{name}.records.json", work / f"{name}.xlsx"
-    evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
-    records_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
-    command = [sys.executable, str(SKILL / "scripts" / "build_annotation_workbook.py"), "--records", str(records_path), "--evidence", str(evidence_path), "--output", str(output), "--workspace-root", str(work.parents[1]), "--force"]
-    completed = subprocess.run(command, text=True, capture_output=True)
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stdout + completed.stderr)
-    qa = json.loads(output.with_suffix(".qa.json").read_text(encoding="utf-8"))
-    assert qa["status"] == "pass"
-    workbook = load_workbook(output, data_only=False)
-    assert workbook.sheetnames == ["注释结果", "详细证据", "说明与数据来源", "细胞类型与文献"]
-    assert "简化映射" not in workbook.sheetnames
-    for sheet in workbook.worksheets:
-        assert sheet.auto_filter.ref is None
-    assert max((row.height or 15) for row in workbook["注释结果"].row_dimensions.values()) <= 54
-    main_values = [cell.value for row in workbook["注释结果"].iter_rows() for cell in row]
-    assert not any(isinstance(value, str) and value.lstrip().startswith(("{", "[")) for value in main_values)
-    assert not any(isinstance(value, str) and ":\\" in value for value in main_values)
-    quality_col = [cell.value for cell in workbook["注释结果"][1]].index("质量评分") + 1
-    assert isinstance(workbook["注释结果"].cell(2, quality_col).value, (int, float))
-    return evidence, records, command
+SKILL = Path(__file__).resolve()
 
 
 def main():
@@ -107,74 +19,51 @@ def main():
     args = parser.parse_args()
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
-
-    split_programs = {"0": ["epi"], "1": ["endo"], "2": ["t"], "3": ["nk"]}
-    split_labels = {"0": "Epithelial_cell", "1": "Endothelial_cell", "2": "T_cell", "3": "NK_cell"}
-    split_evidence, split_records, split_command = build(work, "split", split_programs, split_labels)
-    assert split_evidence["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
-
-    mixed_programs = {"0": ["t", "nk"], "1": ["epi"]}
-    mixed_labels = {"0": "T_cell", "1": "Epithelial_cell"}
-    mixed_evidence, _, _ = build(work, "mixed", mixed_programs, mixed_labels)
-    assert mixed_evidence["deterministic_tnk_arbitration"]["recommended_regime"] == "per_cluster"
-    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["auto_merge_allowed"] is False
-    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["stable_id"] != "Multi_cell"
-    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["mixed_evidence"] is True
-    assert mixed_evidence["deterministic_annotation_evidence"]["0"]["mixed_population"] is False
-    mixed_workbook = load_workbook(work / "mixed.xlsx", data_only=False)
-    mixed_result = mixed_workbook["注释结果"]
-    mixed_headers = {cell.value: cell.column for cell in mixed_result[1]}
-    assert mixed_result.cell(2, mixed_headers["Celltype_EN"]).value == "T_cell"
-    assert (work / "mixed.qa.json").read_text(encoding="utf-8").find('"multi_cell_chinese_static_red": true') >= 0
-
-    minimal_evidence = json.loads(json.dumps(split_evidence))
-    minimal_records = json.loads(json.dumps(split_records))
-    for decision in minimal_evidence["deterministic_annotation_evidence"].values():
-        decision["evidence_mode"] = "minimal"
-        decision["evidence_completeness"] = "positive_markers_only"
-    minimal_records[0]["confidence"] = "high"
-    minimal_evidence_path, minimal_records_path = work / "minimal.evidence.json", work / "minimal.records.json"
-    minimal_evidence_path.write_text(json.dumps(minimal_evidence, ensure_ascii=False), encoding="utf-8")
-    minimal_records_path.write_text(json.dumps(minimal_records, ensure_ascii=False), encoding="utf-8")
-    failed = subprocess.run(
-        [sys.executable, str(SKILL / "scripts" / "build_annotation_workbook.py"), "--records", str(minimal_records_path), "--evidence", str(minimal_evidence_path), "--output", str(work / "minimal.xlsx"), "--workspace-root", str(work.parents[1]), "--force"],
-        text=True, capture_output=True,
-    )
-    assert failed.returncode != 0 and "cannot receive high confidence" in (failed.stdout + failed.stderr)
-
-    external_records = copy.deepcopy(split_records)
-    inject_deterministic_evidence(external_records, split_evidence)
-    external = external_records[0]
-    external_id = str(external["stable_id"])
-    external.update({
-        "label_basis": "validated_external_candidate",
-        "canonical_subtype": external_id,
-        "candidate_labels": f"{external_id}; Stromal_cell",
-        "supporting_markers": "EPCAM; KRT8; KRT18",
-        "literature_source": "source-one; source-two",
-        "manual_review": True,
-        "confidence": "medium",
-    })
-    try:
-        validate(external_records, list(split_programs), split_evidence)
-    except ValueError as exc:
-        assert "requires literature_details" in str(exc)
-        assert "requires an approved current-case override_validation method" in str(exc)
-    else:
-        raise AssertionError("Unsupported external major-celltype override must fail")
-    external.update({
-        "literature_details": [
-            {"title": "Source one", "pmid": "PMID:M1", "species": "Human", "tissue": "test", "supported_conclusion": "Supports the major identity."},
-            {"title": "Source two", "doi": "10.1000/m2", "species": "Human", "tissue": "test", "supported_conclusion": "Independently supports the major identity."},
-        ],
-        "override_validation": {
-            "method": "reference_mapping", "evidence_ids": ["reference:test"],
-            "supported_identity": external_id,
-            "competing_identity_excluded": "Reference mapping excludes the competing stromal identity.",
+    repo = next(parent for parent in work.parents if (parent / "local-marketplace").is_dir()) / "local-marketplace"
+    skill = repo / "plugins" / "sc-major-celltype-annotation-auto" / "skills" / "sc-major-celltype-annotation-auto"
+    evidence = {
+        "clusters": ["10", "2", "0"], "average_shape": [12, 3], "average_reader": "test",
+        "confirmed_metadata": {"species": "Human", "tissue": "lung", "annotation_level": "major", "parent_population": "All_cells"},
+        "source_paths": {"cell_avg_exp": "avg.tsv", "marker_table": "markers.xlsx"},
+        "cluster_profiles": {
+            "0": {"top_markers": [{"gene": "EPCAM", "mean_expr": 3.0, "pct1": 0.8, "pct2": 0.1, "log2FC": 2.0}]},
+            "2": {"top_markers": [{"gene": "TRAC", "mean_expr": 2.5, "pct1": 0.7, "pct2": 0.05, "log2FC": 1.8}]},
+            "10": {"top_markers": [{"gene": "NCR1", "mean_expr": 2.8, "pct1": 0.65, "pct2": 0.03, "log2FC": 2.1}]},
         },
-    })
-    validate(external_records, list(split_programs), split_evidence)
-    print(json.dumps({"status": "pass", "checks": 16, "work_dir": str(work)}))
+        "qualitative_annotation_evidence": {
+            "0": {"stable_id": "Epithelial_cell", "qualitative_gates": {"identity_anchor": "通过"}},
+            "2": {"stable_id": "T_cell", "qualitative_gates": {"identity_anchor": "通过"}},
+            "10": {"stable_id": "NK_cell", "qualitative_gates": {"identity_anchor": "通过"}},
+        },
+    }
+    rows = [("10", "NK细胞", "NK_cell", "NCR1"), ("2", "T细胞", "T_cell", "TRAC"), ("0", "上皮细胞", "Epithelial_cell", "EPCAM")]
+    records = [{
+        "cluster_id": cluster, "celltype_cn": cn, "celltype_en": en, "stable_id": en,
+        "broad_type": en, "supporting_markers": marker, "candidate_labels": en,
+        "rationale": "Qualitative multi-marker program retained.",
+        "review_action": "Retain identity and verify on UMAP.",
+        "literature_source": "Curated Cell Ontology reference",
+    } for cluster, cn, en, marker in rows]
+    ep, rp, output = work / "evidence.json", work / "records.json", work / "major.xlsx"
+    ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+    rp.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+    completed = subprocess.run([
+        sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
+        "--records", str(rp), "--evidence", str(ep), "--output", str(output),
+        "--workspace-root", str(work.parents[1]), "--force",
+    ], text=True, capture_output=True)
+    if completed.returncode:
+        raise RuntimeError(completed.stdout + completed.stderr)
+    workbook = load_workbook(output)
+    assert workbook.sheetnames == ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
+    assert [workbook["绘图列表"].cell(row, 1).value for row in range(2, 5)] == ["0", "2", "10"]
+    headers = [cell.value for cell in workbook["注释结果"][1]]
+    assert "质量评分" not in headers and "置信度" not in headers
+    assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
+    assert all(not cell.alignment.wrap_text for sheet in workbook.worksheets for row in sheet.iter_rows() for cell in row)
+    qa = json.loads(output.with_suffix(".qa.json").read_text(encoding="utf-8"))
+    assert qa["aggregate_scores_exported"] is False and qa["confidence_exported"] is False
+    print(json.dumps({"status": "pass", "checks": 10, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

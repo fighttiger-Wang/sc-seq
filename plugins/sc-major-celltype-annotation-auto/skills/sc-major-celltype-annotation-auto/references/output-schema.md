@@ -1,27 +1,80 @@
 # Output schema
 
-Every annotation record contains:
+The final workbook contains exactly these sheets in order:
 
-| Group | Fields |
-|---|---|
-| Identity | `cluster_id`, `celltype_cn`, `celltype_en`, `stable_id`, `broad_type`, `fine_type`, `parent_path`, `tissue_module` |
-| State/role | `state`, `state_list`, `primary_state`, `disease_role`, `display_label` |
-| Species/provenance | `target_species`, `panel_species`, `cross_species_inference`, `marker_panel_evidence_ids`, `marker_panel_evidence_gate` |
-| Evidence | `supporting_markers`, `conflicting_markers`, `candidate_labels`, `rationale`, `primary_evidence_major_label`, `formal_identity_fallback`, deterministic scores and decision trace |
-| Risk | `mixed_or_doublet`, `mixed_population`, `suspected_doublet`, `mixture_type`, `possible_components`, `auto_merge_allowed`, `manual_review`, `review_action` |
-| Naming/override audit | `label_basis`, `canonical_subtype`, `top_marker_gene`, `literature_source`, `literature_details`, `override_validation`, `override_audit`, `user_constraint_audit`, `naming_grammar`, `contextually_excluded_naming_markers` |
+1. `绘图列表`
+2. `注释结果`
+3. `详细证据`
+4. `细胞类型与文献`
+5. `说明与数据来源`
 
-Rules:
+## 绘图列表
 
-- `stable_id` is the finest approved identity supported by the cluster.
-- `Cell` is forbidden as a final label in every annotation mode. A coherent mixed/multiplet cluster uses `stable_id=Multi_cell`, Chinese name `多细胞`, populated `possible_components`, manual review, and `auto_merge_allowed=false`. A noncoherent non-mixed cluster must enter targeted research and block formal delivery if unresolved.
-- Major mode may display its nearest enabled major ancestor; subcluster mode displays the finest defensible within-parent identity.
-- `display_label` equals the identity. Store state separately in `state`, preserve all detected states in `state_list`, and retain one `primary_state` for prioritization.
-- Repeated canonical labels remain identical; cluster ID provides uniqueness.
-- A coherent incompatible lineage conflict requires `mixed_population=true`, `suspected_doublet=true`, `manual_review=true`, and `auto_merge_allowed=false`.
-- Cross-species Human-panel transfer requires `cross_species_inference=true` and panel provenance.
-- Every non-R0 result requires manual review; minimal evidence cannot receive high confidence.
-- `validated_external_candidate` requires at least two independent structured sources, at least two supporting markers, final-identity inclusion in `candidate_labels`, structured current-case `override_validation`, manual review, and confidence below high until formal promotion. It cannot bypass deterministic mixed/off-parent conflicts or failed identity gates.
-- `user_constraint_audit` records hard excluded labels, conflict-only markers, excluded ranked candidates, and whether a legal alternative was selected. A final label that remains explicitly excluded is invalid and blocks QA.
+Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
+Repeated labels are allowed and are not decorated with cluster IDs or Marker
+prefixes.
 
-The final workbook contains `注释结果`, `详细证据`, `说明与数据来源`, and `细胞类型与文献`. The research sheet lists involved cell types, characteristic markers, candidates/competitors, reusable literature sources, and UMAP judgment. The main sheet shows identity, developmental stage, state, quality score, mixed/doublet risk, and concise judgment evidence without JSON or full paths. Automatic filters are disabled, rows are compact, and no blank manual-entry columns are created. QA records cluster order, label normalization, knowledge-base/core/config versions and hashes, active tissue modules, cross-species calls, mixed/doublet blocks, and identity-state separation.
+## 注释结果
+
+Columns:
+
+1. Cluster
+2. 中文名称
+3. Celltype_EN
+4. 细胞谱系
+5. 发育/成熟阶段
+6. 细胞状态
+7. 组织/疾病相关角色
+8. 关键 Marker
+9. 主要竞争候选
+10. UMAP 判断摘要
+11. 异常/边界标记
+12. 可能组成
+13. 判定摘要
+14. 验证建议
+15. 下游处理建议
+
+The sheet contains no score, confidence, candidate rank, or numeric quality
+field. `关键 Marker` contains gene symbols only.
+
+## 详细证据
+
+One row per cluster. Include final identity, parent context, primary and
+competing programs, supporting/conflicting/missing Marker evidence, eight
+qualitative gates, off-parent audit, development/state programs, UMAP and
+cross-island audit, mixed/doublet explanation, rationale, evidence gaps,
+validation, and handling.
+
+Available Marker values use:
+
+```text
+FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
+```
+
+Use `NA` for unavailable values. Do not infer zero without a verified complete
+matrix.
+
+## 细胞类型与文献
+
+Exactly `细胞类型 | 文献 | 经典鉴定 Marker | 本次鉴定使用的 Marker`.
+One cell type x one reference is one row. Do not merge cells. Every final type
+has at least one reference with a clickable PMID, DOI, or URL when available.
+
+## 说明与数据来源
+
+Exactly `项目 | 内容`. Show filenames only. Record species, tissue, parent,
+mode, metric definitions, versions, run time, constraints, sorting and red-fill
+rules, limitations, and the no-auto-modification declaration.
+
+## Shared QA
+
+- All three Cluster sheets use the same numeric ascending order and exact IDs.
+- Fixed widths and row heights; wrapping, shrink-to-fit, and autofilters are
+  disabled.
+- Freeze first row; freeze first three columns in result/evidence and first
+  column in literature.
+- Static red fill applies only to `中文名称` for coherent significant state,
+  `Multi_cell`, suspected doublet, low quality, debris, background interference,
+  or lineage/off-parent boundary.
+- Every cluster receives a final annotation. Subcluster output cannot retreat to
+  the supplied parent solely because evidence is incomplete.
