@@ -2,7 +2,28 @@
 """Validate structured, all-cluster UMAP topology review records."""
 
 import json
+import sys
 from pathlib import Path
+
+
+def _load_resolution_module():
+    local = Path(__file__).resolve().parent
+    if (local / "qualitative_umap_resolution.py").is_file():
+        if str(local) not in sys.path:
+            sys.path.insert(0, str(local))
+        import qualitative_umap_resolution as module
+        return module
+    for parent in Path(__file__).resolve().parents:
+        shared = parent / "shared" / "sc-annotation-evidence-core"
+        if (shared / "qualitative_umap_resolution.py").is_file():
+            if str(shared) not in sys.path:
+                sys.path.insert(0, str(shared))
+            import qualitative_umap_resolution as module
+            return module
+    raise RuntimeError("Shared qualitative UMAP resolution module not found")
+
+
+_RESOLUTION = _load_resolution_module()
 
 
 RELATIONS = {"concordant", "conflict", "indeterminate"}
@@ -11,7 +32,8 @@ SAME_LABEL_TOPOLOGIES = {"adjacent", "disconnected", "not_applicable"}
 SEPARATION_EXPLANATIONS = {"state_dominant", "sample_effect", "trajectory_boundary", "none"}
 CONFLICT_RESOLUTION_BASES = {
     "cell_level_coexpression", "sample_metadata", "trajectory_metric",
-    "reference_mapping", "quantitative_qc", "literature_only", "none",
+    "reference_mapping", "quantitative_qc", "integrated_marker_umap_reassessment",
+    "literature_only", "none",
 }
 
 
@@ -35,11 +57,11 @@ def _normalize_cluster_entries(audit):
     raise ValueError("UMAP audit clusters must be an object or list")
 
 
-def _record_context(records):
+def _record_context(records, entries=None):
     context = {}
     for record in records or []:
         cluster = str(record.get("cluster_id", ""))
-        label = str(record.get("stable_id") or record.get("canonical_subtype") or record.get("celltype_en") or "")
+        label = _RESOLUTION.effective_label(record, (entries or {}).get(cluster, {}))
         states = record.get("state_list", [])
         if isinstance(states, str):
             try:
@@ -60,10 +82,11 @@ def _record_context(records):
     return context
 
 
-def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
+def validate_umap_audit(audit, expected_clusters, formal=False, records=None, evidence=None):
     expected = [str(cluster) for cluster in expected_clusters]
     entries, duplicates = _normalize_cluster_entries(audit)
-    record_context = _record_context(records)
+    record_by_cluster = {str(record.get("cluster_id", "")): record for record in records or []}
+    record_context = _record_context(records, entries)
     label_groups = {}
     for cluster, item in record_context.items():
         if item["label"]:
@@ -84,7 +107,8 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
         if cluster not in entries:
             continue
         item = entries[cluster]
-        relation = str(item.get("marker_umap_relation", ""))
+        relation = _RESOLUTION.normalize_relation(item.get("marker_umap_relation", ""))
+        item["marker_umap_relation"] = relation
         research_status = str(item.get("research_status", ""))
         same_label_clusters = [str(value) for value in item.get("same_label_clusters", [])]
         same_label_topology = str(item.get("same_label_topology", ""))
@@ -107,6 +131,10 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None):
             errors.append(f"Cluster {cluster} invalid separation_explanation: {separation_explanation}")
         if conflict_resolution_basis not in CONFLICT_RESOLUTION_BASES:
             errors.append(f"Cluster {cluster} invalid conflict_resolution_basis: {conflict_resolution_basis}")
+        if record_by_cluster:
+            errors.extend(_RESOLUTION.validate_identity_resolution(
+                item, record_by_cluster.get(cluster, {}), evidence=evidence, formal=formal
+            ))
 
         if record_context:
             label = record_context.get(cluster, {}).get("label", "")
@@ -215,6 +243,7 @@ def apply_umap_audit(records, validated):
     entries = validated["entries"]
     for record in records:
         item = entries[str(record.get("cluster_id", ""))]
+        _RESOLUTION.apply_identity_resolution(record, item)
         record["umap_review_status"] = "reviewed"
         record["umap_neighbors"] = item.get("nearest_clusters", [])
         record["umap_topology"] = item.get("topology_summary", "")

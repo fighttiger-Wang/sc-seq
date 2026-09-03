@@ -1,76 +1,132 @@
 {
-  "config_version": "3.0.0",
+  "config_version": "3.1.0",
   "thresholds": {
     "minimum_detection_floor": 0.05,
-    "primary_detection_floor": 0.20,
-    "rival_review_floor": 0.10,
-    "minimum_detection_delta": 0.10,
+    "primary_detection_floor": 0.2,
+    "rival_review_floor": 0.1,
+    "minimum_detection_delta": 0.1,
     "primary_robust_z": 2.0,
     "rival_robust_z": 1.5,
     "minimum_core_markers": 3,
-    "minimum_core_fraction": 0.50,
+    "minimum_core_fraction": 0.5,
     "rival_core_markers_for_review": 3,
-    "rival_core_strong_for_review": 2,
-    "rival_to_primary_score_ratio": 0.20,
-    "minimum_accept_margin": 0.15
+    "rival_core_strong_for_review": 2
   },
   "major_label_map": {
-    "B_cell": "B_cell", "plasma": "B_cell", "T_cell": "T_cell", "NK": "NK_cell",
-    "neutrophil": "Myeloid_cell", "monocyte": "Myeloid_cell", "macrophage": "Myeloid_cell",
-    "lipid_macrophage": "Myeloid_cell", "mast": "Myeloid_cell", "cDC1": "Myeloid_cell",
-    "cDC2": "Myeloid_cell", "DC3": "Myeloid_cell", "pDC": "Myeloid_cell", "migratory_DC": "Myeloid_cell",
-    "epithelial": "Epithelial_cell", "endothelial": "Endothelial_cell", "stromal": "Stromal_cell",
-    "neural": "Neural_cell", "erythroid": "Erythroid", "megakaryocyte_platelet": "Megakaryocyte"
+    "B_cell": "B_cell",
+    "plasma": "B_cell",
+    "T_cell": "T_cell",
+    "NK": "NK_cell",
+    "neutrophil": "Myeloid_cell",
+    "monocyte": "Myeloid_cell",
+    "macrophage": "Myeloid_cell",
+    "lipid_macrophage": "Myeloid_cell",
+    "mast": "Myeloid_cell",
+    "cDC1": "Myeloid_cell",
+    "cDC2": "Myeloid_cell",
+    "DC3": "Myeloid_cell",
+    "pDC": "Myeloid_cell",
+    "migratory_DC": "Myeloid_cell",
+    "epithelial": "Epithelial_cell",
+    "endothelial": "Endothelial_cell",
+    "stromal": "Stromal_cell",
+    "neural": "Neural_cell",
+    "erythroid": "Erythroid",
+    "megakaryocyte_platelet": "Megakaryocyte"
   },
   "broad_groups": {
-    "B_cell": "lymphoid", "plasma": "lymphoid", "T_cell": "lymphoid", "NK": "lymphoid",
-    "neutrophil": "myeloid", "monocyte": "myeloid", "macrophage": "myeloid", "lipid_macrophage": "myeloid",
-    "mast": "myeloid", "cDC1": "myeloid", "cDC2": "myeloid", "DC3": "myeloid", "pDC": "myeloid", "migratory_DC": "myeloid",
-    "epithelial": "epithelial", "endothelial": "vascular", "stromal": "stromal", "neural": "neural",
-    "erythroid": "erythroid", "megakaryocyte_platelet": "platelet"
+    "B_cell": "lymphoid",
+    "plasma": "lymphoid",
+    "T_cell": "lymphoid",
+    "NK": "lymphoid",
+    "neutrophil": "myeloid",
+    "monocyte": "myeloid",
+    "macrophage": "myeloid",
+    "lipid_macrophage": "myeloid",
+    "mast": "myeloid",
+    "cDC1": "myeloid",
+    "cDC2": "myeloid",
+    "DC3": "myeloid",
+    "pDC": "myeloid",
+    "migratory_DC": "myeloid",
+    "epithelial": "epithelial",
+    "endothelial": "vascular",
+    "stromal": "stromal",
+    "neural": "neural",
+    "erythroid": "erythroid",
+    "megakaryocyte_platelet": "platelet"
   },
   "major_identity_policy": {
     "mode": "major_identity_first",
     "interpretation": "In a mixed/all-cell major run, retain the best coherent major identity and move cross-lineage, ambient, contamination, and doublet risk to explicit downstream review fields. Multi_cell requires no coherent dominant identity or cell-level validated mixture/doublet evidence.",
     "qc_exception": {
       "enabled_with_project_prior": true,
-      "allowed_labels": ["debris", "Low_quality"],
-      "minimum_qc_state_fraction_top50": 0.30
+      "allowed_labels": [
+        "debris",
+        "Low_quality"
+      ],
+      "minimum_qc_state_fraction_top50": 0.3
     }
   },
   "project_major_vocabulary_policy": {
-    "minimum_candidate_score_ratio": 0.35,
     "interpretation": "A project label is a tiebreaker or output projection, never a replacement for a coherent identity program.",
     "identity_equivalences": {
-      "Mesothelial_cell": ["Mesothelial_cell", "Stromal_cell"]
+      "Mesothelial_cell": [
+        "Mesothelial_cell",
+        "Stromal_cell"
+      ]
     }
   },
   "major_parent_identity_gates": [
     {
       "rule_id": "REQUIRE_B_PARENT_PROGRAM_FOR_B_DESCENDANTS",
-      "ancestors": ["B_cell"],
+      "ancestors": [
+        "B_cell"
+      ],
       "descendants_only": true,
-      "required_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "EBF1"],
+      "required_anchors": [
+        "CD79A",
+        "CD79B",
+        "MS4A1",
+        "PAX5",
+        "EBF1"
+      ],
       "minimum_required_anchors": 3,
-      "anchor_detection_floor": 0.10,
+      "anchor_detection_floor": 0.1,
       "interpretation": "A memory/naive/activated B child program cannot compete in major mode without a coherent B-lineage parent program."
     },
     {
       "rule_id": "REQUIRE_T_PARENT_PROGRAM_FOR_T_DESCENDANTS",
-      "ancestors": ["T_cell"],
+      "ancestors": [
+        "T_cell"
+      ],
       "descendants_only": true,
-      "required_anchors": ["CD3D", "CD3E", "CD3G", "TRAC"],
+      "required_anchors": [
+        "CD3D",
+        "CD3E",
+        "CD3G",
+        "TRAC"
+      ],
       "minimum_required_anchors": 2,
-      "anchor_detection_floor": 0.10,
+      "anchor_detection_floor": 0.1,
       "interpretation": "T-state or subtype programs require a coherent CD3/TCR parent program."
     },
     {
       "rule_id": "REQUIRE_EPITHELIAL_PARENT_PROGRAM_FOR_EPITHELIAL_DESCENDANTS",
-      "ancestors": ["Epithelial_cell", "Lung_epithelial"],
+      "ancestors": [
+        "Epithelial_cell",
+        "Lung_epithelial"
+      ],
       "descendants_only": true,
-      "required_anchors": ["EPCAM", "KRT8", "KRT18", "KRT19", "CLDN18"],
+      "required_anchors": [
+        "EPCAM",
+        "KRT8",
+        "KRT18",
+        "KRT19",
+        "CLDN18"
+      ],
       "minimum_required_anchors": 2,
-      "anchor_detection_floor": 0.10,
+      "anchor_detection_floor": 0.1,
       "interpretation": "Tissue-secreted genes alone do not establish an epithelial child identity without structural epithelial support."
     }
   ],
@@ -78,141 +134,246 @@
     {
       "rule_id": "VALIDATE_PROJECT_PRIOR_ILC2_PROGRAM",
       "label": "ILC2",
-      "parent_path": ["Cell", "Immune_cell", "Innate_lymphoid_cell", "ILC2"],
-      "core_markers": {"IL1RL1": 0.10, "GATA3": 0.10, "RORA": 0.10, "IL7R": 0.10},
+      "parent_path": [
+        "Cell",
+        "Immune_cell",
+        "Innate_lymphoid_cell",
+        "ILC2"
+      ],
+      "core_markers": {
+        "IL1RL1": 0.1,
+        "GATA3": 0.1,
+        "RORA": 0.1,
+        "IL7R": 0.1
+      },
       "minimum_core_markers": 3,
-      "supportive_markers": {"AREG": 0.10, "CALCA": 0.10, "IL2RA": 0.10},
+      "supportive_markers": {
+        "AREG": 0.1,
+        "CALCA": 0.1,
+        "IL2RA": 0.1
+      },
       "minimum_supportive_markers": 1,
-      "forbidden_markers": {"CD3D": 0.20, "CD3E": 0.20, "TRAC": 0.20, "NKG7": 0.30, "MS4A1": 0.20},
+      "forbidden_markers": {
+        "CD3D": 0.2,
+        "CD3E": 0.2,
+        "TRAC": 0.2,
+        "NKG7": 0.3,
+        "MS4A1": 0.2
+      },
       "maximum_forbidden_markers": 1,
       "interpretation": "A project-prior ILC2 call requires a coherent IL1RL1/GATA3/RORA/IL7R type-2 innate program with supportive effector genes and without a competing T, NK, or B parent program.",
-      "evidence_ids": ["SRC_CL", "SRC_USER_MAP"]
+      "evidence_ids": [
+        "SRC_CL",
+        "SRC_USER_MAP"
+      ]
     }
   ],
   "tnk_rules": {
-    "nk_specific_anchors": ["NCR1", "NCR3", "FCGR3A", "KLRF1"]
+    "nk_specific_anchors": [
+      "NCR1",
+      "NCR3",
+      "FCGR3A",
+      "KLRF1"
+    ]
   },
   "competing_program_policy": {
     "minimum_core_review": 3,
     "minimum_core_strong": 2,
-    "minimum_score_ratio": 0.35,
-    "minimum_specificity": 0.10,
+    "minimum_specificity": 0.1,
     "interpretation": "A second identity program must be directionally enriched above dataset background and competitive with the primary; absolute detection or an ontology ancestor is not a mixed-population signal."
   },
   "off_parent_audit": {
     "enabled_with_full_ratio": true,
     "minimum_core_review": 3,
     "minimum_core_strong": 2,
-    "minimum_specificity": 0.10,
-    "minimum_score_ratio": 1.25,
-    "minimum_score_margin": 0.15,
-    "conflict_score_ratio": 0.70
+    "minimum_specificity": 0.1
   },
-  "negative_conflict_relative_reference_min_fraction": 0.50,
+  "negative_conflict_relative_reference_min_fraction": 0.5,
   "mutually_exclusive_program_rules": [
     {
       "rule_id": "ARBITRATE_ALPHA_BETA_VS_GAMMA_DELTA_TCR",
       "sides": {
         "alpha_beta": {
-          "ancestors": ["CD4_T", "CD8_T"],
-          "anchors": ["TRAC", "TRBC1", "TRBC2"],
+          "ancestors": [
+            "CD4_T",
+            "CD8_T"
+          ],
+          "anchors": [
+            "TRAC",
+            "TRBC1",
+            "TRBC2"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         },
         "gamma_delta": {
-          "ancestors": ["gdT"],
-          "anchors": ["TRDC", "TRGC1", "TRGC2"],
+          "ancestors": [
+            "gdT"
+          ],
+          "anchors": [
+            "TRDC",
+            "TRGC1",
+            "TRGC2"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         }
       },
       "minimum_dominance_ratio": 1.25,
-      "minimum_absolute_margin": 0.10,
+      "minimum_absolute_margin": 0.1,
       "biological_invariant": "Conventional alpha-beta and gamma-delta T-cell identities are defined by competing receptor programs; aggregate dual detection cannot establish dual identity.",
-      "validation_ladder": ["cluster_prevalence", "marker_differential_enrichment", "cell_level_coexpression", "paired_scTCR_or_protein"]
+      "validation_ladder": [
+        "cluster_prevalence",
+        "marker_differential_enrichment",
+        "cell_level_coexpression",
+        "paired_scTCR_or_protein"
+      ]
     },
     {
       "rule_id": "ARBITRATE_TCR_VS_NK_IDENTITY",
       "sides": {
         "t_cell": {
-          "ancestors": ["T_cell"],
-          "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"],
+          "ancestors": [
+            "T_cell"
+          ],
+          "anchors": [
+            "CD3D",
+            "CD3E",
+            "CD3G",
+            "TRAC"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         },
         "nk_cell": {
-          "ancestors": ["NK_cell"],
-          "anchors": ["NKG7", "KLRD1", "NCR1", "GNLY"],
+          "ancestors": [
+            "NK_cell"
+          ],
+          "anchors": [
+            "NKG7",
+            "KLRD1",
+            "NCR1",
+            "GNLY"
+          ],
           "minimum_anchors": 3,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         }
       },
       "minimum_dominance_ratio": 1.25,
-      "minimum_absolute_margin": 0.10,
+      "minimum_absolute_margin": 0.1,
       "biological_invariant": "Shared cytotoxic genes do not define NK identity when a broad coherent TCR program dominates and NK-specific receptors are absent.",
-      "validation_ladder": ["cluster_prevalence", "marker_differential_enrichment", "cell_level_coexpression", "paired_scTCR_or_protein"]
+      "validation_ladder": [
+        "cluster_prevalence",
+        "marker_differential_enrichment",
+        "cell_level_coexpression",
+        "paired_scTCR_or_protein"
+      ]
     }
   ],
   "identity_branch_gates": [
     {
-      "rule_id": "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR",
-      "ancestors": ["MAIT"],
-      "required_anchors": ["TRAV1-2"],
-      "minimum_required_anchors": 1,
-      "anchor_detection_floor": 0.10,
-      "relative_reference_min_fraction": 0.50,
-      "minimum_relative_anchors": 1
+      "rule_id": "REQUIRE_MAIT_COHERENT_ALPHA_BETA_TCR",
+      "ancestors": [
+        "MAIT"
+      ],
+      "required_anchors": [
+        "TRAC",
+        "TRBC1",
+        "TRBC2"
+      ],
+      "minimum_required_anchors": 2,
+      "anchor_detection_floor": 0.1,
+      "relative_reference_min_fraction": 0.2,
+      "minimum_relative_anchors": 2
     },
     {
       "rule_id": "REQUIRE_GAMMA_DELTA_TCR_ANCHORS",
-      "ancestors": ["gdT"],
-      "required_anchors": ["TRDC", "TRGC1", "TRGC2"],
+      "ancestors": [
+        "gdT"
+      ],
+      "required_anchors": [
+        "TRDC",
+        "TRGC1",
+        "TRGC2"
+      ],
       "minimum_required_anchors": 2,
-      "anchor_detection_floor": 0.10,
-      "relative_reference_min_fraction": 0.50,
+      "anchor_detection_floor": 0.1,
+      "relative_reference_min_fraction": 0.5,
       "minimum_relative_anchors": 2
     },
     {
       "rule_id": "REQUIRE_CD4_ALPHA_BETA_ANCHOR",
-      "ancestors": ["CD4_T"],
-      "required_anchors": ["CD4", "CD40LG"],
+      "ancestors": [
+        "CD4_T"
+      ],
+      "required_anchors": [
+        "CD4",
+        "CD40LG"
+      ],
       "minimum_required_anchors": 1,
-      "anchor_detection_floor": 0.10,
-      "relative_reference_min_fraction": 0.50,
+      "anchor_detection_floor": 0.1,
+      "relative_reference_min_fraction": 0.5,
       "minimum_relative_anchors": 1
     },
     {
       "rule_id": "REQUIRE_CD8_ALPHA_BETA_ANCHOR",
-      "ancestors": ["CD8_T"],
-      "required_anchors": ["CD8A", "CD8B", "CD8B1"],
+      "ancestors": [
+        "CD8_T"
+      ],
+      "required_anchors": [
+        "CD8A",
+        "CD8B",
+        "CD8B1"
+      ],
       "minimum_required_anchors": 1,
-      "anchor_detection_floor": 0.10,
-      "relative_reference_min_fraction": 0.20,
+      "anchor_detection_floor": 0.1,
+      "relative_reference_min_fraction": 0.2,
       "minimum_relative_anchors": 1
     },
     {
       "rule_id": "REQUIRE_COHERENT_TCR_PROGRAM",
-      "ancestors": ["T_cell"],
-      "required_anchors": ["CD3D", "CD3E", "CD3G", "TRAC"],
+      "ancestors": [
+        "T_cell"
+      ],
+      "required_anchors": [
+        "CD3D",
+        "CD3E",
+        "CD3G",
+        "TRAC"
+      ],
       "minimum_required_anchors": 2,
-      "anchor_detection_floor": 0.10
+      "anchor_detection_floor": 0.1
     },
     {
       "rule_id": "REQUIRE_DOUBLE_NEGATIVE_T_PHENOTYPE",
-      "ancestors": ["DNT"],
+      "ancestors": [
+        "DNT"
+      ],
       "required_anchors": [],
       "minimum_required_anchors": 0,
-      "forbidden_anchors": ["CD4", "CD40LG", "CD8A", "CD8B", "CD8B1"],
-      "forbidden_detection_ceiling": 0.20,
+      "forbidden_anchors": [
+        "CD4",
+        "CD40LG",
+        "CD8A",
+        "CD8B",
+        "CD8B1"
+      ],
+      "forbidden_detection_ceiling": 0.2,
       "maximum_forbidden_anchors": 0
     },
     {
       "rule_id": "EXCLUDE_COHERENT_GAMMA_DELTA_PROGRAM_FROM_DNT",
-      "ancestors": ["DNT"],
+      "ancestors": [
+        "DNT"
+      ],
       "required_anchors": [],
       "minimum_required_anchors": 0,
-      "forbidden_anchors": ["TRDC", "TRGC1", "TRGC2"],
-      "forbidden_detection_ceiling": 0.10,
+      "forbidden_anchors": [
+        "TRDC",
+        "TRGC1",
+        "TRGC2"
+      ],
+      "forbidden_detection_ceiling": 0.1,
       "maximum_forbidden_anchors": 1
     }
   ],
@@ -220,30 +381,38 @@
     {
       "rule_id": "PREFER_SUPPORTED_GDT_BRANCH_OVER_GENERIC_T",
       "ancestor": "T_cell",
-      "descendants": ["Naive_like_gdT", "IL17A_gdT", "gdT"],
-      "minimum_score_ratio_to_ancestor": 0.75,
+      "descendants": [
+        "Naive_like_gdT",
+        "IL17A_gdT",
+        "gdT"
+      ],
       "minimum_core_review": 3
     },
     {
       "rule_id": "PREFER_SUPPORTED_NAIVE_ALPHA_BETA_BRANCH_OVER_GENERIC_T",
       "ancestor": "T_cell",
-      "descendants": ["CD4_Tn", "CD8_Tn"],
-      "minimum_score_ratio_to_ancestor": 0.75,
+      "descendants": [
+        "CD4_Tn",
+        "CD8_Tn"
+      ],
       "minimum_core_review": 3
     },
     {
       "rule_id": "PREFER_DNT_WHEN_DOUBLE_NEGATIVE_PHENOTYPE_SUPPORTED",
       "ancestor": "Tn",
-      "descendants": ["DNT"],
-      "minimum_score_ratio_to_ancestor": 0.10,
+      "descendants": [
+        "DNT"
+      ],
       "minimum_core_review": 0,
       "gate_only": true
     },
     {
       "rule_id": "PREFER_SUPPORTED_NAIVE_ALPHA_BETA_BRANCH",
       "ancestor": "Tn",
-      "descendants": ["CD4_Tn", "CD8_Tn"],
-      "minimum_score_ratio_to_ancestor": 0.10,
+      "descendants": [
+        "CD4_Tn",
+        "CD8_Tn"
+      ],
       "minimum_core_review": 2,
       "gate_only": true
     },
@@ -260,7 +429,6 @@
         "Tfh",
         "Tph"
       ],
-      "minimum_score_ratio_to_ancestor": 0.7,
       "minimum_core_review": 2
     },
     {
@@ -273,14 +441,15 @@
         "CD8_Teff",
         "CD8_Trm"
       ],
-      "minimum_score_ratio_to_ancestor": 0.7,
       "minimum_core_review": 2
     },
     {
       "rule_id": "PREFER_SUPPORTED_GDT_SUBTYPE",
       "ancestor": "gdT",
-      "descendants": ["Naive_like_gdT", "IL17A_gdT"],
-      "minimum_score_ratio_to_ancestor": 0.80,
+      "descendants": [
+        "Naive_like_gdT",
+        "IL17A_gdT"
+      ],
       "minimum_core_review": 3
     }
   ],
@@ -289,21 +458,40 @@
       "rule_id": "REQUIRE_DC3_APC_DC2_MONOCYTE_BOUNDARY_PROGRAM",
       "label": "DC3",
       "required": true,
-      "core_anchors": ["HLA-DRA", "HLA-DPA1", "HLA-DPB1", "CD74"],
+      "core_anchors": [
+        "HLA-DRA",
+        "HLA-DPA1",
+        "HLA-DPB1",
+        "CD74"
+      ],
       "minimum_core_anchors": 3,
-      "core_detection_floor": 0.20,
-      "supportive_anchors": ["CD1C", "CLEC10A", "FCER1A"],
+      "core_detection_floor": 0.2,
+      "supportive_anchors": [
+        "CD1C",
+        "CLEC10A",
+        "FCER1A"
+      ],
       "minimum_supportive_anchors": 2,
-      "supportive_detection_floor": 0.10,
-      "parent_anchors": ["CD14", "FCN1", "VCAN", "FCGR3A"],
+      "supportive_detection_floor": 0.1,
+      "parent_anchors": [
+        "CD14",
+        "FCN1",
+        "VCAN",
+        "FCGR3A"
+      ],
       "minimum_parent_anchors": 3,
-      "parent_detection_floor": 0.20,
+      "parent_detection_floor": 0.2,
       "forbidden_programs": [
         {
           "program": "coherent_cDC1",
-          "anchors": ["CLEC9A", "XCR1", "WDFY4", "CADM1"],
+          "anchors": [
+            "CLEC9A",
+            "XCR1",
+            "WDFY4",
+            "CADM1"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         }
       ]
     },
@@ -311,77 +499,152 @@
       "rule_id": "REQUIRE_NKT_TCR_PLUS_NK_PROGRAM_AND_EXCLUDE_GDT",
       "label": "NKT",
       "required": true,
-      "core_anchors": ["CD3D", "TRAC"],
+      "core_anchors": [
+        "CD3D",
+        "TRAC"
+      ],
       "minimum_core_anchors": 2,
-      "core_detection_floor": 0.10,
-      "supportive_anchors": ["KLRD1", "NKG7", "NCR1", "XCL1", "XCL2", "ZBTB16", "TRAV10"],
+      "core_detection_floor": 0.1,
+      "supportive_anchors": [
+        "KLRD1",
+        "NKG7",
+        "NCR1",
+        "XCL1",
+        "XCL2",
+        "ZBTB16",
+        "TRAV10"
+      ],
       "minimum_supportive_anchors": 2,
-      "supportive_detection_floor": 0.10,
-      "parent_anchors": ["GNLY", "GZMB", "PRF1", "FGFBP2"],
+      "supportive_detection_floor": 0.1,
+      "parent_anchors": [
+        "GNLY",
+        "GZMB",
+        "PRF1",
+        "FGFBP2"
+      ],
       "minimum_parent_anchors": 1,
-      "parent_detection_floor": 0.10,
+      "parent_detection_floor": 0.1,
       "forbidden_programs": [
         {
           "program": "coherent_gamma_delta_tcr",
-          "anchors": ["TRDC", "TRGC1", "TRGC2"],
+          "anchors": [
+            "TRDC",
+            "TRGC1",
+            "TRGC2"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10,
-          "minimum_dataset_fraction": 0.50
+          "detection_floor": 0.1,
+          "minimum_dataset_fraction": 0.5
         }
       ]
     },
     {
       "rule_id": "NAIVE_B_ABSOLUTE_PROGRAM_FOR_REPEATED_CANONICAL_CLUSTERS",
       "label": "Naive_B",
-      "core_anchors": ["IGHM", "IGHD", "TCL1A"],
+      "core_anchors": [
+        "IGHM",
+        "IGHD",
+        "TCL1A"
+      ],
       "minimum_core_anchors": 2,
       "core_detection_floor": 0.25,
-      "supportive_anchors": ["FCER2", "IL4R", "HVCN1", "FCRL1"],
+      "supportive_anchors": [
+        "FCER2",
+        "IL4R",
+        "HVCN1",
+        "FCRL1"
+      ],
       "minimum_supportive_anchors": 1,
-      "supportive_detection_floor": 0.10,
-      "parent_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "CD74", "HLA-DRA"],
+      "supportive_detection_floor": 0.1,
+      "parent_anchors": [
+        "CD79A",
+        "CD79B",
+        "MS4A1",
+        "PAX5",
+        "CD74",
+        "HLA-DRA"
+      ],
       "minimum_parent_anchors": 3,
-      "parent_detection_floor": 0.10,
+      "parent_detection_floor": 0.1,
       "forbidden_programs": [
         {
           "program": "active_early_B_recombination",
-          "anchors": ["RAG1", "RAG2", "DNTT", "VPREB1", "VPREB1A", "IGLL1"],
+          "anchors": [
+            "RAG1",
+            "RAG2",
+            "DNTT",
+            "VPREB1",
+            "VPREB1A",
+            "IGLL1"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         },
         {
           "program": "terminal_antibody_secretion",
-          "anchors": ["PRDM1", "SDC1", "DERL3"],
+          "anchors": [
+            "PRDM1",
+            "SDC1",
+            "DERL3"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         }
       ]
     },
     {
       "rule_id": "IMMATURE_B_SURFACE_IGM_WITH_REDUCED_RECOMBINATION",
       "label": "Immature_B",
-      "core_anchors": ["IGHM", "CD24", "CD38", "TCL1A", "VPREB3"],
+      "core_anchors": [
+        "IGHM",
+        "CD24",
+        "CD38",
+        "TCL1A",
+        "VPREB3"
+      ],
       "minimum_core_anchors": 4,
-      "core_detection_floor": 0.30,
-      "supportive_anchors": ["ROR1", "FCRL1", "IL4R"],
+      "core_detection_floor": 0.3,
+      "supportive_anchors": [
+        "ROR1",
+        "FCRL1",
+        "IL4R"
+      ],
       "minimum_supportive_anchors": 1,
-      "supportive_detection_floor": 0.10,
-      "parent_anchors": ["CD79A", "CD79B", "MS4A1", "PAX5", "CD74", "HLA-DRA"],
+      "supportive_detection_floor": 0.1,
+      "parent_anchors": [
+        "CD79A",
+        "CD79B",
+        "MS4A1",
+        "PAX5",
+        "CD74",
+        "HLA-DRA"
+      ],
       "minimum_parent_anchors": 3,
-      "parent_detection_floor": 0.10,
+      "parent_detection_floor": 0.1,
       "forbidden_programs": [
         {
           "program": "dataset_dominant_active_early_B_recombination",
-          "anchors": ["RAG1", "RAG2", "DNTT", "VPREB1", "VPREB1A", "IGLL1"],
+          "anchors": [
+            "RAG1",
+            "RAG2",
+            "DNTT",
+            "VPREB1",
+            "VPREB1A",
+            "IGLL1"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10,
-          "minimum_dataset_fraction": 0.50
+          "detection_floor": 0.1,
+          "minimum_dataset_fraction": 0.5
         },
         {
           "program": "terminal_antibody_secretion",
-          "anchors": ["PRDM1", "SDC1", "DERL3"],
+          "anchors": [
+            "PRDM1",
+            "SDC1",
+            "DERL3"
+          ],
           "minimum_anchors": 2,
-          "detection_floor": 0.10
+          "detection_floor": 0.1
         }
       ]
     }
@@ -391,113 +654,188 @@
       "rule_id": "PREFER_CD8_TN_WHEN_NAIVE_PROGRAM_IS_COHERENT_AND_ACTIVATION_HISTORY_IS_ABSENT",
       "preferred": "CD8_Tn",
       "over": "CD8_Tcm",
-      "minimum_score_ratio": 0.80,
       "minimum_core_review": 3,
-      "required_anchors": ["TCF7", "LEF1", "IL7R"],
+      "required_anchors": [
+        "TCF7",
+        "LEF1",
+        "IL7R"
+      ],
       "minimum_required_anchors": 3,
-      "anchor_detection_floor": 0.30,
-      "forbidden_anchors": ["CD44", "IFNG", "GZMB", "PRF1"],
-      "forbidden_detection_floor": 0.20,
+      "anchor_detection_floor": 0.3,
+      "forbidden_anchors": [
+        "CD44",
+        "IFNG",
+        "GZMB",
+        "PRF1"
+      ],
+      "forbidden_detection_floor": 0.2,
       "maximum_forbidden_anchors": 0
     },
     {
       "rule_id": "PREFER_TRANSITIONAL_B_WHEN_MATURATION_BRIDGE_PROGRAM_IS_COMPARABLE",
       "preferred": "Transitional_B",
       "over": "Naive_B",
-      "minimum_score_ratio": 0.95,
       "minimum_core_review": 2,
-      "required_anchors": ["CD24", "CD38", "IGHM"],
+      "required_anchors": [
+        "CD24",
+        "CD38",
+        "IGHM"
+      ],
       "minimum_required_anchors": 3,
-      "anchor_detection_floor": 0.50,
-      "forbidden_anchors": ["RAG1", "RAG2", "DNTT"],
-      "forbidden_detection_floor": 0.10,
+      "anchor_detection_floor": 0.5,
+      "forbidden_anchors": [
+        "RAG1",
+        "RAG2",
+        "DNTT"
+      ],
+      "forbidden_detection_floor": 0.1,
       "maximum_forbidden_anchors": 0
     },
     {
       "rule_id": "PREFER_PRE_B_WHEN_PRE_B_RECEPTOR_PROGRAM_IS_COMPARABLE",
       "preferred": "Pre_B",
       "over": "Pro_B",
-      "minimum_score_ratio": 0.95,
       "minimum_core_review": 3,
-      "required_anchors": ["CD79A", "VPREB1", "VPREB1A", "IGLL1", "RAG1"],
+      "required_anchors": [
+        "CD79A",
+        "VPREB1",
+        "VPREB1A",
+        "IGLL1",
+        "RAG1"
+      ],
       "minimum_required_anchors": 3,
-      "anchor_detection_floor": 0.10,
-      "forbidden_anchors": ["MS4A1"],
-      "forbidden_detection_floor": 0.20,
+      "anchor_detection_floor": 0.1,
+      "forbidden_anchors": [
+        "MS4A1"
+      ],
+      "forbidden_detection_floor": 0.2,
       "maximum_forbidden_anchors": 0
     },
     {
       "rule_id": "PREFER_IMMATURE_B_AT_SURFACE_IGM_RECOMBINATION_EXIT",
       "preferred": "Immature_B",
       "over": "Pre_B",
-      "minimum_score_ratio": 0.0,
       "minimum_core_review": 0,
       "require_absolute_program_gate": true,
-      "required_anchors": ["IGHM", "CD24", "CD38", "TCL1A", "VPREB3"],
+      "required_anchors": [
+        "IGHM",
+        "CD24",
+        "CD38",
+        "TCL1A",
+        "VPREB3"
+      ],
       "minimum_required_anchors": 4,
-      "anchor_detection_floor": 0.30,
-      "forbidden_anchors": ["PRDM1", "SDC1", "DERL3"],
-      "forbidden_detection_floor": 0.10,
+      "anchor_detection_floor": 0.3,
+      "forbidden_anchors": [
+        "PRDM1",
+        "SDC1",
+        "DERL3"
+      ],
+      "forbidden_detection_floor": 0.1,
       "maximum_forbidden_anchors": 1
     }
   ],
   "sublineage_conflict_rules": [
     {
       "rule_id": "CD4_ALPHA_BETA_VS_CD8_ALPHA_BETA_T",
-      "left_ancestors": ["CD4_T"],
-      "right_ancestors": ["CD8_T"],
-      "left_anchors": ["CD4", "CD40LG"],
-      "right_anchors": ["CD8A", "CD8B", "CD8B1"],
+      "left_ancestors": [
+        "CD4_T"
+      ],
+      "right_ancestors": [
+        "CD8_T"
+      ],
+      "left_anchors": [
+        "CD4",
+        "CD40LG"
+      ],
+      "right_anchors": [
+        "CD8A",
+        "CD8B",
+        "CD8B1"
+      ],
       "minimum_left_anchors": 1,
       "minimum_right_anchors": 1,
       "minimum_rival_core_review": 2,
-      "minimum_score_ratio": 0.70,
-      "anchor_detection_floor": 0.20
+      "anchor_detection_floor": 0.2
     },
     {
       "rule_id": "CD4_ALPHA_BETA_VS_GAMMA_DELTA_T",
-      "left_ancestors": ["CD4_T"],
-      "right_ancestors": ["gdT"],
-      "left_anchors": ["CD4", "CD40LG"],
-      "right_anchors": ["TRDC", "TRGC1", "TRGC2"],
+      "left_ancestors": [
+        "CD4_T"
+      ],
+      "right_ancestors": [
+        "gdT"
+      ],
+      "left_anchors": [
+        "CD4",
+        "CD40LG"
+      ],
+      "right_anchors": [
+        "TRDC",
+        "TRGC1",
+        "TRGC2"
+      ],
       "minimum_left_anchors": 1,
       "minimum_right_anchors": 2,
       "minimum_rival_core_review": 2,
-      "minimum_score_ratio": 0.70,
-      "anchor_detection_floor": 0.20
+      "anchor_detection_floor": 0.2
     },
     {
       "rule_id": "CD8_ALPHA_BETA_VS_GAMMA_DELTA_T",
-      "left_ancestors": ["CD8_T"],
-      "right_ancestors": ["gdT"],
-      "left_anchors": ["CD8A", "CD8B", "CD8B1"],
-      "right_anchors": ["TRDC", "TRGC1", "TRGC2"],
+      "left_ancestors": [
+        "CD8_T"
+      ],
+      "right_ancestors": [
+        "gdT"
+      ],
+      "left_anchors": [
+        "CD8A",
+        "CD8B",
+        "CD8B1"
+      ],
+      "right_anchors": [
+        "TRDC",
+        "TRGC1",
+        "TRGC2"
+      ],
       "minimum_left_anchors": 1,
       "minimum_right_anchors": 2,
       "minimum_rival_core_review": 2,
-      "minimum_score_ratio": 0.70,
-      "anchor_detection_floor": 0.20
+      "anchor_detection_floor": 0.2
     }
   ],
   "myeloid_boundary_rules": {
     "neutrophil_vs_monocyte": {
       "rule_id": "MYELOID_NEUTROPHIL_VS_MONOCYTE_PROGRAM_GATE",
       "monocyte_program": {
-        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "LST1": 0.20, "TYROBP": 0.20},
+        "markers": {
+          "CD14": 0.2,
+          "FCN1": 0.2,
+          "VCAN": 0.2,
+          "LST1": 0.2,
+          "TYROBP": 0.2
+        },
         "minimum_markers": 4
       },
       "neutrophil_commitment": {
-        "markers": {"CSF3R": 0.20, "FCGR3B": 0.10},
+        "markers": {
+          "CSF3R": 0.2,
+          "FCGR3B": 0.1
+        },
         "minimum_markers": 2
       },
       "alternative_program_can_complete_commitment": {
         "enabled": true,
-        "required_anchor_markers": {"CSF3R": 0.20},
+        "required_anchor_markers": {
+          "CSF3R": 0.2
+        },
         "minimum_required_anchors": 1,
         "interpretation": "In species such as mouse where FCGR3B is not a reliable commitment requirement, CSF3R plus a coherent mature, granule-development, or inflammatory neutrophil program is sufficient."
       },
       "borderline_activated_neutrophil": {
-        "required_anchor_markers": {"CSF3R": 0.20},
+        "required_anchor_markers": {
+          "CSF3R": 0.2
+        },
         "borderline_marker": "FCGR3B",
         "borderline_floor_fraction": 0.75,
         "program_id": "activated_inflammatory_neutrophil",
@@ -508,197 +846,759 @@
         {
           "program_id": "mature_neutrophil",
           "required_markers": {},
-          "markers": {"FCGR3B": 0.30, "CXCR2": 0.10, "PGLYRP1": 0.10, "LTF": 0.10, "CAMP": 0.10, "CD177": 0.10},
+          "markers": {
+            "FCGR3B": 0.3,
+            "CXCR2": 0.1,
+            "PGLYRP1": 0.1,
+            "LTF": 0.1,
+            "CAMP": 0.1,
+            "CD177": 0.1
+          },
           "minimum_markers": 2
         },
         {
           "program_id": "early_granule_neutrophil",
           "required_markers": {},
-          "markers": {"MPO": 0.10, "ELANE": 0.10, "PRTN3": 0.10, "AZU1": 0.10, "DEFA1": 0.10, "DEFA3": 0.10, "DEFA4": 0.10, "MS4A3": 0.10, "CEBPE": 0.10},
+          "markers": {
+            "MPO": 0.1,
+            "ELANE": 0.1,
+            "PRTN3": 0.1,
+            "AZU1": 0.1,
+            "DEFA1": 0.1,
+            "DEFA3": 0.1,
+            "DEFA4": 0.1,
+            "MS4A3": 0.1,
+            "CEBPE": 0.1
+          },
           "minimum_markers": 2
         },
         {
           "program_id": "activated_inflammatory_neutrophil",
-          "required_markers": {"FCGR3B": 0.10},
-          "markers": {"PI3": 0.10, "SLPI": 0.10, "CXCL8": 0.10},
+          "required_markers": {
+            "FCGR3B": 0.1
+          },
+          "markers": {
+            "PI3": 0.1,
+            "SLPI": 0.1,
+            "CXCL8": 0.1
+          },
           "minimum_markers": 2
         }
       ]
     },
     "dc_identity_programs": {
       "cDC1": {
-        "markers": {"CLEC9A": 0.10, "XCR1": 0.10, "WDFY4": 0.10, "CADM1": 0.10},
+        "markers": {
+          "CLEC9A": 0.1,
+          "XCR1": 0.1,
+          "WDFY4": 0.1,
+          "CADM1": 0.1
+        },
         "minimum_markers": 2
       },
       "cDC2": {
-        "markers": {"CD1C": 0.10, "CLEC10A": 0.10, "FCER1A": 0.10},
+        "markers": {
+          "CD1C": 0.1,
+          "CLEC10A": 0.1,
+          "FCER1A": 0.1
+        },
         "minimum_markers": 2
       },
       "Migratory_DC": {
-        "markers": {"CCR7": 0.10, "FSCN1": 0.10, "LAMP3": 0.10},
+        "markers": {
+          "CCR7": 0.1,
+          "FSCN1": 0.1,
+          "LAMP3": 0.1
+        },
         "minimum_markers": 2
       }
     },
     "dc_like_activation": {
-      "markers": {"CD83": 0.10, "ITGAX": 0.10, "RELB": 0.10},
+      "markers": {
+        "CD83": 0.1,
+        "ITGAX": 0.1,
+        "RELB": 0.1
+      },
       "minimum_markers": 2
     },
     "dc3_vs_monocyte": {
       "rule_id": "MYELOID_DC3_VS_MONOCYTE_COEXPRESSION_GATE",
       "apc_program": {
-        "markers": {"HLA-DRA": 0.20, "HLA-DPA1": 0.20, "HLA-DPB1": 0.20, "CD74": 0.20},
+        "markers": {
+          "HLA-DRA": 0.2,
+          "HLA-DPA1": 0.2,
+          "HLA-DPB1": 0.2,
+          "CD74": 0.2
+        },
         "minimum_markers": 3
       },
       "dc_specific_program": {
-        "markers": {"CD1C": 0.10, "CLEC10A": 0.10, "FCER1A": 0.10},
+        "markers": {
+          "CD1C": 0.1,
+          "CLEC10A": 0.1,
+          "FCER1A": 0.1
+        },
         "minimum_markers": 2
       },
       "monocyte_specific_program": {
-        "markers": {"CD14": 0.20, "FCN1": 0.20, "VCAN": 0.20, "FCGR3A": 0.20},
+        "markers": {
+          "CD14": 0.2,
+          "FCN1": 0.2,
+          "VCAN": 0.2,
+          "FCGR3A": 0.2
+        },
         "minimum_markers": 3,
         "two_marker_competitive_exception": {
           "minimum_markers": 2,
           "minimum_mean_detection": 0.25,
-          "minimum_ratio_to_dc": 0.80
+          "minimum_ratio_to_dc": 0.8
         }
       },
       "pan_myeloid_support": {
-        "markers": {"LST1": 0.20, "TYROBP": 0.20}
+        "markers": {
+          "LST1": 0.2,
+          "TYROBP": 0.2
+        }
       },
       "macrophage_exclusion": {
-        "markers": {"C1QA": 0.20, "C1QB": 0.20, "C1QC": 0.20, "MERTK": 0.20},
+        "markers": {
+          "C1QA": 0.2,
+          "C1QB": 0.2,
+          "C1QC": 0.2,
+          "MERTK": 0.2
+        },
         "minimum_markers": 3,
         "minimum_mean_detection": 0.35,
-        "minimum_ratio_to_dc_specific": 1.00,
+        "minimum_ratio_to_dc_specific": 1.0,
         "interpretation": "A coherent macrophage program that is at least as strong as the DC-specific program blocks the DC3 boundary call; retain macrophage identity and Cycling as state."
       },
       "cdc2_dominance_review": {
         "minimum_dc_specific_markers": 3,
         "maximum_monocyte_specific_markers": 2,
-        "minimum_dominance_ratio": 1.50,
-        "minimum_absolute_margin": 0.20,
+        "minimum_dominance_ratio": 1.5,
+        "minimum_absolute_margin": 0.2,
         "manual_review": true,
         "auto_merge_allowed": false
       }
     }
   },
+  "identity_program_gates": {
+    "NKT": {
+      "rule_id": "REQUIRE_NKT_COMPLETE_TCR_NK_CYTOTOXIC_PROGRAM",
+      "priority": 40,
+      "required": true,
+      "required_programs": [
+        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1},
+        {"program": "NK_specific", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1},
+        {"program": "cytotoxic", "anchors": ["GNLY", "GZMB", "PRF1", "FGFBP2"], "minimum_anchors": 1, "detection_floor": 0.1}
+      ],
+      "forbidden_programs": [
+        {"program": "gamma_delta_TCR", "anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1, "minimum_dataset_fraction": 0.5}
+      ]
+    },
+    "MAIT": {
+      "rule_id": "REQUIRE_MAIT_COMPLETE_ALPHABETA_AND_ALTERNATIVE_PROGRAM",
+      "priority": 30,
+      "required": true,
+      "required_programs": [
+        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1},
+        {"program": "MAIT_noncanonical", "anchors": ["KLRB1", "ZBTB16", "NCR3", "TRAV1-2"], "minimum_anchors": 3, "detection_floor": 0.1}
+      ],
+      "competing_branch": {
+        "own_program": {"anchors": ["TRAC", "TRBC1", "TRBC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "rival_program": {"anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "minimum_dominance_ratio": 1.25,
+        "minimum_absolute_margin": 0.1
+      },
+      "forbidden_programs": [
+        {"program": "coherent_NK_identity", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1}
+      ]
+    },
+    "DNT": {
+      "rule_id": "REQUIRE_DNT_ALPHABETA_TCR_WITHOUT_CD4_CD8_COMMITMENT",
+      "priority": 20,
+      "required": true,
+      "required_programs": [
+        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1}
+      ],
+      "absence_programs": [
+        {"program": "CD4_or_CD8", "anchors": ["CD4", "CD40LG", "CD8A", "CD8B", "CD8B1"], "minimum_anchors": 2, "detection_floor": 0.2}
+      ],
+      "competing_branch": {
+        "own_program": {"anchors": ["TRAC", "TRBC1", "TRBC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "rival_program": {"anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "minimum_dominance_ratio": 1.25,
+        "minimum_absolute_margin": 0.1
+      },
+      "forbidden_programs": [
+        {"program": "coherent_NK_identity", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1}
+      ]
+    }
+  },
   "identity_panels": {
     "B_cell": {
-      "core": ["CD79A", "CD79B", "EBF1", "PAX5", "MS4A1", "FCMR"],
-      "supportive": ["CD74", "CD72", "TNFRSF13C", "IGHM", "IGHD"],
-      "negative": ["CD3D", "TRAC", "NKG7", "PECAM1", "CDH5"]
+      "core": [
+        "CD79A",
+        "CD79B",
+        "EBF1",
+        "PAX5",
+        "MS4A1",
+        "FCMR"
+      ],
+      "supportive": [
+        "CD74",
+        "CD72",
+        "TNFRSF13C",
+        "IGHM",
+        "IGHD"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "NKG7",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "plasma": {
-      "core": ["PRDM1", "XBP1", "SDC1", "MZB1", "DERL3", "FKBP11"],
-      "supportive": ["JCHAIN", "SEC11C", "IGHG1", "IGKC"],
-      "negative": ["CD3D", "TRAC", "PECAM1", "CDH5"]
+      "core": [
+        "PRDM1",
+        "XBP1",
+        "SDC1",
+        "MZB1",
+        "DERL3",
+        "FKBP11"
+      ],
+      "supportive": [
+        "JCHAIN",
+        "SEC11C",
+        "IGHG1",
+        "IGKC"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "T_cell": {
-      "core": ["CD3D", "CD3E", "CD3G", "TRAC", "LCK", "LAT"],
-      "supportive": ["IL7R", "LTB", "TRBC1", "TRBC2"],
-      "negative": ["MS4A1", "CD79A", "PECAM1", "CDH5", "CLEC9A", "XCR1"]
+      "core": [
+        "CD3D",
+        "CD3E",
+        "CD3G",
+        "TRAC",
+        "LCK",
+        "LAT"
+      ],
+      "supportive": [
+        "IL7R",
+        "LTB",
+        "TRBC1",
+        "TRBC2"
+      ],
+      "negative": [
+        "MS4A1",
+        "CD79A",
+        "PECAM1",
+        "CDH5",
+        "CLEC9A",
+        "XCR1"
+      ]
     },
     "NK": {
-      "core": ["NKG7", "KLRD1", "PRF1", "GNLY", "NCR1", "KLRF1"],
-      "supportive": ["GZMB", "GZMK", "CCL5", "TYROBP", "KLRC1", "KLRC2"],
-      "negative": ["MS4A1", "CD79A", "PECAM1", "CDH5"]
+      "core": [
+        "NKG7",
+        "KLRD1",
+        "PRF1",
+        "GNLY",
+        "NCR1",
+        "KLRF1"
+      ],
+      "supportive": [
+        "GZMB",
+        "GZMK",
+        "CCL5",
+        "TYROBP",
+        "KLRC1",
+        "KLRC2"
+      ],
+      "negative": [
+        "MS4A1",
+        "CD79A",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "neutrophil": {
-      "core": ["S100A8", "S100A9", "RETNLG", "CSF3R", "CXCR2", "PGLYRP1"],
-      "supportive": ["CAMP", "NGP", "LCN2", "FCGR3B", "MNDA"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1", "CDH5"]
+      "core": [
+        "S100A8",
+        "S100A9",
+        "RETNLG",
+        "CSF3R",
+        "CXCR2",
+        "PGLYRP1"
+      ],
+      "supportive": [
+        "CAMP",
+        "NGP",
+        "LCN2",
+        "FCGR3B",
+        "MNDA"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "monocyte": {
-      "core": ["LYZ", "LYZ2", "VCAN", "CCR2", "LY6C2", "PLAC8"],
-      "supportive": ["CHIL3", "FCN1", "S100A8", "S100A9", "CTSS"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1", "CDH5"]
+      "core": [
+        "LYZ",
+        "LYZ2",
+        "VCAN",
+        "CCR2",
+        "LY6C2",
+        "PLAC8"
+      ],
+      "supportive": [
+        "CHIL3",
+        "FCN1",
+        "S100A8",
+        "S100A9",
+        "CTSS"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "macrophage": {
-      "core": ["C1QA", "C1QB", "C1QC", "APOE", "MERTK", "ADGRE1", "LPL"],
-      "supportive": ["CD68", "LGMN", "CTSS", "FCER1G", "TYROBP"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1", "CDH5"]
+      "core": [
+        "C1QA",
+        "C1QB",
+        "C1QC",
+        "APOE",
+        "MERTK",
+        "ADGRE1",
+        "LPL"
+      ],
+      "supportive": [
+        "CD68",
+        "LGMN",
+        "CTSS",
+        "FCER1G",
+        "TYROBP"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "lipid_macrophage": {
-      "core": ["FABP4", "PPARG", "CD36", "ADGRE4", "ACE"],
-      "supportive": ["APOE", "LGMN", "CD68", "ADGRE1", "LPL"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "CDH5"]
+      "core": [
+        "FABP4",
+        "PPARG",
+        "CD36",
+        "ADGRE4",
+        "ACE"
+      ],
+      "supportive": [
+        "APOE",
+        "LGMN",
+        "CD68",
+        "ADGRE1",
+        "LPL"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "CDH5"
+      ]
     },
     "mast": {
-      "core": ["KIT", "TPSAB1", "TPSB2", "CPA3", "MS4A2", "HDC"],
-      "supportive": ["FCER1A", "GATA2", "HPGDS"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1"]
+      "core": [
+        "KIT",
+        "TPSAB1",
+        "TPSB2",
+        "CPA3",
+        "MS4A2",
+        "HDC"
+      ],
+      "supportive": [
+        "FCER1A",
+        "GATA2",
+        "HPGDS"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1"
+      ]
     },
     "cDC1": {
-      "core": ["CLEC9A", "XCR1", "WDFY4", "CADM1", "ITGAE"],
-      "supportive": ["IRF8", "BTLA", "BATF3", "H2-AB1", "HLA-DRA"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "CD79A", "CDH5"]
+      "core": [
+        "CLEC9A",
+        "XCR1",
+        "WDFY4",
+        "CADM1",
+        "ITGAE"
+      ],
+      "supportive": [
+        "IRF8",
+        "BTLA",
+        "BATF3",
+        "H2-AB1",
+        "HLA-DRA"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "CD79A",
+        "CDH5"
+      ]
     },
     "cDC2": {
-      "core": ["MGL2", "CD209A", "CLEC10A", "SIRPA", "FCGR2B", "CD1C"],
-      "supportive": ["H2-AB1", "H2-AA", "HLA-DRA", "HLA-DPA1"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "CD79A", "CDH5"]
+      "core": [
+        "MGL2",
+        "CD209A",
+        "CLEC10A",
+        "SIRPA",
+        "FCGR2B",
+        "CD1C"
+      ],
+      "supportive": [
+        "H2-AB1",
+        "H2-AA",
+        "HLA-DRA",
+        "HLA-DPA1"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "CD79A",
+        "CDH5"
+      ]
     },
     "pDC": {
-      "core": ["TCF4", "SIGLECH", "CLEC4C", "GZMB", "CCR9", "LY6D"],
-      "supportive": ["BST2", "RUNX2", "JCHAIN", "GZMB"],
-      "negative": ["CD3D", "TRAC", "PECAM1", "CDH5", "KDR"]
+      "core": [
+        "TCF4",
+        "SIGLECH",
+        "CLEC4C",
+        "GZMB",
+        "CCR9",
+        "LY6D"
+      ],
+      "supportive": [
+        "BST2",
+        "RUNX2",
+        "JCHAIN",
+        "GZMB"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "PECAM1",
+        "CDH5",
+        "KDR"
+      ]
     },
     "migratory_DC": {
-      "core": ["CCR7", "FSCN1", "CCL22", "IL12B", "LY75"],
-      "supportive": ["CCL17", "CD83", "RELB", "H2-AB1", "HLA-DRA"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "CDH5"]
+      "core": [
+        "CCR7",
+        "FSCN1",
+        "CCL22",
+        "IL12B",
+        "LY75"
+      ],
+      "supportive": [
+        "CCL17",
+        "CD83",
+        "RELB",
+        "H2-AB1",
+        "HLA-DRA"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "CDH5"
+      ]
     },
     "epithelial": {
-      "core": ["EPCAM", "KRT8", "KRT18", "KRT19", "KRT7", "SFN"],
-      "supportive": ["KRT14", "KRT17", "MUC1", "CLDN4", "CLDN7"],
-      "negative": ["CD3D", "TRAC", "PTPRC", "PECAM1", "CDH5", "COL1A1"]
+      "core": [
+        "EPCAM",
+        "KRT8",
+        "KRT18",
+        "KRT19",
+        "KRT7",
+        "SFN"
+      ],
+      "supportive": [
+        "KRT14",
+        "KRT17",
+        "MUC1",
+        "CLDN4",
+        "CLDN7"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "PTPRC",
+        "PECAM1",
+        "CDH5",
+        "COL1A1"
+      ]
     },
     "endothelial": {
-      "core": ["PECAM1", "CDH5", "KDR", "VWF", "EMCN", "ESAM", "RAMP2"],
-      "supportive": ["ENG", "RBP7", "KLF2", "PLVAP"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "CD79A", "C1QA"]
+      "core": [
+        "PECAM1",
+        "CDH5",
+        "KDR",
+        "VWF",
+        "EMCN",
+        "ESAM",
+        "RAMP2"
+      ],
+      "supportive": [
+        "ENG",
+        "RBP7",
+        "KLF2",
+        "PLVAP"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "CD79A",
+        "C1QA"
+      ]
     },
     "stromal": {
-      "core": ["COL1A1", "COL1A2", "COL3A1", "DCN", "LUM", "PDGFRA"],
-      "supportive": ["COL6A1", "COL6A2", "COL6A3", "SPARC", "RGS5", "ACTA2"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1", "CDH5"]
+      "core": [
+        "COL1A1",
+        "COL1A2",
+        "COL3A1",
+        "DCN",
+        "LUM",
+        "PDGFRA"
+      ],
+      "supportive": [
+        "COL6A1",
+        "COL6A2",
+        "COL6A3",
+        "SPARC",
+        "RGS5",
+        "ACTA2"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1",
+        "CDH5"
+      ]
     },
     "neural": {
-      "core": ["S100B", "SOX10", "SLC1A3", "PLP1", "MPZ", "SYN1"],
-      "supportive": ["GFAP", "FABP7", "SLC1A1", "NCAM1"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1", "COL1A1"]
+      "core": [
+        "S100B",
+        "SOX10",
+        "SLC1A3",
+        "PLP1",
+        "MPZ",
+        "SYN1"
+      ],
+      "supportive": [
+        "GFAP",
+        "FABP7",
+        "SLC1A1",
+        "NCAM1"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1",
+        "COL1A1"
+      ]
     },
     "erythroid": {
-      "core": ["ALAS2", "GYPA", "AHSP", "HBA1", "HBA2", "HBB"],
-      "supportive": ["HBA-A1", "HBA-A2", "HBB-BS", "HBB-BT"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1"]
+      "core": [
+        "ALAS2",
+        "GYPA",
+        "AHSP",
+        "HBA1",
+        "HBA2",
+        "HBB"
+      ],
+      "supportive": [
+        "HBA-A1",
+        "HBA-A2",
+        "HBB-BS",
+        "HBB-BT"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1"
+      ]
     },
     "megakaryocyte_platelet": {
-      "core": ["PPBP", "PF4", "GP9", "ITGA2B"],
-      "supportive": ["NRGN", "RGS18", "SDPR"],
-      "negative": ["CD3D", "TRAC", "MS4A1", "PECAM1"]
+      "core": [
+        "PPBP",
+        "PF4",
+        "GP9",
+        "ITGA2B"
+      ],
+      "supportive": [
+        "NRGN",
+        "RGS18",
+        "SDPR"
+      ],
+      "negative": [
+        "CD3D",
+        "TRAC",
+        "MS4A1",
+        "PECAM1"
+      ]
     }
   },
   "state_panels": {
-    "S_phase": ["MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "PCNA", "TYMS", "RRM1", "RRM2", "PCLAF"],
-    "G2M_phase": ["MKI67", "TOP2A", "UBE2C", "CENPF", "TPX2", "NUSAP1", "CDC20", "CCNB1", "CCNB2", "BIRC5"],
-    "interferon": ["ISG15", "RSAD2", "MX1", "MX2", "IFI6", "IFI44", "IFIT1", "IFIT3", "OAS1A", "USP18"],
-    "activation_APC": ["CD40", "CD83", "ITGAX", "CCR7", "REL", "RELB", "NFKB1", "NFKB2", "IFI30"],
-    "exhaustion": ["TOX", "TOX2", "PDCD1", "HAVCR2", "TIGIT", "LAG3", "ENTPD1", "CXCL13"],
-    "hypoxia": ["HIF1A", "CA9", "VEGFA", "BNIP3", "NDRG1", "SLC2A1"],
-    "stress": ["FOS", "JUN", "JUNB", "DUSP1", "HSPA1A", "HSPA1B"],
-    "angiogenic": ["ESM1", "ANGPT2", "PGF", "KDR", "PLVAP", "CXCR4"],
-    "emt": ["VIM", "SNAI1", "SNAI2", "ZEB1", "ZEB2", "FN1"],
-    "myofibroblastic": ["ACTA2", "TAGLN", "MYL9", "TPM2", "COL1A1", "COL3A1"]
+    "S_phase": [
+      "MCM2",
+      "MCM3",
+      "MCM4",
+      "MCM5",
+      "MCM6",
+      "MCM7",
+      "PCNA",
+      "TYMS",
+      "RRM1",
+      "RRM2",
+      "PCLAF"
+    ],
+    "G2M_phase": [
+      "MKI67",
+      "TOP2A",
+      "UBE2C",
+      "CENPF",
+      "TPX2",
+      "NUSAP1",
+      "CDC20",
+      "CCNB1",
+      "CCNB2",
+      "BIRC5"
+    ],
+    "interferon": [
+      "ISG15",
+      "RSAD2",
+      "MX1",
+      "MX2",
+      "IFI6",
+      "IFI44",
+      "IFIT1",
+      "IFIT3",
+      "OAS1A",
+      "USP18"
+    ],
+    "activation_APC": [
+      "CD40",
+      "CD83",
+      "ITGAX",
+      "CCR7",
+      "REL",
+      "RELB",
+      "NFKB1",
+      "NFKB2",
+      "IFI30"
+    ],
+    "exhaustion": [
+      "TOX",
+      "TOX2",
+      "PDCD1",
+      "HAVCR2",
+      "TIGIT",
+      "LAG3",
+      "ENTPD1",
+      "CXCL13"
+    ],
+    "hypoxia": [
+      "HIF1A",
+      "CA9",
+      "VEGFA",
+      "BNIP3",
+      "NDRG1",
+      "SLC2A1"
+    ],
+    "stress": [
+      "FOS",
+      "JUN",
+      "JUNB",
+      "DUSP1",
+      "HSPA1A",
+      "HSPA1B"
+    ],
+    "angiogenic": [
+      "ESM1",
+      "ANGPT2",
+      "PGF",
+      "KDR",
+      "PLVAP",
+      "CXCR4"
+    ],
+    "emt": [
+      "VIM",
+      "SNAI1",
+      "SNAI2",
+      "ZEB1",
+      "ZEB2",
+      "FN1"
+    ],
+    "myofibroblastic": [
+      "ACTA2",
+      "TAGLN",
+      "MYL9",
+      "TPM2",
+      "COL1A1",
+      "COL3A1"
+    ]
   },
   "state_program_rules": {
     "S_phase": {
       "minimum_markers": 4,
-      "required_any": ["PCNA", "TYMS", "RRM1", "RRM2", "PCLAF"]
+      "required_any": [
+        "PCNA",
+        "TYMS",
+        "RRM1",
+        "RRM2",
+        "PCLAF"
+      ]
     },
     "G2M_phase": {
       "minimum_markers": 3,
-      "required_any": ["MKI67", "TOP2A", "UBE2C", "CENPF", "TPX2", "CCNB1", "CCNB2", "BIRC5"]
+      "required_any": [
+        "MKI67",
+        "TOP2A",
+        "UBE2C",
+        "CENPF",
+        "TPX2",
+        "CCNB1",
+        "CCNB2",
+        "BIRC5"
+      ]
     }
   }
 }

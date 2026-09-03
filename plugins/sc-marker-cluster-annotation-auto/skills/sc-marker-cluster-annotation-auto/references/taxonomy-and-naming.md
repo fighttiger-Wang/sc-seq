@@ -2,7 +2,7 @@
 
 Use the approved stable IDs and parent relationships in `cell-annotation-knowledge-base.v2.json`.
 
-- Species share one ontology and use exact-species Marker panels where available. If no exact panel exists, use documented cross-species transfer with ortholog/program conservation, reduced confidence, and manual review.
+- Species share one ontology and use exact-species Marker panels where available. If no exact panel exists, use documented cross-species transfer with ortholog/program conservation, an explicit evidence-gap statement, and manual validation advice.
 - Select the finest reliable node for `stable_id`; major mode displays the nearest enabled major ancestor, while subcluster mode displays the finest reliable within-parent node.
 - Enable `core_multi_tissue` and tissue modules matching the confirmed tissue.
 - Allow different branches to stop at different depths. Require consistency only among siblings under the same parent.
