@@ -244,6 +244,36 @@ class MarketplaceSetupTests(unittest.TestCase):
             development = MANAGER.preflight_repository(client, str(remote), "main", False)
             self.assertEqual(development["status"], "development-current")
 
+    def test_registered_detached_stable_root_fast_forwards_without_touching_release_worktree(self) -> None:
+        git = MANAGER.require_git()
+        with temporary_directory("marketplace-stable-root-") as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            remote = base / "remote.git"
+            registered = base / "registered"
+            subprocess.run([git, "init", "--bare", str(remote)], check=True, capture_output=True)
+            subprocess.run([git, "init", "-b", "main", str(source)], check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=source, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=source, check=True)
+            (source / "README.md").write_text("one\n", encoding="utf-8")
+            subprocess.run([git, "add", "README.md"], cwd=source, check=True)
+            subprocess.run([git, "commit", "-m", "one"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "remote", "add", "origin", str(remote)], cwd=source, check=True)
+            subprocess.run([git, "push", "-u", "origin", "main"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote, check=True)
+            subprocess.run([git, "clone", str(remote), str(registered)], check=True, capture_output=True)
+            subprocess.run([git, "switch", "--detach"], cwd=registered, check=True, capture_output=True)
+            (source / "README.md").write_text("two\n", encoding="utf-8")
+            subprocess.run([git, "add", "README.md"], cwd=source, check=True)
+            subprocess.run([git, "commit", "-m", "two"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "push", "origin", "main"], cwd=source, check=True, capture_output=True)
+            result = MANAGER.synchronize_registered_stable_root(git, source, registered, str(remote), "main")
+            self.assertEqual(result["status"], "updated")
+            self.assertEqual(
+                subprocess.run([git, "rev-parse", "HEAD"], cwd=registered, check=True, text=True, capture_output=True).stdout.strip(),
+                subprocess.run([git, "rev-parse", "HEAD"], cwd=source, check=True, text=True, capture_output=True).stdout.strip(),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

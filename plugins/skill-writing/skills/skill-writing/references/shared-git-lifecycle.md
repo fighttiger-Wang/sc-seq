@@ -50,6 +50,6 @@ Both marketplace entries must use `INSTALLED_BY_DEFAULT`, `ON_INSTALL`, `./plugi
 
 ## After merge
 
-On the releasing computer, a successful full closeout refreshes the complete callable cache from verified stable `main`, even when the configured main checkout is dirty; it does not overwrite that dirty checkout. On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs affected plugins. Restart Codex after an installed update.
+On the releasing computer, a successful full closeout safely fast-forwards a clean registered stable source and refreshes the complete callable cache from verified stable `main`. It never overwrites a dirty, divergent, or development source; that condition is reported separately while cache refresh still uses the verified temporary stable worktree. On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs affected plugins. Restart Codex after an installed update.
 
 Machine-local items do not travel through GitHub: clone path, Git credentials, Codex home, marketplace registration, and the managed `AGENTS.md` trigger. Bootstrap configures these separately on every computer.
