@@ -966,6 +966,46 @@ def configured_workspace_any(codex_home: Path) -> Path | None:
     return Path(value).expanduser().resolve() if value else None
 
 
+def synchronize_registered_stable_root(
+    git: str,
+    release_root: Path,
+    registered_root: Path,
+    repository: str,
+    stable_ref: str,
+) -> dict:
+    if normalized_path(release_root) == normalized_path(registered_root):
+        return {"status": "release-worktree-retained", "path": str(registered_root)}
+    facts = git_facts(registered_root, repository)
+    if not facts.get("git"):
+        return {"status": "non-git-source-retained", "path": str(registered_root)}
+    if facts.get("dirty"):
+        return {"status": "dirty-source-retained", "path": str(registered_root), "before": facts.get("commit")}
+    remote_ref = f"origin/{stable_ref}"
+    run([git, "fetch", "origin", stable_ref], cwd=registered_root)
+    remote = git_output(git, registered_root, "rev-parse", remote_ref)
+    local = git_output(git, registered_root, "rev-parse", "HEAD")
+    if local == remote:
+        return {"status": "up-to-date", "path": str(registered_root), "before": local, "after": remote}
+    if not git_is_ancestor(git, registered_root, local, remote):
+        return {"status": "divergent-source-retained", "path": str(registered_root), "before": local, "stable": remote}
+    if facts.get("branch") == stable_ref:
+        run([git, "pull", "--ff-only", "origin", stable_ref], cwd=registered_root)
+    elif facts.get("branch") is None:
+        run([git, "switch", "--detach", remote_ref], cwd=registered_root)
+    else:
+        return {
+            "status": "development-source-retained",
+            "path": str(registered_root),
+            "branch": facts.get("branch"),
+            "before": local,
+            "stable": remote,
+        }
+    after = git_output(git, registered_root, "rev-parse", "HEAD")
+    if after != remote:
+        raise RuntimeError(f"Registered stable source did not synchronize to {remote}: {after}")
+    return {"status": "updated", "path": str(registered_root), "before": local, "after": after}
+
+
 def refresh_from_verified_stable(
     args,
     root: Path,
@@ -980,6 +1020,13 @@ def refresh_from_verified_stable(
     original_root = configured_marketplace(codex_home)
     if not original_root or not is_marketplace(original_root):
         original_root = root
+    registered_source_sync = synchronize_registered_stable_root(
+        git,
+        root,
+        original_root,
+        args.repo_url,
+        stable_ref,
+    )
     temporary_parent = workspace / "tmp"
     temporary_parent.mkdir(parents=True, exist_ok=True)
     stable_root = temporary_parent / f"workspace-local-stable-{uuid.uuid4().hex}"
@@ -1023,6 +1070,7 @@ def refresh_from_verified_stable(
         "status": "refreshed",
         "stableCommit": stable_commit,
         "restoredMarketplaceRoot": str(original_root),
+        "registeredSourceSync": registered_source_sync,
         "workspaceRoot": str(workspace),
         "restartRequired": True,
     }
