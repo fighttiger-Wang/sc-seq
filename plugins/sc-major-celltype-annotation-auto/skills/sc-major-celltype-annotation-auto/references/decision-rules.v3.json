@@ -5,7 +5,7 @@
     "global_background_before_local_candidate",
     "programs_over_single_markers",
     "prevalence_and_intensity_jointly",
-    "umap_global_audit_supports_but_does_not_gate_identity",
+    "umap_global_audit_gates_delivery_and_can_reject_only_a_provisional_identity_with_marker_supported_reassessment",
     "fixed_annotation_level_per_run",
     "retain_primary_identity_on_impurity",
     "aggregate_evidence_cannot_prove_same_cell_coexpression"
@@ -73,8 +73,10 @@
       "marker_umap_conflict",
       "isolated_state_or_cycle_island"
     ],
-    "conflict_action": "reassess_integrated_evidence_and_record_reason",
-    "hard_gate": false
+    "conflict_action": "retain_or_reject_and_reassign_after_integrated_marker_umap_reassessment",
+    "delivery_hard_gate": true,
+    "standalone_identity_classifier": false,
+    "reassignment_scope": "existing_marker_supported_sibling_candidate_only"
   },
   "naming": {
     "canonical_plot_label": "one_stable_identity_spelling",

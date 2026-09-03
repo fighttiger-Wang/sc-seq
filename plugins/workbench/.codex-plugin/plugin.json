@@ -1,13 +1,13 @@
 {
   "name": "workbench",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902152211",
   "description": "把自然语言、文件和参考图转成可持续迭代并可接入真实数据的工作台。",
   "author": {
     "name": "WorkBuddy SkillHub / Codex local adaptation"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "08 · 工作台",
+    "displayName": "08 · 工作台 v0.1.0",
     "shortDescription": "搭建、续作并集成个人或团队工作台",
     "longDescription": "从自然语言、文件、表格或截图出发，完成工作台需求收敛、页面实现、数据接入、验证和后续维护。",
     "developerName": "WorkBuddy 来源 · Codex 本地适配",

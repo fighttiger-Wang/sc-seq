@@ -1,5 +1,5 @@
 interface:
-  display_name: "02 · 图片展示单细胞质控数据"
+  display_name: "02 · 图片展示单细胞质控数据 v0.1.0"
   short_description: "将单细胞质控大表输出为 Excel 和展示大图"
   default_prompt: "Use $single-cell-qc-image-display to turn single-cell QC rows into Excel and a presentation image."
 

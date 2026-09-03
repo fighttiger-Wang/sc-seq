@@ -11,8 +11,21 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from annotation_evidence_core import enrich_evidence
 from inspect_annotation_inputs import build_evidence
+
+
+def _load_qualitative_core():
+    for parent in Path(__file__).resolve().parents:
+        shared = parent / "shared" / "sc-annotation-evidence-core"
+        if (shared / "qualitative_evidence_core.py").is_file():
+            if str(shared) not in sys.path:
+                sys.path.insert(0, str(shared))
+            from qualitative_evidence_core import enrich_evidence as qualitative_enrich  # noqa: WPS433
+            return qualitative_enrich
+    raise RuntimeError("Shared qualitative annotation evidence core not found")
+
+
+enrich_evidence = _load_qualitative_core()
 
 
 STATE_PARENT_TOKENS = ("dividing", "cycling", "prolifer", "activated", "stress", "interferon", "hypoxi", "增殖", "活化", "应激")
@@ -117,10 +130,17 @@ def template_record(cluster):
         "user_constraint_audit": {},
         "broad_type": "", "fine_type": "", "state": "",
         "supporting_markers": "", "conflicting_markers": "",
-        "candidate_labels": "", "confidence": "", "quality_score": None,
+        "candidate_labels": "",
         "mixed_or_doublet": False, "mixture_type": "none", "possible_components": "",
         "mixed_evidence": False, "review_in_subcluster": False,
-        "rationale": "", "manual_review": True, "review_action": "",
+        "rationale": "", "review_action": "", "validation_advice": "",
+        "handling_advice": "", "evidence_gaps": "",
+        "qualitative_gates": {
+            "identity_anchor": "未确定", "parent_lineage": "未确定",
+            "sibling_competition": "未确定", "exclusion": "未确定",
+            "off_parent": "不适用", "state_program": "不适用",
+            "umap": "未确定", "mixed_doublet": "不适用"
+        },
     }
 
 
@@ -136,12 +156,10 @@ def evidence_digest(evidence):
             "naming_top_marker": profile["naming_top_marker"],
             "excluded_naming_markers": profile["excluded_naming_markers"],
             "top_informative_markers": profile["top_informative_markers"][:15],
-            "signature_scores": profile["signature_scores"],
             "signature_marker_support": profile.get("signature_marker_support", {}),
-            "ranked_lineage_signatures": profile["ranked_lineage_signatures"],
             "qc_state_fraction_top50": profile["qc_state_fraction_top50"],
             "alerts": profile["alerts"],
-            "deterministic_evidence": evidence.get("deterministic_annotation_evidence", {}).get(str(cluster), {}),
+            "qualitative_evidence": evidence.get("qualitative_annotation_evidence", {}).get(str(cluster), {}),
         }
     return {
         "schema_version": evidence["schema_version"],
@@ -158,7 +176,7 @@ def evidence_digest(evidence):
         "naming_marker_policy": evidence.get("naming_marker_policy", {}),
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
         "user_constraints": evidence.get("annotation_evidence_policy", {}).get("user_constraints", {}),
-        "deterministic_tnk_arbitration": evidence.get("deterministic_tnk_arbitration", {}),
+        "qualitative_tnk_audit": evidence.get("qualitative_tnk_audit", {}),
         "full_evidence_pack": "annotation_evidence_pack.json",
         "usage": "Annotate from this digest first; open the full evidence pack only for a targeted conflict.",
     }
@@ -304,7 +322,7 @@ def main():
         "path_policy": {"write_drive": "E:", "c_drive_input_allowed": False, "junctions_in_output_allowed": False},
         "naming_marker_policy": evidence.get("naming_marker_policy", {}),
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
-        "deterministic_tnk_arbitration": evidence.get("deterministic_tnk_arbitration", {}),
+        "qualitative_tnk_audit": evidence.get("qualitative_tnk_audit", {}),
         "python": sys.executable,
     }
     manifest_path = output_dir / "annotation_run_manifest.json"
@@ -314,8 +332,8 @@ def main():
         "average_reader": evidence["average_reader"],
         "average_gene_header": evidence.get("average_gene_header", "GeneName"),
         "average_matrix_semantics": evidence.get("average_matrix_semantics", {}),
-        "evidence_mode": sorted({item["evidence_mode"] for item in evidence["deterministic_annotation_evidence"].values()}),
-        "tnk_regime": evidence.get("deterministic_tnk_arbitration", {}).get("recommended_regime"),
+        "evidence_mode": sorted({item["evidence_mode"] for item in evidence["qualitative_annotation_evidence"].values()}),
+        "decision_model": evidence.get("annotation_evidence_policy", {}).get("decision_model"),
         "evidence_bytes": evidence_path.stat().st_size, "digest_bytes": digest_path.stat().st_size,
         "evidence_pack": str(evidence_path), "evidence_digest": str(digest_path),
         "annotation_template": str(template_path),
@@ -325,5 +343,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

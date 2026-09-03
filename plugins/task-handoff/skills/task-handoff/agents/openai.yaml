@@ -1,5 +1,5 @@
 interface:
-  display_name: "09 · 任务交接"
+  display_name: "09 · 任务交接 v0.2.1"
   short_description: "自动续接并维护项目与 skill 的中央交接记录"
   default_prompt: "使用 $task-handoff 读取或更新命名项目、软件、代码库或 skill 的中央交接记录。"
 

@@ -51,7 +51,8 @@ def workspace_root(root: Path, explicit: Path | None) -> Path:
 
 def default_source(root: Path, workspace: Path) -> Path:
     runtime = workspace / ".sc-annotation-knowledge" / "published" / "current" / "cell-annotation-knowledge-base.v2.json"
-    return runtime if runtime.is_file() else root / "shared" / "sc-annotation-evidence-core" / "knowledge-base" / "cell-annotation-knowledge-base.v2.json"
+    canonical = root / "shared" / "sc-annotation-evidence-core" / "knowledge-base" / "cell-annotation-knowledge-base.v2.json"
+    return canonical if canonical.is_file() else runtime
 
 
 def update_annotation_versions(root: Path, cachebuster: str) -> dict:

@@ -1,5 +1,5 @@
 interface:
-  display_name: "15 · 细胞类型功能基因热图"
+  display_name: "15 · 细胞类型功能基因热图 v0.1.0"
   short_description: "固定生成细胞类型汇总及分样本功能基因表达热图并完成顺序校验"
   default_prompt: "Use $celltype-function-heatmap to create the two finalized cell-type function heatmaps from my matrices and annotation tables."
 

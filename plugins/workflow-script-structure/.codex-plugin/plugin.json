@@ -1,6 +1,6 @@
 {
   "name": "workflow-script-structure",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902152211",
   "description": "Standardize workflow packages by separating callable code, editable parameters, and submission scripts.",
   "author": {
     "name": "fight"
@@ -23,7 +23,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "07 · 流程脚本结构",
+    "displayName": "07 · 流程脚本结构 v0.1.0",
     "shortDescription": "代码、参数、投递脚本分离；支持 work.sh 和分步投递",
     "longDescription": "用于编写生信、HPC、Singularity/Apptainer 流程代码包时，固定采用调用代码、参数文件、任务投递脚本分离的结构，并开放 SIF_PATH 与 BIND_PATHS。",
     "developerName": "fight",

@@ -1,13 +1,13 @@
 {
   "name": "celltype-function-heatmap",
-  "version": "0.1.0+codex.20260901135627",
+  "version": "0.1.0+codex.20260902152211",
   "description": "Generate the fixed two-panel cell-type function heatmap deliverable from expression matrices and annotation tables.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "15 · 细胞类型功能基因热图",
+    "displayName": "15 · 细胞类型功能基因热图 v0.1.0",
     "shortDescription": "固定生成细胞类型及分样本功能基因热图并校验顺序",
     "longDescription": "从细胞类型表达矩阵、分样本表达矩阵、基因模块表和细胞类型配色表生成两张固定版式热图。",
     "developerName": "fight",

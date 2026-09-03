@@ -1,13 +1,13 @@
 {
   "name": "task-handoff",
-  "version": "0.2.1+codex.20260901135627",
+  "version": "0.2.1+codex.20260902152211",
   "description": "Maintain centralized cross-session continuity records for named projects, software, codebases, and skills.",
   "author": {
     "name": "Personal"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "09 · 任务交接",
+    "displayName": "09 · 任务交接 v0.2.1",
     "shortDescription": "自动续接并维护中央交接记录",
     "longDescription": "识别命名项目、软件、代码库和 skill，在续接时自动读取中央记录，并在完成、失败、阻塞或暂停前安全更新最新状态与最近 30 次历史。",
     "developerName": "Personal",
