@@ -16,6 +16,7 @@ from qualitative_evidence_core import (  # noqa: E402
     _is_more_defensible,
     enrich_evidence,
 )
+from knowledge_base import build_runtime_config, load_knowledge_base  # noqa: E402
 
 
 PROGRAMS = {
@@ -82,6 +83,20 @@ def main():
         decision["qualitative_gates"]["identity_anchor"] == "通过"
         for decision in decisions.values()
     )
+
+    # MAIT must not depend on a single canonical TCR transcript in aggregate
+    # data; SLC4A10 and TRAV1-2 are confirmatory/supportive evidence, while a
+    # coherent alpha-beta branch remains required.
+    kb = load_knowledge_base()
+    runtime = build_runtime_config(
+        kb, species="Human", tissue="fetal lung", annotation_level="subcluster",
+        parent_population="T_NK_2_2", parent_kind="lineage",
+    )
+    assert runtime["resolved_parent_id"] == "T_NK_lineage"
+    assert "MAIT" in runtime["identity_panels"]
+    assert "SLC4A10" not in runtime["identity_panels"]["MAIT"]["core"]
+    assert "TRAV1-2" not in runtime["identity_panels"]["MAIT"]["core"]
+    assert len(runtime["identity_panels"]["MAIT"]["core"]) >= 5
 
     def candidate(label, parent_gate="通过", program_gate="通过", parent_path=None, major="Myeloid_cell"):
         return {

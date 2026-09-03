@@ -144,7 +144,26 @@ def template_record(cluster):
     }
 
 
-def evidence_digest(evidence):
+def _blind_qualitative_view(decision):
+    """Remove deterministic final choices from the model-facing blind-test view.
+
+    Candidate labels inside candidate_program_audits remain available because
+    they are the ontology's alternatives.  The core's chosen label and its
+    derived rationale must not be shown before the independent annotation pass.
+    """
+    hidden = {
+        "stable_id", "suggested_identity", "primary_program",
+        "primary_major_label", "biological_precedence_trace",
+        "recommended_action", "decision_rationale",
+    }
+    return {
+        key: ([] if key == "biological_precedence_trace" else "")
+        if key in hidden else value
+        for key, value in decision.items()
+    }
+
+
+def evidence_digest(evidence, blind_test=False):
     """Return compact model-facing evidence; retain the full pack for targeted review."""
     profiles = {}
     for cluster in evidence["clusters"]:
@@ -159,7 +178,10 @@ def evidence_digest(evidence):
             "signature_marker_support": profile.get("signature_marker_support", {}),
             "qc_state_fraction_top50": profile["qc_state_fraction_top50"],
             "alerts": profile["alerts"],
-            "qualitative_evidence": evidence.get("qualitative_annotation_evidence", {}).get(str(cluster), {}),
+            "qualitative_evidence": (
+                _blind_qualitative_view(evidence.get("qualitative_annotation_evidence", {}).get(str(cluster), {}))
+                if blind_test else evidence.get("qualitative_annotation_evidence", {}).get(str(cluster), {})
+            ),
         }
     return {
         "schema_version": evidence["schema_version"],
@@ -178,7 +200,12 @@ def evidence_digest(evidence):
         "user_constraints": evidence.get("annotation_evidence_policy", {}).get("user_constraints", {}),
         "qualitative_tnk_audit": evidence.get("qualitative_tnk_audit", {}),
         "full_evidence_pack": "annotation_evidence_pack.json",
-        "usage": "Annotate from this digest first; open the full evidence pack only for a targeted conflict.",
+        "blind_test": bool(blind_test),
+        "usage": (
+            "Blind test: use candidate programs and current-case evidence only; do not treat any hidden core choice as a label."
+            if blind_test else
+            "Annotate from this digest first; open the full evidence pack only for a targeted conflict."
+        ),
     }
 
 
@@ -208,6 +235,7 @@ def main():
     parser.add_argument("--exclude-label", action="append", default=[], help="Hard-exclude a final major identity label; repeat as needed.")
     parser.add_argument("--exclude-marker", action="append", default=[], help="Treat a marker as conflict/contamination evidence, not positive identity/state evidence; repeat as needed.")
     parser.add_argument("--allow-partial-ratios", action="store_true", help="Allow a marker-only ratio table for provisional review; formal full-ratio claims remain disabled.")
+    parser.add_argument("--blind-test", action="store_true", help="Run without project priors or cluster-specific annotation constraints; labels must come only from current expression/marker/UMAP evidence.")
     parser.add_argument("--top-n", type=int, default=60)
     parser.add_argument("--informative-n", type=int, default=25)
     args = parser.parse_args()
@@ -246,6 +274,11 @@ def main():
     annotation_constraints = load_annotation_constraints(
         constraints_path, args.exclude_label, args.exclude_marker
     )
+    if args.blind_test:
+        if project_prior_path or project_prior:
+            raise ValueError("Blind test cannot use --project-prior or any prior label workbook")
+        if constraints_path or args.exclude_label or args.exclude_marker or annotation_constraints.get("by_cluster"):
+            raise ValueError("Blind test cannot use annotation constraints or excluded labels/markers")
     project_major_vocabulary = sorted({
         *(str(item).strip() for item in args.project_major_label if str(item).strip()),
         *(label for label in project_prior.values() if label),
@@ -282,6 +315,7 @@ def main():
         "parent_population": args.parent_population, "parent_kind": parent_kind,
         "project_major_vocabulary": project_major_vocabulary,
         "project_prior_clusters": sorted(project_prior),
+        "blind_test": bool(args.blind_test),
         "sample_context": sample_context,
         "annotation_constraints": annotation_constraints,
         "ratio_mode": "full_ratio" if ratios and not args.allow_partial_ratios else ("partial_ratio" if ratios else "positive_markers_only"),
@@ -308,7 +342,7 @@ def main():
     evidence_path = output_dir / "annotation_evidence_pack.json"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     digest_path = output_dir / "annotation_evidence_digest.json"
-    digest_path.write_text(json.dumps(evidence_digest(evidence), ensure_ascii=False, indent=2), encoding="utf-8")
+    digest_path.write_text(json.dumps(evidence_digest(evidence, blind_test=bool(args.blind_test)), ensure_ascii=False, indent=2), encoding="utf-8")
     template_path = output_dir / "annotation_records.template.json"
     template_path.write_text(json.dumps([template_record(c) for c in evidence["clusters"]], ensure_ascii=False, indent=2), encoding="utf-8")
     manifest = {

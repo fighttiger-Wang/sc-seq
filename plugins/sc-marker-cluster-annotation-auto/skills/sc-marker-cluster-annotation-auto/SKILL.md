@@ -51,6 +51,12 @@ For every cluster:
    action. A conflict may reject a provisional label only when integrated
    Marker and topology review selects an already-supported same-level candidate;
    UMAP alone cannot create or overwrite an identity.
+   Formal delivery must bind the records to the output of
+   `qualitative_evidence_core`: do not hand-author `evidence.json`,
+   `records.json`, and `umap_audit.json` by copying a proposed label into all
+   three files. A UMAP reassignment is valid only for a documented
+   marker/UMAP conflict and only to a candidate present in the core's
+   candidate-program audits.
 6. Resolve primary identity, then separately assign any
    `low_quality`, `background_interference`, `abnormal_state`, `debris`,
    `suspected_doublet`, or `mixed_population` flags. Flags may coexist.
@@ -104,6 +110,34 @@ and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook
 and a hash-matching passing QA sidecar; legacy four-sheet output is invalid.
 Deliver a timestamped Excel workbook to the supplied E-drive input directory.
 Do not automatically edit or filter the underlying object.
+
+For a blind test, invoke the preparation entry point with `--blind-test`.
+Do not pass a prior annotation workbook, old records, old UMAP audit,
+cluster-specific exclusions, or marker exclusions. The only label-bearing
+artifact allowed in the blind run is the ontology's candidate-program
+vocabulary. The model-facing digest redacts the qualitative core's
+`stable_id`, `suggested_identity`, `primary_program`, major label, derived
+rationale, and recommended action. Treat those fields in the internal evidence
+pack as audit bindings, never as the annotation answer. First write an
+independent provisional label from the current-case multi-gene programs and
+the candidate audits; then perform a separate all-cluster UMAP review. UMAP
+review must be read from the supplied image and must not be generated from the
+core decision or from the provisional label. Final workbook construction is
+allowed only after the independent records, UMAP audit, and internal evidence
+binding all pass validation.
+
+## Release handoff
+
+When the user explicitly approves publication, automate the safe release steps
+for this skill: increment the technical package version, synchronize the
+display name and marketplace version entry, run the registered regressions,
+create a `codex/` branch, commit only the approved skill scope, push it, and
+create or report the pull-request URL. Do not edit the installed cache as a
+source. Do not merge the pull request or refresh the stable cache until the
+release gate confirms that the selected commit is present on stable `main`;
+merging remains an explicit human-controlled action. After stable merge, run
+preflight and require a Codex restart plus a new task before testing the slash
+skill.
 
 Never output generic `Cell`, mix ancestors and descendants, infer same-cell
 coexpression from aggregate data, silently discard off-parent clusters, or

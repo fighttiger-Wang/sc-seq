@@ -29,10 +29,11 @@ def main():
             "3": {"top_markers": [{"gene": "TRDC", "mean_expr": 3.1, "pct1": 0.65, "pct2": 0.05, "log2FC": 2.0}]},
         },
         "qualitative_annotation_evidence": {
-            "0": {"stable_id": "Tn", "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
-            "1": {"stable_id": "NK_cell", "state_program": [{"program": "activation", "status": "通过", "marker_count": 3}], "qualitative_gates": {"identity_anchor": "通过", "state_program": "通过"}},
-            "3": {"stable_id": "gdT", "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
+            "0": {"stable_id": "Tn", "primary_program": "Tn", "candidate_program_audits": [{"label": "Tn", "program_gate": "通过"}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
+            "1": {"stable_id": "NK_cell", "primary_program": "NK_cell", "candidate_program_audits": [{"label": "NK_cell", "program_gate": "通过"}], "state_program": [{"program": "activation", "status": "通过", "marker_count": 3}], "qualitative_gates": {"identity_anchor": "通过", "state_program": "通过"}},
+            "3": {"stable_id": "gdT", "primary_program": "gdT", "candidate_program_audits": [{"label": "gdT", "program_gate": "通过"}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
         },
+        "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
     rows = [("3", "γδT细胞", "gdT", "TRDC"), ("0", "初始T细胞", "Tn", "CCR7"), ("1", "NK细胞", "NK_cell", "FGFBP2")]
     records = [{
@@ -84,6 +85,20 @@ def main():
     assert "FGFBP2(mean=4.67, ratio=70.20%" in marker_text
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
 
+    # A label that disagrees with the qualitative core must not be made
+    # acceptable by copying the same label into the workbook-facing record.
+    bad_records = json.loads(json.dumps(records))
+    bad_records[1]["stable_id"] = "gdT"
+    bad_records[1]["celltype_en"] = "gdT"
+    bad_records_path = work / "bad_records.json"
+    bad_records_path.write_text(json.dumps(bad_records, ensure_ascii=False), encoding="utf-8")
+    rejected = subprocess.run([
+        sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
+        "--records", str(bad_records_path), "--evidence", str(ep), "--umap-audit", str(up),
+        "--output", str(work / "rejected.xlsx"), "--workspace-root", str(work.parents[1]), "--force",
+    ], text=True, capture_output=True)
+    assert rejected.returncode != 0
+
     myeloid_evidence = {
         "clusters": ["17", "7"],
         "average_shape": [12, 2],
@@ -108,9 +123,10 @@ def main():
             ]},
         },
         "qualitative_annotation_evidence": {
-            "7": {"stable_id": "DC3", "candidate_labels": ["DC3", "Classical_monocyte"]},
-            "17": {"stable_id": "DC3", "candidate_labels": ["DC3", "cDC2"]},
+            "7": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "Classical_monocyte", "program_gate": "通过"}], "candidate_labels": ["DC3", "Classical_monocyte"]},
+            "17": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "cDC2", "program_gate": "通过"}], "candidate_labels": ["DC3", "cDC2"]},
         },
+        "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
     myeloid_records = [
         {

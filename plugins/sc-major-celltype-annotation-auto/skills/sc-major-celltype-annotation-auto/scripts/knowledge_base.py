@@ -180,6 +180,13 @@ def build_runtime_config(kb, species="Human", tissue="", annotation_level="subcl
         for alias in kb.get("aliases", [])
     }
     parent_id = parent if parent in nodes else parent_aliases.get(parent.lower(), "")
+    # Analysis folders often append a sample/subcluster suffix to the
+    # ontology parent (for example, ``T_NK_2_2``). Resolve the lineage prefix
+    # generically; never add a case-specific cluster ID to the knowledge base.
+    if not parent_id:
+        normalized_parent = re.sub(r"[\s/\\-]+", "_", parent.lower()).strip("_")
+        if re.fullmatch(r"t_nk(?:_[a-z0-9]+)+", normalized_parent) or normalized_parent in {"t_nk", "t_nk_lineage"}:
+            parent_id = "T_NK_lineage"
     if not parent_id and parent:
         # Parent inputs often use a branch token (for example, ``T_NK``)
         # rather than the ontology node's canonical ``*_lineage`` ID.  Resolve
