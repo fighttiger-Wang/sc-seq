@@ -126,6 +126,19 @@ core decision or from the provisional label. Final workbook construction is
 allowed only after the independent records, UMAP audit, and internal evidence
 binding all pass validation.
 
+## Release handoff
+
+When the user explicitly approves publication, automate the safe release steps
+for this skill: increment the technical package version, synchronize the
+display name and marketplace version entry, run the registered regressions,
+create a `codex/` branch, commit only the approved skill scope, push it, and
+create or report the pull-request URL. Do not edit the installed cache as a
+source. Do not merge the pull request or refresh the stable cache until the
+release gate confirms that the selected commit is present on stable `main`;
+merging remains an explicit human-controlled action. After stable merge, run
+preflight and require a Codex restart plus a new task before testing the slash
+skill.
+
 Never output generic `Cell`, mix ancestors and descendants, infer same-cell
 coexpression from aggregate data, silently discard off-parent clusters, or
 claim confirmed doublet from aggregate-only evidence.
