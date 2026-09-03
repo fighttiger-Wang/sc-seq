@@ -43,13 +43,13 @@ Both marketplace entries must use `INSTALLED_BY_DEFAULT`, `ON_INSTALL`, `./plugi
 1. Run `personal-skill-marketplace-setup` in unconfirmed `publish` mode. This is a read-only plan.
 2. If the plan reports an unregistered plugin, complete all registries and rerun validation. Do not bypass the error with manual Git commands.
 3. Present changed paths, affected plugins, tests, target branch, and whether GitHub authentication is available.
-4. Ask once for explicit publication confirmation.
-5. After confirmation, let the setup Skill update affected cachebusters, synchronize versions, test, commit, and push a `codex/*` branch. Never push directly to `main`.
-6. Create a PR when authenticated GitHub CLI/API access exists. Otherwise return a compare URL and state that the PR has not yet been created.
-7. Do not merge automatically. Report CI results and ask separately before merging unless the user already gave explicit merge authorization.
+4. Ask once for explicit publication intent. A single request such as “发布并合并” authorizes both stages; a publication-only request does not authorize merge.
+5. After confirmation, let the setup Skill automatically increment unchanged semantic patch versions, synchronize display names/cachebusters/manifests, test, commit, and push a `codex/*` branch. Never push directly to `main`.
+6. Create or reuse a PR through authenticated GitHub CLI/API access. Without authentication, return a compare URL; a merge-authorized run must stop because it cannot verify or merge the PR.
+7. When merge is explicitly authorized, the setup Skill waits for all observed checks and commit statuses to succeed, requires a clean non-draft PR, merges with the exact head SHA, verifies that both release and merge commits are in remote `main`, and refreshes the local cache from a temporary detached stable worktree. It restores the original marketplace registration before removing that temporary worktree.
 
 ## After merge
 
-On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs only affected plugins. Restart Codex after an installed update.
+On the releasing computer, a successful full closeout refreshes the complete callable cache from verified stable `main`, even when the configured main checkout is dirty; it does not overwrite that dirty checkout. On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs affected plugins. Restart Codex after an installed update.
 
 Machine-local items do not travel through GitHub: clone path, Git credentials, Codex home, marketplace registration, and the managed `AGENTS.md` trigger. Bootstrap configures these separately on every computer.

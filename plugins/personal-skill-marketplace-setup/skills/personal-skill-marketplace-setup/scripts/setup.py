@@ -13,6 +13,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
 from pathlib import Path
 
 
@@ -59,6 +64,16 @@ def normalized_repository(value: str) -> str:
     return text.lower()
 
 
+def subprocess_environment(command: list[str], cwd: Path | None = None) -> dict[str, str]:
+    environment = os.environ.copy()
+    executable = Path(command[0]).name.lower() if command else ""
+    if cwd is not None and executable in {"git", "git.exe"}:
+        environment["GIT_CONFIG_COUNT"] = "1"
+        environment["GIT_CONFIG_KEY_0"] = "safe.directory"
+        environment["GIT_CONFIG_VALUE_0"] = str(cwd.resolve())
+    return environment
+
+
 def run(
     command: list[str],
     *,
@@ -77,6 +92,7 @@ def run(
         capture_output=capture,
         encoding="utf-8" if capture else None,
         errors="replace" if capture else None,
+        env=subprocess_environment(command, cwd),
     )
     if capture and show_output:
         if result.stdout:
@@ -100,6 +116,7 @@ def git_ref_exists(git: str, root: Path, ref: str) -> bool:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        env=subprocess_environment([git], root),
     )
     return result.returncode == 0
 
@@ -109,6 +126,7 @@ def git_is_ancestor(git: str, root: Path, ancestor: str, descendant: str) -> boo
         [git, "merge-base", "--is-ancestor", ancestor, descendant],
         cwd=root,
         capture_output=True,
+        env=subprocess_environment([git], root),
     ).returncode == 0
 
 
@@ -161,6 +179,23 @@ def changed_plugin_ids(paths: list[str]) -> list[str]:
     )
 
 
+def publication_plugins(root: Path, paths: list[str]) -> list[str]:
+    pack = load_json(root / "skill-pack.json")
+    registered = [str(item["id"]) for item in pack.get("plugins", [])]
+    selected = set(changed_plugin_ids(paths))
+    if any(
+        relative
+        in {
+            "tools/install_personal_skill_marketplace.py",
+            "Setup-PersonalSkillMarketplace.ps1",
+            "Setup-PersonalSkillMarketplace.sh",
+        }
+        for relative in paths
+    ):
+        selected.add(SETUP_SKILL_ID)
+    return [plugin_id for plugin_id in registered if plugin_id in selected]
+
+
 def unregistered_changed_plugins(root: Path, paths: list[str]) -> list[str]:
     pack = load_json(root / "skill-pack.json")
     registered = {str(item["id"]) for item in pack.get("plugins", [])}
@@ -179,6 +214,7 @@ def managed_guidance_block() -> str:
             "- If preflight reports `up-to-date`, do not repeat the network check again in the same task.",
             "- Create or update maintained plugins through `$skill-writing`. A new plugin must be present in `skill-pack.json` and both marketplace manifests before publication.",
             "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills and ask whether to publish. Never commit or push without the user's explicit confirmation.",
+            "- When the user explicitly requests publication and merge in the same request, invoke the setup Skill with both `--confirm-publish` and `--confirm-merge`; it must increment versions, test, push, create or reuse the PR, wait for CI, merge, verify stable `main`, and refresh the local callable cache.",
             GUIDANCE_END,
         )
     )
@@ -280,7 +316,15 @@ def git_facts(root: Path, expected_repository: str) -> dict:
     remote = run([git, "remote", "get-url", "origin"], cwd=root, capture=True, show_output=False).stdout.strip()
     if normalized_repository(remote) != normalized_repository(expected_repository):
         raise RuntimeError(f"Repository remote mismatch. Expected {expected_repository}; found {remote}")
-    branch_result = subprocess.run([git, "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=root, text=True, capture_output=True, encoding="utf-8", errors="replace")
+    branch_result = subprocess.run(
+        [git, "symbolic-ref", "--quiet", "--short", "HEAD"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        env=subprocess_environment([git], root),
+    )
     branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
     commit = run([git, "rev-parse", "HEAD"], cwd=root, capture=True, show_output=False).stdout.strip()
     dirty = bool(run([git, "status", "--porcelain"], cwd=root, capture=True, show_output=False).stdout.strip())
@@ -516,19 +560,95 @@ def run_doctor(root: Path, dry_run: bool) -> None:
     run([sys.executable, str(root / "tools" / "test_personal_skill_marketplace.py"), "--marketplace-root", str(root)], cwd=root, dry_run=dry_run)
 
 
-def replace_plugin_cachebusters(root: Path, plugin_ids: list[str]) -> dict[str, str]:
+def semantic_version(value: str) -> tuple[int, int, int]:
+    base = value.split("+", 1)[0]
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", base)
+    if not match:
+        raise RuntimeError(f"Plugin version is not semantic X.Y.Z: {value}")
+    return tuple(int(item) for item in match.groups())
+
+
+def semantic_version_text(value: tuple[int, int, int]) -> str:
+    return ".".join(str(item) for item in value)
+
+
+def next_patch_version(value: str) -> str:
+    major, minor, patch = semantic_version(value)
+    return semantic_version_text((major, minor, patch + 1))
+
+
+def display_name_with_version(value: str, version: str) -> str:
+    name = re.sub(r"\s+v\d+\.\d+\.\d+$", "", value.strip())
+    return f"{name} v{version}"
+
+
+def update_yaml_display_version(path: Path, version: str) -> None:
+    original = path.read_text(encoding="utf-8")
+    lines = original.splitlines(keepends=True)
+    changed = 0
+    updated: list[str] = []
+    for line in lines:
+        match = re.match(r"^(\s*display_name:\s*)(.*?)(\r?\n)?$", line)
+        if not match:
+            updated.append(line)
+            continue
+        raw = match.group(2).strip()
+        quote = raw[0] if len(raw) >= 2 and raw[0] in {'\"', "'"} and raw[-1] == raw[0] else ""
+        value = raw[1:-1] if quote else raw
+        replacement = display_name_with_version(value, version)
+        updated.append(f"{match.group(1)}{quote}{replacement}{quote}{match.group(3) or ''}")
+        changed += 1
+    if changed != 1:
+        raise RuntimeError(f"Expected exactly one display_name in {path}; found {changed}")
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text("".join(updated), encoding="utf-8", newline="")
+    os.replace(temporary, path)
+
+
+def committed_plugin_version(git: str, root: Path, plugin_id: str) -> str | None:
+    relative = f"plugins/{plugin_id}/.codex-plugin/plugin.json"
+    completed = subprocess.run(
+        [git, "show", f"HEAD:{relative}"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        env=subprocess_environment([git], root),
+    )
+    if completed.returncode:
+        return None
+    return str(json.loads(completed.stdout).get("version") or "")
+
+
+def proposed_plugin_versions(root: Path, plugin_ids: list[str], git: str | None = None) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for plugin_id in plugin_ids:
+        manifest = load_json(root / "plugins" / plugin_id / ".codex-plugin" / "plugin.json")
+        current = str(manifest.get("version") or "0.1.0")
+        current_base = semantic_version_text(semantic_version(current))
+        previous = committed_plugin_version(git, root, plugin_id) if git else None
+        previous_base = semantic_version_text(semantic_version(previous)) if previous else None
+        result[plugin_id] = next_patch_version(current_base) if previous_base == current_base else current_base
+    return result
+
+
+def replace_plugin_cachebusters(root: Path, plugin_ids: list[str], git: str | None = None) -> dict[str, str]:
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S")
     versions: dict[str, str] = {}
+    proposed = proposed_plugin_versions(root, plugin_ids, git)
     for plugin_id in plugin_ids:
         path = root / "plugins" / plugin_id / ".codex-plugin" / "plugin.json"
         manifest = load_json(path)
-        current = str(manifest.get("version") or "0.1.0")
-        base = current.split("+", 1)[0]
+        base = proposed[plugin_id]
         version = f"{base}+codex.{stamp}"
         manifest["version"] = version
+        interface = manifest.setdefault("interface", {})
+        interface["displayName"] = display_name_with_version(str(interface.get("displayName") or plugin_id), base)
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
         os.replace(temporary, path)
+        update_yaml_display_version(root / "plugins" / plugin_id / "skills" / plugin_id / "agents" / "openai.yaml", base)
         versions[plugin_id] = version
     run([sys.executable, str(root / "tools" / "sync_skill_pack_versions.py")], cwd=root)
     return versions
@@ -588,7 +708,327 @@ def repository_compare_url(repository: str, stable_ref: str, branch: str) -> str
     return f"https://github.com/{slug}/compare/{stable_ref}...{branch}?expand=1"
 
 
-def publish_changes(args, root: Path) -> dict:
+def github_repository_slug(repository: str) -> str | None:
+    normalized = normalized_repository(repository)
+    if not normalized.startswith("github.com/"):
+        return None
+    slug = normalized.removeprefix("github.com/")
+    return slug if re.fullmatch(r"[^/]+/[^/]+", slug) else None
+
+
+def enable_github_api_proxy_from_git(git: str, root: Path) -> str | None:
+    completed = subprocess.run(
+        [git, "config", "--get", "http.proxy"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        env=subprocess_environment([git], root),
+    )
+    proxy = completed.stdout.strip() if completed.returncode == 0 else ""
+    if proxy:
+        os.environ.setdefault("HTTPS_PROXY", proxy)
+        os.environ.setdefault("HTTP_PROXY", proxy)
+        return proxy
+    return None
+
+
+def github_auth_token(git: str, root: Path, repository: str) -> str:
+    for name in ("GITHUB_TOKEN", "GH_TOKEN"):
+        if os.environ.get(name):
+            return str(os.environ[name])
+    gh = shutil.which("gh")
+    if gh:
+        completed = subprocess.run(
+            [gh, "auth", "token"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if completed.returncode == 0 and completed.stdout.strip():
+            return completed.stdout.strip()
+    slug = github_repository_slug(repository)
+    if not slug:
+        raise RuntimeError("Automatic PR operations require a GitHub repository")
+    for credential_input in (
+        f"protocol=https\nhost=github.com\npath={slug}\n\n",
+        "protocol=https\nhost=github.com\n\n",
+    ):
+        completed = subprocess.run(
+            [git, "credential", "fill"],
+            cwd=root,
+            input=credential_input,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            env=subprocess_environment([git], root),
+        )
+        values = {}
+        for line in completed.stdout.splitlines():
+            if "=" in line:
+                key, value = line.split("=", 1)
+                values[key] = value
+        if completed.returncode == 0 and values.get("password"):
+            return values["password"]
+    raise RuntimeError("GitHub authentication was not available from gh, environment, or the configured Git credential helper")
+
+
+def github_api_request(
+    token: str,
+    slug: str,
+    method: str,
+    endpoint: str,
+    payload: dict | None = None,
+):
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    suffix = endpoint.lstrip("/")
+    url = f"https://api.github.com/repos/{slug}" + (f"/{suffix}" if suffix else "")
+    request = urllib.request.Request(
+        url,
+        data=data,
+        method=method,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "workspace-local-skill-release",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            detail = json.loads(body).get("message", body)
+        except json.JSONDecodeError:
+            detail = body
+        raise RuntimeError(f"GitHub API {method} {endpoint} failed with HTTP {exc.code}: {detail}") from None
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"GitHub API {method} {endpoint} failed: {exc.reason}") from None
+
+
+def find_or_create_pull_request(
+    token: str,
+    slug: str,
+    stable_ref: str,
+    branch: str,
+    title: str,
+    release_commit: str,
+) -> dict:
+    owner = slug.split("/", 1)[0]
+    query = urllib.parse.urlencode({"state": "open", "head": f"{owner}:{branch}", "base": stable_ref})
+    existing = github_api_request(token, slug, "GET", f"pulls?{query}")
+    if existing:
+        return existing[0]
+    return github_api_request(
+        token,
+        slug,
+        "POST",
+        "pulls",
+        {
+            "title": title,
+            "head": branch,
+            "base": stable_ref,
+            "body": f"Automated Skill release from `{release_commit}`. Tests passed locally before push.",
+        },
+    )
+
+
+def github_ci_summary(checks: dict, combined_status: dict) -> dict:
+    check_runs = list(checks.get("check_runs") or [])
+    statuses = list(combined_status.get("statuses") or [])
+    pending = [str(item.get("name") or "unnamed-check") for item in check_runs if item.get("status") != "completed"]
+    failed = [
+        str(item.get("name") or "unnamed-check")
+        for item in check_runs
+        if item.get("status") == "completed" and item.get("conclusion") not in {"success", "neutral", "skipped"}
+    ]
+    pending.extend(str(item.get("context") or "unnamed-status") for item in statuses if item.get("state") == "pending")
+    failed.extend(str(item.get("context") or "unnamed-status") for item in statuses if item.get("state") in {"error", "failure"})
+    observed = len(check_runs) + len(statuses)
+    return {
+        "observed": observed,
+        "pending": sorted(set(pending)),
+        "failed": sorted(set(failed)),
+        "successful": observed > 0 and not pending and not failed,
+    }
+
+
+def wait_for_github_ci(token: str, slug: str, head_sha: str, timeout_seconds: int, poll_seconds: int) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+    last_state = None
+    while True:
+        checks = github_api_request(token, slug, "GET", f"commits/{head_sha}/check-runs?per_page=100")
+        statuses = github_api_request(token, slug, "GET", f"commits/{head_sha}/status")
+        summary = github_ci_summary(checks, statuses)
+        state = json.dumps(summary, ensure_ascii=False, sort_keys=True)
+        if state != last_state:
+            print(json.dumps({"githubCI": summary}, ensure_ascii=False), flush=True)
+            last_state = state
+        if summary["failed"]:
+            raise RuntimeError("GitHub CI failed: " + ", ".join(summary["failed"]))
+        if summary["successful"]:
+            return summary
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"Timed out waiting for GitHub CI after {timeout_seconds} seconds")
+        time.sleep(max(1, min(poll_seconds, int(max(1, deadline - time.monotonic())))))
+
+
+def wait_for_clean_pull_request(token: str, slug: str, number: int, timeout_seconds: int, poll_seconds: int) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        pull = github_api_request(token, slug, "GET", f"pulls/{number}")
+        if pull.get("draft"):
+            raise RuntimeError(f"Pull request #{number} is a draft")
+        if pull.get("state") != "open":
+            raise RuntimeError(f"Pull request #{number} is not open")
+        if pull.get("mergeable") is True and pull.get("mergeable_state") == "clean":
+            return pull
+        if pull.get("mergeable") is False:
+            raise RuntimeError(f"Pull request #{number} is not mergeable: {pull.get('mergeable_state')}")
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"Pull request #{number} did not reach clean mergeable state")
+        time.sleep(max(1, min(poll_seconds, int(max(1, deadline - time.monotonic())))))
+
+
+def merge_pull_request(token: str, slug: str, number: int, head_sha: str, title: str) -> dict:
+    result = github_api_request(
+        token,
+        slug,
+        "PUT",
+        f"pulls/{number}/merge",
+        {"sha": head_sha, "merge_method": "merge", "commit_title": title},
+    )
+    if result.get("merged") is not True or not result.get("sha"):
+        raise RuntimeError(f"GitHub did not merge pull request #{number}: {result.get('message', 'unknown response')}")
+    return result
+
+
+def verify_remote_release(
+    git: str,
+    root: Path,
+    stable_ref: str,
+    release_commit: str,
+    merge_commit: str,
+) -> dict:
+    run([git, "fetch", "origin", stable_ref], cwd=root)
+    remote_ref = f"origin/{stable_ref}"
+    stable_commit = git_output(git, root, "rev-parse", remote_ref)
+    if not git_is_ancestor(git, root, release_commit, stable_commit):
+        raise RuntimeError(f"Release commit {release_commit} is not contained in {remote_ref}")
+    if not git_is_ancestor(git, root, merge_commit, stable_commit):
+        raise RuntimeError(f"Merge commit {merge_commit} is not contained in {remote_ref}")
+    return {
+        "stableRef": remote_ref,
+        "stableCommit": stable_commit,
+        "releaseCommit": release_commit,
+        "mergeCommit": merge_commit,
+        "verified": True,
+    }
+
+
+def codex_marketplace_roots(codex_cli: str, root: Path) -> list[str]:
+    completed = run([codex_cli, "plugin", "marketplace", "list"], cwd=root, capture=True, show_output=False)
+    roots = []
+    pattern = re.compile(rf"(?m)^\s*{re.escape(MARKETPLACE_NAME)}\s+(.+?)\s*$")
+    for match in pattern.finditer(completed.stdout or ""):
+        roots.append(match.group(1).strip())
+    return roots
+
+
+def verify_enabled_plugin_versions(codex_cli: str, root: Path) -> None:
+    pack = load_json(root / "skill-pack.json")
+    completed = run([codex_cli, "plugin", "list"], cwd=root, capture=True, show_output=False)
+    missing = []
+    for item in pack.get("plugins", []):
+        pattern = re.compile(
+            rf"(?m)^\s*{re.escape(item['id'])}@{re.escape(MARKETPLACE_NAME)}\s+"
+            rf"installed,\s*enabled\s+{re.escape(item['version'])}(?:\s|$)"
+        )
+        if not pattern.search(completed.stdout or ""):
+            missing.append(str(item["id"]))
+    if missing:
+        raise RuntimeError("Stable cache refresh did not install expected plugin versions: " + ", ".join(missing))
+
+
+def configured_workspace_any(codex_home: Path) -> Path | None:
+    marker = codex_home / "workspace-local.json"
+    if not marker.is_file():
+        return None
+    value = load_json(marker).get("workspaceRoot")
+    return Path(value).expanduser().resolve() if value else None
+
+
+def refresh_from_verified_stable(
+    args,
+    root: Path,
+    codex_home: Path,
+    stable_ref: str,
+) -> dict:
+    git = require_git()
+    workspace = validate_workspace(args.workspace_root or configured_workspace_any(codex_home) or root.parent, codex_home, False)
+    codex_cli = resolve_codex_cli(args.codex_cli, root, codex_home)
+    if not codex_cli:
+        raise FileNotFoundError("Codex CLI was not found; stable release was merged but the callable cache was not refreshed")
+    original_root = configured_marketplace(codex_home)
+    if not original_root or not is_marketplace(original_root):
+        original_root = root
+    temporary_parent = workspace / "tmp"
+    temporary_parent.mkdir(parents=True, exist_ok=True)
+    stable_root = temporary_parent / f"workspace-local-stable-{uuid.uuid4().hex}"
+    run([git, "worktree", "add", "--detach", str(stable_root), f"origin/{stable_ref}"], cwd=root)
+    restored = False
+    try:
+        stable_commit = git_output(git, stable_root, "rev-parse", "HEAD")
+        run_doctor(stable_root, False)
+        command = [
+            sys.executable,
+            str(stable_root / "tools" / "install_personal_skill_marketplace.py"),
+            "--marketplace-root",
+            str(stable_root),
+            "--workspace-root",
+            str(workspace),
+            "--codex-home",
+            str(codex_home),
+            "--codex-cli",
+            codex_cli,
+            "--skip-doctor",
+            "--skip-user-config",
+            "--replace-marketplace-registration",
+        ]
+        run(command, cwd=stable_root)
+        verify_enabled_plugin_versions(codex_cli, stable_root)
+    finally:
+        try:
+            current_roots = codex_marketplace_roots(codex_cli, stable_root)
+            if len(current_roots) != 1 or normalized_path(current_roots[0]) != normalized_path(original_root):
+                run([codex_cli, "plugin", "marketplace", "remove", MARKETPLACE_NAME], cwd=stable_root)
+                run([codex_cli, "plugin", "marketplace", "add", str(original_root)], cwd=stable_root)
+            restored_roots = codex_marketplace_roots(codex_cli, stable_root)
+            if len(restored_roots) != 1 or normalized_path(restored_roots[0]) != normalized_path(original_root):
+                raise RuntimeError(f"Failed to restore marketplace registration to {original_root}: {restored_roots}")
+            verify_enabled_plugin_versions(codex_cli, stable_root)
+            restored = True
+        finally:
+            if restored:
+                run([git, "worktree", "remove", str(stable_root)], cwd=root)
+    return {
+        "status": "refreshed",
+        "stableCommit": stable_commit,
+        "restoredMarketplaceRoot": str(original_root),
+        "workspaceRoot": str(workspace),
+        "restartRequired": True,
+    }
+
+
+def publish_changes(args, root: Path, codex_home: Path) -> dict:
     facts = git_facts(root, args.repo_url)
     if not facts["git"] or not facts["branch"]:
         raise RuntimeError("Publish requires a normal Git branch in the authoritative source checkout")
@@ -602,13 +1042,15 @@ def publish_changes(args, root: Path) -> dict:
     if not paths:
         raise RuntimeError("No uncommitted marketplace changes were found")
     unregistered = unregistered_changed_plugins(root, paths)
-    affected = affected_plugins(root, paths)
+    affected = publication_plugins(root, paths)
+    proposed_versions = proposed_plugin_versions(root, affected, git) if affected else {}
     plan = {
         "status": "registration-required" if unregistered else "confirmation-required" if not args.confirm_publish else "publishing",
         "stableRef": stable_ref,
         "currentBranch": facts["branch"],
         "changedPaths": paths,
         "affectedPlugins": affected,
+        "proposedSemanticVersions": proposed_versions,
         "unregisteredPlugins": unregistered,
         "requiredRegistrationFiles": [
             "skill-pack.json",
@@ -616,6 +1058,8 @@ def publish_changes(args, root: Path) -> dict:
             ".codex-plugin/marketplace.json",
         ],
         "tests": ["marketplace doctor", "setup unit tests", "version manifest check", "annotation regressions when affected"],
+        "mergeRequiresExplicitAuthorization": True,
+        "mergeAuthorized": bool(args.confirm_merge),
     }
     if not args.confirm_publish:
         return plan
@@ -641,36 +1085,80 @@ def publish_changes(args, root: Path) -> dict:
     if branch == stable_ref:
         branch = args.branch or f"codex/skills-{dt.datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}"
         run([git, "switch", "-c", branch], cwd=root, dry_run=args.dry_run)
-    versions = {} if args.dry_run else replace_plugin_cachebusters(root, affected)
+    versions = {} if args.dry_run else replace_plugin_cachebusters(root, affected, git)
     run_publish_tests(root, affected, args.dry_run)
     publish_paths = changed_worktree_paths(git, root) if not args.dry_run else paths
     run([git, "add", "--", *publish_paths], cwd=root, dry_run=args.dry_run)
     message = args.message or f"Update personal skills: {', '.join(affected)}"
     run([git, "commit", "-m", message], cwd=root, dry_run=args.dry_run)
     run([git, "push", "-u", "origin", branch], cwd=root, dry_run=args.dry_run)
+    release_commit = None if args.dry_run else git_output(git, root, "rev-parse", "HEAD")
     pr = None
     pr_status = "not-requested"
-    if args.create_pr:
-        gh = shutil.which("gh")
-        if gh:
-            completed = run(
-                [gh, "pr", "create", "--base", stable_ref, "--head", branch, "--fill"],
-                cwd=root,
-                capture=True,
-                dry_run=args.dry_run,
-            )
-            pr = completed.stdout.strip() if completed.stdout else None
-            pr_status = "created" if pr else "requested"
-        else:
-            pr_status = "compare-url-required"
     compare_url = repository_compare_url(args.repo_url, stable_ref, branch)
+    if args.dry_run:
+        return {
+            **plan,
+            "status": "dry-run",
+            "branch": branch,
+            "versions": versions,
+            "pullRequestStatus": "planned" if args.create_pr or args.confirm_merge else "not-requested",
+            "mergeStatus": "planned" if args.confirm_merge else "not-authorized",
+            "compareUrl": compare_url,
+        }
+
+    pull = None
+    token = None
+    slug = github_repository_slug(args.repo_url)
+    if args.create_pr or args.confirm_merge:
+        try:
+            if not slug:
+                raise RuntimeError("Automatic PR creation requires a GitHub repository")
+            enable_github_api_proxy_from_git(git, root)
+            token = github_auth_token(git, root, args.repo_url)
+            pull = find_or_create_pull_request(token, slug, stable_ref, branch, message, str(release_commit))
+            pr = str(pull.get("html_url") or "") or None
+            pr_status = "created-or-reused"
+        except Exception:
+            if args.confirm_merge:
+                raise
+            pr_status = "compare-url-required"
+
+    ci = None
+    merge = None
+    stable = None
+    refresh = None
+    if args.confirm_merge:
+        if not pull or not token or not slug:
+            raise RuntimeError("Automatic merge requires an authenticated GitHub pull request")
+        number = int(pull["number"])
+        head_sha = str(pull.get("head", {}).get("sha") or release_commit)
+        if head_sha != release_commit:
+            raise RuntimeError(f"Pull request #{number} head {head_sha} does not match release commit {release_commit}")
+        ci = wait_for_github_ci(token, slug, head_sha, args.ci_timeout_seconds, args.ci_poll_seconds)
+        pull = wait_for_clean_pull_request(token, slug, number, min(180, args.ci_timeout_seconds), args.ci_poll_seconds)
+        merge_response = merge_pull_request(token, slug, number, head_sha, message)
+        merge_commit = str(merge_response["sha"])
+        merge = {
+            "status": "merged",
+            "pullRequestNumber": number,
+            "pullRequest": pr,
+            "mergeCommit": merge_commit,
+        }
+        stable = verify_remote_release(git, root, stable_ref, str(release_commit), merge_commit)
+        refresh = refresh_from_verified_stable(args, root, codex_home, stable_ref)
     return {
         **plan,
-        "status": "published" if pr_status != "compare-url-required" else "published-pr-required",
+        "status": "merged-and-refreshed" if refresh else "published" if pr_status != "compare-url-required" else "published-pr-required",
         "branch": branch,
         "versions": versions,
+        "releaseCommit": release_commit,
         "pullRequest": pr,
         "pullRequestStatus": pr_status,
+        "githubCI": ci,
+        "merge": merge,
+        "stableVerification": stable,
+        "cacheRefresh": refresh,
         "compareUrl": compare_url,
     }
 
@@ -727,8 +1215,18 @@ def main() -> None:
     parser.add_argument("--branch")
     parser.add_argument("--message")
     parser.add_argument("--create-pr", action="store_true")
+    parser.add_argument("--confirm-merge", action="store_true")
+    parser.add_argument("--ci-timeout-seconds", type=int, default=1800)
+    parser.add_argument("--ci-poll-seconds", type=int, default=10)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+
+    if args.confirm_merge and not args.confirm_publish:
+        raise ValueError("--confirm-merge requires --confirm-publish and an explicit user request to publish and merge")
+    if args.confirm_merge:
+        args.create_pr = True
+    if args.ci_timeout_seconds < 1 or args.ci_poll_seconds < 1:
+        raise ValueError("CI timeout and poll interval must be positive")
 
     codex_home = resolve_codex_home(args.codex_home)
     os.environ["CODEX_HOME"] = str(codex_home)
@@ -777,7 +1275,7 @@ def main() -> None:
         verify_ref(root, args.ref, facts_before["commit"])
 
     if args.mode == "publish":
-        print(json.dumps(publish_changes(args, root), ensure_ascii=False, indent=2))
+        print(json.dumps(publish_changes(args, root, codex_home), ensure_ascii=False, indent=2))
         return
 
     if args.mode == "bootstrap" and not args.workspace_root:

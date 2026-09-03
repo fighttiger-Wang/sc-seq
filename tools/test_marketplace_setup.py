@@ -99,6 +99,16 @@ class MarketplaceSetupTests(unittest.TestCase):
         shared = MANAGER.affected_plugins(ROOT, ["shared/sc-annotation-evidence-core/VERSION.json"])
         pack = INSTALLER.load_json(ROOT / "skill-pack.json")
         self.assertEqual(shared, [item["id"] for item in pack["plugins"]])
+        self.assertEqual(
+            MANAGER.publication_plugins(
+                ROOT,
+                [
+                    "shared/sc-annotation-evidence-core/VERSION.json",
+                    "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/SKILL.md",
+                ],
+            ),
+            ["sc-marker-cluster-annotation-auto"],
+        )
 
     def test_new_plugin_directory_requires_marketplace_registration(self) -> None:
         paths = [
@@ -131,6 +141,51 @@ class MarketplaceSetupTests(unittest.TestCase):
                 "codex/new-skill",
             )
         )
+
+    def test_github_repository_slug_and_ci_summary_are_deterministic(self) -> None:
+        self.assertEqual(
+            MANAGER.github_repository_slug("git@github.com:fighttiger-Wang/sc-seq.git"),
+            "fighttiger-wang/sc-seq",
+        )
+        self.assertIsNone(MANAGER.github_repository_slug("https://example.invalid/owner/repo.git"))
+        successful = MANAGER.github_ci_summary(
+            {
+                "check_runs": [
+                    {"name": "windows", "status": "completed", "conclusion": "success"},
+                    {"name": "macos", "status": "completed", "conclusion": "success"},
+                ]
+            },
+            {"statuses": []},
+        )
+        self.assertTrue(successful["successful"])
+        failed = MANAGER.github_ci_summary(
+            {"check_runs": [{"name": "windows", "status": "completed", "conclusion": "failure"}]},
+            {"statuses": []},
+        )
+        self.assertEqual(failed["failed"], ["windows"])
+
+    def test_semantic_version_plan_bumps_patch_once_and_syncs_display_name(self) -> None:
+        git = MANAGER.require_git()
+        self.assertEqual(MANAGER.display_name_with_version("13 · 共享 Skill 下载安装 v0.1.0", "0.1.1"), "13 · 共享 Skill 下载安装 v0.1.1")
+        with temporary_directory("marketplace-version-yaml-") as temporary:
+            root = Path(temporary)
+            plugin = root / "plugins" / "example" / ".codex-plugin"
+            plugin.mkdir(parents=True)
+            manifest = plugin / "plugin.json"
+            manifest.write_text('{"name":"example","version":"2.4.6+codex.old"}\n', encoding="utf-8")
+            subprocess.run([git, "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=root, check=True)
+            subprocess.run([git, "add", "."], cwd=root, check=True)
+            subprocess.run([git, "commit", "-m", "initial"], cwd=root, check=True, capture_output=True)
+            self.assertEqual(MANAGER.proposed_plugin_versions(root, ["example"], git)["example"], "2.4.7")
+            manifest.write_text('{"name":"example","version":"3.0.0"}\n', encoding="utf-8")
+            self.assertEqual(MANAGER.proposed_plugin_versions(root, ["example"], git)["example"], "3.0.0")
+
+            metadata = root / "openai.yaml"
+            metadata.write_text('interface:\n  display_name: "13 · 示例 v0.1.0"\n', encoding="utf-8")
+            MANAGER.update_yaml_display_version(metadata, "0.1.1")
+            self.assertIn('display_name: "13 · 示例 v0.1.1"', metadata.read_text(encoding="utf-8"))
 
     def test_managed_guidance_preserves_existing_content_and_is_idempotent(self) -> None:
         with temporary_directory("marketplace-guidance-") as temporary:
