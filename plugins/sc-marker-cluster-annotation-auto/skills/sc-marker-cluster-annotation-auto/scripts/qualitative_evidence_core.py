@@ -13,7 +13,7 @@ from pathlib import Path
 
 from qualitative_gate_helpers import (
     CORE_VERSION, DEFAULT_CONFIG, _absolute_program_gate, _identity_branch_gate,
-    _major_label, _mutually_exclusive_program_gate, _myeloid_boundary_audit,
+    _identity_program_gate, _major_label, _mutually_exclusive_program_gate, _myeloid_boundary_audit,
     _snapshot_metadata, _validate_runtime_snapshot, gene_metric,
     load_cell_evidence, load_gene_map, load_ratio_table, marker_ratio_table,
     normalize_user_constraints,
@@ -89,14 +89,20 @@ def _evaluate_panel(label, panel, cluster, values, clusters, thresholds, full_ra
         "negative_conflicts": conflicts,
     }
     branch = _identity_branch_gate(candidate, config, cluster, values, full_ratio)
+    identity_program = _identity_program_gate(label, config, cluster, values, full_ratio)
     absolute = _absolute_program_gate(label, config, cluster, values, full_ratio)
     mutually_exclusive = _mutually_exclusive_program_gate(candidate, config, cluster, values, full_ratio)
     absolute_required = bool(absolute.get("required"))
     absolute_ok = bool(absolute.get("passed")) if absolute_required else True
-    exclusion_passed = not conflicts
+    # A passed explicit boundary program may reinterpret a broad panel
+    # exclusion (for example, non-dominant gamma-delta background in DNT).
+    # It cannot bypass the dedicated program's own forbidden/absence checks.
+    exclusion_passed = bool(not conflicts or identity_program.get('passed', False))
+    identity_passed = bool(identity_passed or identity_program.get('passed', False))
+    branch_passed = bool(branch.get('passed', True) or identity_program.get('passed', False))
     program_passed = bool(
         identity_passed
-        and branch.get("passed", True)
+        and branch_passed
         and mutually_exclusive.get("passed", True)
         and absolute_ok
         and exclusion_passed
@@ -117,6 +123,8 @@ def _evaluate_panel(label, panel, cluster, values, clusters, thresholds, full_ra
         "parent_lineage_gate": _status(provenance.get("within_parent_scope", True), applicable=config.get("resolved_parent_id", "") != ""),
         "exclusion_gate": _status(exclusion_passed, assessed=bool(negative_metrics) or full_ratio),
         "branch_gate": _status(branch.get("passed"), branch.get("assessed", True), bool(branch.get("rule_id"))),
+        "identity_program_gate": _status(identity_program.get("passed"), identity_program.get("assessed", False), bool(identity_program.get("rule_id"))),
+        "identity_program_priority": int(identity_program.get("priority", 0)),
         "absolute_program_gate": _status(absolute.get("passed"), absolute.get("assessed", False), absolute_required),
         "mutually_exclusive_gate": _status(mutually_exclusive.get("passed"), mutually_exclusive.get("assessed", False), bool(mutually_exclusive.get("rule_id"))),
         "program_gate": _status(program_passed, identity_assessed),
@@ -127,6 +135,7 @@ def _evaluate_panel(label, panel, cluster, values, clusters, thresholds, full_ra
         "conflicting_markers": conflicts,
         "missing_core_markers": missing,
         "branch_audit": branch,
+        "identity_program_audit": identity_program,
         "absolute_program_audit": absolute,
         "mutually_exclusive_audit": mutually_exclusive,
         "decision_rule": panel.get("decision_rule", ""),
@@ -144,6 +153,13 @@ def _is_more_defensible(candidate, current, prior_label=""):
         return False, "current_matches_declared_parent_scope"
     if prior_label and candidate["label"] == prior_label and current["label"] != prior_label:
         return True, "project_prior_tiebreaker"
+    if candidate.get("identity_program_gate") == "通过" and current.get("identity_program_gate") != "通过":
+        return True, "complete_configured_identity_program"
+    if current.get("identity_program_gate") == "通过" and candidate.get("identity_program_gate") != "通过":
+        return False, "current_has_complete_configured_identity_program"
+    if candidate.get("identity_program_gate") == "通过" and current.get("identity_program_gate") == "通过":
+        if candidate.get("identity_program_priority", 0) != current.get("identity_program_priority", 0):
+            return candidate.get("identity_program_priority", 0) > current.get("identity_program_priority", 0), "configured_identity_specificity_precedence"
     if candidate["program_gate"] == "通过" and current["program_gate"] != "通过":
         return True, "complete_identity_program"
     if current["program_gate"] == "通过" and candidate["program_gate"] != "通过":

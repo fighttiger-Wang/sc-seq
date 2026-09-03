@@ -272,17 +272,19 @@
   ],
   "identity_branch_gates": [
     {
-      "rule_id": "REQUIRE_MAIT_CANONICAL_TCR_ANCHOR",
+      "rule_id": "REQUIRE_MAIT_COHERENT_ALPHA_BETA_TCR",
       "ancestors": [
         "MAIT"
       ],
       "required_anchors": [
-        "TRAV1-2"
+        "TRAC",
+        "TRBC1",
+        "TRBC2"
       ],
-      "minimum_required_anchors": 1,
+      "minimum_required_anchors": 2,
       "anchor_detection_floor": 0.1,
-      "relative_reference_min_fraction": 0.5,
-      "minimum_relative_anchors": 1
+      "relative_reference_min_fraction": 0.2,
+      "minimum_relative_anchors": 2
     },
     {
       "rule_id": "REQUIRE_GAMMA_DELTA_TCR_ANCHORS",

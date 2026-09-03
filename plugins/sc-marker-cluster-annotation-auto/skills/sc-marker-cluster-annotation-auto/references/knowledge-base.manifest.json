@@ -17,10 +17,10 @@
     "calibration_policy": 1
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "d8c7e6ae11f26a8f4d0c574b13e18edf5858f2298568a72f7cabed9d1a977d8f",
+    "cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
     "ontology.v2.json": "e73407d20fd919935bf60a12bd441b51c452da3cfc1b14b8315ffae981830399",
     "aliases.v2.json": "e51150be3709c6e7edd49b274963705e42f3c6ad8134c4553b86a1666a3a5232",
-    "marker-panels.v2.json": "8cf3b9cbc43054526685535e47045ea1c1ddcbab7393f548a41f604979d771cc",
+    "marker-panels.v2.json": "68f6d47a480a7950ae622c03d5c25f4dbd27a401c751b3327cca137f4dd3dd9b",
     "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
     "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
     "decision-rules.v2.json": "55efef88f90bf4bd2fe0784535d4e3b3db1e4b365892552d11259cb94535ab72",

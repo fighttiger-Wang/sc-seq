@@ -506,3 +506,94 @@ def _mutually_exclusive_program_gate(candidate, config, cluster, values, full_ra
     selected['all_applicable_rules_passed'] = selected['passed']
     selected['assessments'] = assessments
     return selected
+
+
+def _identity_program_gate(label, config, cluster, values, full_ratio):
+    """Apply explicit absolute program gates for high-risk unconventional identities.
+
+    These gates are deliberately configuration-driven.  They prevent a subtype
+    from being created by one shared marker while allowing a complete alternative
+    program to survive a dropout-prone canonical anchor.
+    """
+    rule = config.get('identity_program_gates', {}).get(label)
+    if not rule:
+        return {'rule_id': '', 'assessed': False, 'passed': True, 'required': False}
+    if not full_ratio:
+        return {'rule_id': rule.get('rule_id', ''), 'assessed': False, 'passed': True, 'required': False, 'reason': 'requires_full_cluster_ratio'}
+
+    def profile(program):
+        anchors = [_norm(gene) for gene in program.get('anchors', [])]
+        floor = float(program.get('detection_floor', 0.1))
+        current = values.get(str(cluster), {})
+        ratios = {gene: float(current.get(gene, {}).get('ratio', 0.0)) for gene in anchors}
+        hits = [gene for gene, ratio in ratios.items() if ratio >= floor]
+        return {
+            'anchors': anchors,
+            'detected_anchors': hits,
+            'minimum_anchors': int(program.get('minimum_anchors', 1)),
+            'detection_floor': floor,
+            'ratios': {gene: round(ratio, 4) for gene, ratio in ratios.items()},
+            'mean_detection': round(sum(ratios.values()) / len(ratios), 4) if ratios else 0.0,
+            'coherent': len(hits) >= int(program.get('minimum_anchors', 1)),
+        }
+
+    required = []
+    for program in rule.get('required_programs', []):
+        item = profile(program)
+        item['program'] = program.get('program', 'required')
+        required.append(item)
+
+    forbidden = []
+    for program in rule.get('forbidden_programs', []):
+        item = profile(program)
+        item['program'] = program.get('program', 'forbidden')
+        minimum_fraction = program.get('minimum_dataset_fraction')
+        if minimum_fraction is not None:
+            relative_hits = []
+            fractions = {}
+            for gene in item['detected_anchors']:
+                peak = max((float(other.get(gene, {}).get('ratio', 0.0)) for other in values.values()), default=0.0)
+                fraction = item['ratios'][gene] / peak if peak > 0 else 0.0
+                fractions[gene] = round(fraction, 4)
+                if fraction >= float(minimum_fraction):
+                    relative_hits.append(gene)
+            item['relative_hits'] = relative_hits
+            item['relative_fractions'] = fractions
+            item['coherent'] = len(relative_hits) >= item['minimum_anchors']
+        if item['coherent']:
+            forbidden.append(item)
+
+    branch = rule.get('competing_branch')
+    branch_audit = {}
+    branch_passed = True
+    if branch:
+        own = profile(branch.get('own_program', {}))
+        rival = profile(branch.get('rival_program', {}))
+        ratio_threshold = float(branch.get('minimum_dominance_ratio', 1.25))
+        margin_threshold = float(branch.get('minimum_absolute_margin', 0.1))
+        own_dominant = own['coherent'] and own['mean_detection'] >= rival['mean_detection'] * ratio_threshold and (own['mean_detection'] - rival['mean_detection'] >= margin_threshold)
+        rival_dominant = rival['coherent'] and rival['mean_detection'] >= own['mean_detection'] * ratio_threshold and (rival['mean_detection'] - own['mean_detection'] >= margin_threshold)
+        branch_passed = own_dominant or not rival_dominant
+        branch_audit = {
+            'own_program': own, 'rival_program': rival,
+            'own_dominant': own_dominant, 'rival_dominant': rival_dominant,
+            'minimum_dominance_ratio': ratio_threshold,
+            'minimum_absolute_margin': margin_threshold,
+            'resolution': 'own_dominant' if own_dominant else 'rival_dominant' if rival_dominant else 'not_rival_dominant',
+        }
+
+    exclusions = []
+    for program in rule.get('absence_programs', []):
+        item = profile(program)
+        if item['detected_anchors']:
+            exclusions.append(item)
+    required_passed = all(item['coherent'] for item in required)
+    passed = bool(required_passed and branch_passed and not forbidden and not exclusions)
+    return {
+        'rule_id': rule.get('rule_id', ''), 'assessed': True, 'passed': passed,
+        'priority': int(rule.get('priority', 0)),
+        'required': bool(rule.get('required', True)), 'required_programs': required,
+        'forbidden_programs': forbidden, 'absence_programs': exclusions,
+        'competing_branch': branch_audit,
+        'coherence_basis': 'configuration_driven_complete_identity_program',
+    }

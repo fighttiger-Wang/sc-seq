@@ -187,6 +187,17 @@ def build_runtime_config(kb, species="Human", tissue="", annotation_level="subcl
         normalized_parent = re.sub(r"[\s/\\-]+", "_", parent.lower()).strip("_")
         if re.fullmatch(r"t_nk(?:_[a-z0-9]+)+", normalized_parent) or normalized_parent in {"t_nk", "t_nk_lineage"}:
             parent_id = "T_NK_lineage"
+    if not parent_id and parent:
+        # Parent inputs often use a branch token (for example, ``T_NK``)
+        # rather than the ontology node's canonical ``*_lineage`` ID.  Resolve
+        # that token only when it maps unambiguously to a lineage root.
+        branch_matches = [
+            cell_id for cell_id, node in nodes.items()
+            if str(node.get("branch", "")).strip().lower() == parent.lower()
+            and str(cell_id).lower().endswith("_lineage")
+        ]
+        if len(branch_matches) == 1:
+            parent_id = branch_matches[0]
     restrict_to_parent = annotation_level == "subcluster" and parent_kind == "lineage" and parent_id in nodes
 
     approved_rows = [row for row in kb.get("marker_panels", []) if row.get("approval_status") == "Approve"]

@@ -308,6 +308,53 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
         errors.append(f"Cluster order/membership mismatch: expected={expected}, records={observed}")
     if len(set(observed)) != len(observed):
         errors.append("Duplicate cluster IDs are not allowed")
+    # Formal subcluster delivery must be bound to the output of the biological
+    # gate core. A hand-authored trio of records/evidence/UMAP files can
+    # otherwise make an incorrect label look internally consistent.
+    if annotation_level == "subcluster":
+        policy = evidence.get("annotation_evidence_policy", {}) or {}
+        decisions = evidence.get("qualitative_annotation_evidence", {}) or {}
+        core_mode = str(policy.get("decision_model", "")).strip()
+        if core_mode != "qualitative_biological_gates":
+            errors.append(
+                "Formal subcluster delivery requires evidence produced by "
+                "qualitative_evidence_core (decision_model=qualitative_biological_gates)"
+            )
+        for cluster in expected:
+            decision = decisions.get(str(cluster), {})
+            if not isinstance(decision, dict):
+                errors.append(f"Cluster {cluster} qualitative core decision is missing or invalid")
+                continue
+            if not str(decision.get("primary_program", "")).strip():
+                errors.append(f"Cluster {cluster} qualitative core decision lacks primary_program")
+            if not isinstance(decision.get("candidate_program_audits"), list):
+                errors.append(f"Cluster {cluster} qualitative core decision lacks candidate_program_audits")
+            matching = next((record for record in records if str(record.get("cluster_id", "")) == cluster), {})
+            expected_label = normalize_final_label(decision.get("stable_id", "")) if decision.get("stable_id") else ""
+            actual_label = normalize_final_label(matching.get("stable_id", "")) if matching.get("stable_id") else ""
+            audit = _umap_entry(umap_audit, cluster)
+            reassigned = (
+                normalize_relation(audit.get("marker_umap_relation", "")) == "conflict"
+                and str(audit.get("identity_action", "")).strip() == "reject_and_reassign"
+            )
+            if expected_label and actual_label != expected_label and not reassigned:
+                errors.append(
+                    f"Cluster {cluster} final label {actual_label} is not the qualitative-core "
+                    f"decision {expected_label}; only a validated UMAP reassignment may change it"
+                )
+            if reassigned:
+                resolved = normalize_final_label(audit.get("resolved_label", "")) if audit.get("resolved_label") else ""
+                candidates = {
+                    str(item.get("label", "")).strip()
+                    for item in decision.get("candidate_program_audits", [])
+                    if isinstance(item, dict) and str(item.get("label", "")).strip()
+                }
+                if resolved != actual_label:
+                    errors.append(f"Cluster {cluster} UMAP resolved_label does not match the final record label")
+                if resolved and candidates and resolved not in candidates:
+                    errors.append(
+                        f"Cluster {cluster} UMAP reassignment {resolved} is absent from qualitative-core candidates"
+                    )
     umap_source = str(evidence.get("source_paths", {}).get("umap", "")).strip()
     if umap_source:
         if not isinstance(umap_audit, dict):
