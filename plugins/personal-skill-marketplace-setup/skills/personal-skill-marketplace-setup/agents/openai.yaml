@@ -1,5 +1,5 @@
 interface:
-  display_name: "13 · 共享 Skill 下载安装 v0.1.0"
+  display_name: "13 · 共享 Skill 下载安装 v0.1.1"
   short_description: "新电脑部署、按需同步并发布共享 Codex skills"
   default_prompt: "Use $personal-skill-marketplace-setup to bootstrap this computer or preflight and publish the shared personal Codex skill marketplace."
 
