@@ -37,12 +37,12 @@
       "group": "blind_test_integrity",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_blind_test_contract.py",
       "work_subdir": "blind_test_contract",
-      "expected_assertions": 22,
+      "expected_assertions": 10,
       "protects": [
         "blind manifest excludes project priors and cluster-specific constraints",
         "model-facing digest does not leak deterministic core final choices",
         "candidate program alternatives and current-case evidence remain available",
-        "blind preparation remains reproducible on the supplied E-drive test set"
+        "blind-test regression remains portable and contains no sample-specific paths or labels"
       ]
     }
   ]

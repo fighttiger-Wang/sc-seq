@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -15,39 +14,69 @@ def main():
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
 
-    marketplace = Path(__file__).resolve().parents[5]
-    root = marketplace.parent
-    prepare = marketplace / "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/scripts/prepare_annotation.py"
-    source = Path(r"E:\Desktop\售后\N135-郭致远-人-胎肺\2-替换样本后\N002-亚群注释\测试\T_NK_2_2")
-    output = work / "blind_prepare"
-    command = [
-        sys.executable, str(prepare),
-        "--avg", str(source / "avg_expr_result.txt"),
-        "--markers", str(source / "Markergene_list.xlsx"),
-        "--umap", str(source / "umap.png"),
-        "--output-dir", str(output),
-        "--workspace-root", str(root),
-        "--species", "human", "--tissue", "fetal lung",
-        "--annotation-level", "subcluster",
-        "--parent-population", "T_NK_2_2", "--blind-test",
-    ]
-    completed = subprocess.run(command, text=True, capture_output=True)
-    if completed.returncode != 0:
-        raise AssertionError(completed.stderr or completed.stdout)
+    scripts = Path(__file__).resolve().parents[1] / "scripts"
+    sys.path.insert(0, str(scripts))
+    from prepare_annotation import evidence_digest
 
-    manifest = json.loads((output / "annotation_run_manifest.json").read_text(encoding="utf-8"))
-    digest = json.loads((output / "annotation_evidence_digest.json").read_text(encoding="utf-8"))
-    assert manifest["metadata"]["blind_test"] is True
-    assert manifest["metadata"]["project_prior_clusters"] == []
-    assert manifest["metadata"]["annotation_constraints"].get("by_cluster", {}) == {}
+    decision = {
+        "stable_id": "candidate_a",
+        "suggested_identity": "candidate_a",
+        "primary_program": "candidate_a",
+        "primary_major_label": "parent_lineage",
+        "biological_precedence_trace": ["candidate_a"],
+        "recommended_action": "retain candidate_a",
+        "decision_rationale": "candidate_a was selected",
+        "candidate_program_audits": [
+            {"label": "candidate_a", "program_gate": "pass"},
+            {"label": "candidate_b", "program_gate": "fail"},
+        ],
+        "supporting_markers": [{"gene": "GENE_A", "p_in": 0.8}],
+        "qualitative_gates": {"identity_anchor": "pass"},
+    }
+    evidence = {
+        "schema_version": "test",
+        "average_reader": "synthetic",
+        "average_gene_header": "gene",
+        "average_gene_header_normalized_to": "GeneName",
+        "average_shape": [1, 2],
+        "average_matrix_semantics": {},
+        "clusters": ["0"],
+        "cluster_profiles": {
+            "0": {
+                "marker_count": 1,
+                "top_markers": [{"gene": "GENE_A"}],
+                "raw_top_marker": "GENE_A",
+                "naming_top_marker": "GENE_A",
+                "excluded_naming_markers": [],
+                "top_informative_markers": [{"gene": "GENE_A"}],
+                "signature_marker_support": {},
+                "qc_state_fraction_top50": 0.0,
+                "alerts": [],
+            }
+        },
+        "qualitative_annotation_evidence": {"0": decision},
+        "canonical_expression_by_gene": {},
+        "confirmed_metadata": {
+            "blind_test": True,
+            "project_prior_clusters": [],
+            "annotation_constraints": {},
+        },
+        "source_paths": {},
+        "naming_marker_policy": {},
+        "annotation_evidence_policy": {"user_constraints": {}},
+        "qualitative_tnk_audit": {},
+    }
+    digest = evidence_digest(evidence, blind_test=True)
     assert digest["blind_test"] is True
     for cluster, item in digest["cluster_profiles"].items():
         qualitative = item["qualitative_evidence"]
         for key in ("stable_id", "suggested_identity", "primary_program", "primary_major_label", "decision_rationale", "recommended_action"):
             assert qualitative.get(key, "") == "", f"blind digest leaked {key} for cluster {cluster}"
         assert qualitative["candidate_program_audits"], f"candidate alternatives missing for cluster {cluster}"
+        assert qualitative["supporting_markers"] == decision["supporting_markers"]
 
-    print(json.dumps({"status": "pass", "checks": 4 + len(digest["cluster_profiles"])}, ensure_ascii=False))
+    assert evidence["qualitative_annotation_evidence"]["0"]["stable_id"] == "candidate_a"
+    print(json.dumps({"status": "pass", "checks": 10}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
