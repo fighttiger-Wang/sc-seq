@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "stages": [
+    "candidate_generation",
+    "identity_eligibility",
+    "competing_program_arbitration",
+    "boundary_resolution",
+    "state_development_separation",
+    "umap_consistency_audit",
+    "final_identity_binding"
+  ],
+  "rules": [
+    {
+      "rule_id": "ARBITRATE_MYELOID_DC_MONOCYTE_PROGRAMS",
+      "enabled": true,
+      "scope": {"expected_parent_ids": ["Myeloid", "Myeloid_cell"]},
+      "activation": {
+        "path": ["identity_boundary_audit", "dc3_vs_monocyte", "dc3_boundary_candidate"],
+        "equals": true
+      },
+      "sides": {
+        "left": {
+          "candidate_labels": ["cDC2"],
+          "program": {
+            "audit_root": ["identity_boundary_audit", "dc3_vs_monocyte"],
+            "hits_path": ["dc_specific_hits"],
+            "relative_hits_path": ["dc_specific_review_hits"],
+            "mean_path": ["cdc2_program_mean"],
+            "minimum_hits": 2,
+            "minimum_relative_hits": 2,
+            "expected_relative_hits": 3
+          }
+        },
+        "right": {
+          "candidate_labels": ["Classical_monocyte", "Nonclassical_monocyte", "Monocyte"],
+          "program": {
+            "audit_root": ["identity_boundary_audit", "dc3_vs_monocyte"],
+            "hits_path": ["monocyte_specific_hits"],
+            "relative_hits_path": ["monocyte_specific_review_hits"],
+            "mean_path": ["monocyte_specific_program_mean"],
+            "coherent_path": ["monocyte_specific_competitive"],
+            "minimum_hits": 3,
+            "minimum_relative_hits": 2,
+            "expected_relative_hits": 4
+          }
+        }
+      },
+      "dominance": {"minimum_ratio": 1.25, "minimum_absolute_margin": 0.1},
+      "bindings": {"left_dominant": "boundary_identity"},
+      "boundary_identity": {
+        "candidate_labels": ["DC3"],
+        "eligibility_path": ["identity_boundary_audit", "dc3_vs_monocyte", "dc3_boundary_candidate"],
+        "when": "coherent_without_dominance"
+      }
+    }
+  ]
+}

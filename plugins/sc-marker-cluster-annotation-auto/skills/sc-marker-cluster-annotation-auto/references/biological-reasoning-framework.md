@@ -29,10 +29,15 @@ An identity call requires coherent multi-gene support across the relevant questi
 
 Before scoring leaves, define each high-risk boundary as two or more versioned sibling programs with positive anchors, biological exclusions, dominance thresholds, citations, and regression cases.
 
+Passing an absolute, branch, exclusion, or boundary gate makes a candidate
+eligible; it does not make that candidate the winner. Final identity selection
+must occur in a separate competing-program arbitration stage.
+
 For each side:
 
 1. Confirm multi-gene coherence above conservative detection floors.
-2. Compare mean/robust prevalence of the complete programs, not isolated genes.
+2. Compare dataset-relative program completeness before raw prevalence. Means
+   from different gene panels are not automatically commensurate.
 3. Require both a relative dominance ratio and an absolute prevalence margin before declaring one branch dominant.
 4. If one program dominates, block leaves from the rival branch even if individual rival genes are enriched.
 5. If both programs are coherent and neither dominates, retain a boundary conflict unless a registered boundary-defined identity explicitly requires the joint program. In that case, assign that terminal identity with an explicit evidence gap and blocked merging; do not claim purity or doublets from aggregate data.

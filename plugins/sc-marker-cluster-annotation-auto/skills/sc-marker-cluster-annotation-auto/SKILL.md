@@ -37,6 +37,12 @@ For every cluster:
    support, and multiple MAIT-associated markers; DNT tolerates non-dominant
    receptor background but not a dominant competing CD4/CD8 or gamma-delta
    program.
+   When multiple sibling programs pass, read the
+   [identity arbitration contract](references/identity-arbitration-contract.md).
+   Eligibility gates never grant automatic final-label priority: compare the
+   complete competing programs and explicitly resolve one-sided dominance, a
+   registered boundary identity, or an unresolved boundary before binding the
+   label.
 3. Jointly interpret `mean_expr`, `expr_ratio`, `log2FC`, `pct.1`, and `pct.2`.
    High expression in a few cells is not a broadly supported program; a modest
    signal across most cells may be meaningful. `norm_expr` must not be counted
@@ -80,6 +86,13 @@ exclusions, and the decision. If the knowledge base lacks a defensible leaf,
 perform targeted research and use a validated external candidate only with two
 independent sources and current-case supporting markers; do not silently choose
 an arbitrary ancestor.
+
+Apply the versioned
+[identity arbitration policy](references/identity-arbitration-policy.v1.json)
+after candidate generation. Absolute, branch, exclusion, and boundary gates
+establish eligibility only. State/development programs are evaluated after
+identity competition, and UMAP is an audit after marker-supported arbitration;
+neither may create or rescue an identity program.
 
 ## Output
 

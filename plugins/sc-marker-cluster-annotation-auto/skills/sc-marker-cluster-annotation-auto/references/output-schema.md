@@ -45,6 +45,12 @@ qualitative gates, off-parent audit, development/state programs, UMAP and
 cross-island audit, mixed/doublet explanation, rationale, evidence gaps,
 validation, and handling.
 
+The bound evidence record also retains `identity_arbitration` for every
+applicable high-risk boundary: rule id, left/right program completeness,
+resolution, binding action, and the explicit roles of absolute gates, state,
+and topology. These fields support the written gate/rationale columns and are
+not converted into a score or confidence value.
+
 Available Marker values use:
 
 ```text
