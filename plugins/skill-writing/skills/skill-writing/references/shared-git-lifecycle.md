@@ -6,7 +6,7 @@ Use this workflow for every maintained `workspace-local` Skill on Windows or mac
 
 The remote repository's stable `main` ref is the only cross-computer release authority. Keep the workflow number (for example `03`) fixed for lookup, and maintain an independent per-Skill visible release version (for example `v3.03`). Record both with the exact Git commit and a content SHA-256. Plugin cachebuster versions are technical installation metadata and must not replace the user-facing release version.
 
-Draft edits belong to the current task's isolated worktree or staging copy. They are testable only through an explicit current-task path and are not registered, installed, published, or callable through `/`. Publication requires an explicit user confirmation after the test report. Promotion must be all-or-nothing across the selected Skill's source, manifests, release record, and installation; on a failed gate, retain the previous callable release.
+Draft edits belong to the current task's isolated worktree or staging copy. They are testable only through an explicit current-task path and are not registered, installed, published, or callable through `/`. After the test report, ask once for a single explicit authorization covering publication, CI-gated merge, stable verification, and installation. Promotion must be all-or-nothing across the selected Skill's source, manifests, release record, and installation; on a failed gate, retain the previous callable release. Use a PR-only outcome only when the user explicitly limits the request to publication only, PR only, no merge, or no install.
 
 ## Why a pull request exists
 
@@ -43,10 +43,10 @@ Both marketplace entries must use `INSTALLED_BY_DEFAULT`, `ON_INSTALL`, `./plugi
 1. Run `personal-skill-marketplace-setup` in unconfirmed `publish` mode. This is a read-only plan.
 2. If the plan reports an unregistered plugin, complete all registries and rerun validation. Do not bypass the error with manual Git commands.
 3. Present changed paths, affected plugins, tests, target branch, and whether GitHub authentication is available.
-4. Ask once for explicit publication intent. A single request such as “发布并合并” authorizes both stages; a publication-only request does not authorize merge.
-5. After confirmation, let the setup Skill automatically increment unchanged semantic patch versions, synchronize display names/cachebusters/manifests, test, commit, and push a `codex/*` branch. Never push directly to `main`.
+4. Ask once for the full end-to-end release authorization. The question must explicitly cover version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, and local cache refresh. One affirmative reply authorizes the complete sequence; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use the narrower PR-only route.
+5. After the combined confirmation, let the setup Skill automatically increment unchanged semantic patch versions, synchronize display names/cachebusters/manifests, test, commit, and push a `codex/*` branch. Never push directly to `main`.
 6. Create or reuse a PR through authenticated GitHub CLI/API access. Without authentication, return a compare URL; a merge-authorized run must stop because it cannot verify or merge the PR.
-7. When merge is explicitly authorized, the setup Skill waits for all observed checks and commit statuses to succeed, requires a clean non-draft PR, merges with the exact head SHA, verifies that both release and merge commits are in remote `main`, and refreshes the local cache from a temporary detached stable worktree. It restores the original marketplace registration before removing that temporary worktree.
+7. Under the single combined authorization, the setup Skill waits for all observed checks and commit statuses to succeed, requires a clean non-draft PR, merges with the exact head SHA, verifies that both release and merge commits are in remote `main`, and refreshes the local cache from a temporary detached stable worktree. It restores the original marketplace registration before removing that temporary worktree.
 
 ## After merge
 

@@ -17,7 +17,7 @@ Keep the stable marketplace checkout and its `main`-derived working tree clean w
 
 Each Skill owns its own release sequence. Keep the fixed workflow number (`03`, `04`, etc.) separate from the visible release version (`v3.03`, `v3.04`, etc.). The visible name may be `03 · Name v3.03`; the plugin package's cache-busting version remains a separate technical field. Every release record must also contain the Git commit and content SHA-256.
 
-After the user has finished testing, summarize the candidate and ask for explicit publication consent. Without consent, do not copy or merge the candidate into the stable source, update registries, change cachebusters, write a published audit record, or install it. With consent, promote only the explicitly named Skill(s), create the release record, validate all registry/cache/hash gates, and install only the resulting release. A partial promotion is a failure: keep the previous callable release and report the failed gate.
+After the user has finished testing, summarize the candidate and ask once for a single end-to-end release authorization covering version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, and local cache refresh. Without consent, do not copy or merge the candidate into the stable source, update registries, change cachebusters, write a published audit record, or install it. One affirmative reply authorizes the complete sequence; do not ask separate publication, merge, or installation questions. If the user explicitly requests publication only, PR only, no merge, or no install, honor that narrower scope and stop at the open PR. A partial promotion is a failure: keep the previous callable release and report the failed gate.
 
 The two annotation Skills `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto` are independent release units. Never alter, rebuild, synchronize, or publish either one merely because the other one was edited. Never treat shared annotation evidence or knowledge-base files as permission to change either Skill; their scope must be explicitly named.
 
@@ -81,7 +81,7 @@ Assign later maintained skills the next unused two-digit number, currently `15`.
 10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^\d{2} · .+$`; reject `路` or a missing/wrong separator.
 11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
 12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan containing changed paths, affected Skills, proposed semantic patch versions, tests, branch impact, and installation impact; for an unregistered new plugin, finish the three registries before proceeding.
-13. Ask once for explicit publication intent. If the user requests publication only, invoke the setup Skill with `--confirm-publish --create-pr`. If the user requests publication and merge in the same or a later message, invoke it with `--confirm-publish --confirm-merge`; the combined request is sufficient and must not trigger a redundant merge question.
+13. Ask once for a single end-to-end release authorization. The default question must explicitly include publish, PR, CI-gated merge, stable verification, and local installation. After one affirmative reply, invoke the setup Skill with `--confirm-publish --confirm-merge` and do not ask again. Use `--confirm-publish --create-pr` only when the user explicitly narrows the request to publication only, PR only, no merge, or no install.
 14. Delegate the complete release mechanics to `personal-skill-marketplace-setup`: version increment, display-name and manifest synchronization, tests, `codex/*` branch, commit, push, PR creation/reuse, CI waiting, SHA-pinned merge, stable-main verification, and local stable-cache refresh. Do not reproduce these GitHub steps separately in each domain Skill.
 15. Treat the setup Skill's verified remote and cache results as the release gate. Never report a merge from a push or open PR alone. After a changed cache refresh, tell the user to restart Codex and open a new task before testing `/`.
 
@@ -134,7 +134,7 @@ python3 <shared-marketplace-root>/tools/test_personal_skill_marketplace.py --mar
 python3 <personal-skill-marketplace-setup>/scripts/setup.py publish
 ```
 
-The first `publish` call is read-only. Do not update cachebusters, commit, push, create a PR, or merge until the user explicitly confirms publication. After a merged update is synchronized, verify every maintained plugin is enabled under `workspace-local`. On macOS, rerun the marketplace installer after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
+The first `publish` call is read-only. Do not update cachebusters, commit, push, create a PR, merge, or install until the user explicitly gives the single combined release authorization. Do not split the default flow into separate publication and merge reviews. After a merged update is synchronized, verify every maintained plugin is enabled under `workspace-local`. On macOS, rerun the marketplace installer after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
 
 ## Cross-platform requirements
 
@@ -162,4 +162,4 @@ Do not delete the backup unless the user explicitly asks. After cleanup, remind 
 
 ## Update Existing Plugins
 
-When modifying an already installed shared plugin, run task-level preflight, update the authoritative shared source, validate it, and request a read-only publish plan. After explicit confirmation, use the setup Skill's publication mode. When merge is also explicitly authorized, use its full automatic closeout rather than manually repeating GitHub commands. Other computers still update only from verified stable `main` through preflight and test in a new session.
+When modifying an already installed shared plugin, run task-level preflight, update the authoritative shared source, validate it, and request a read-only publish plan. Ask once for the full publish, merge, verification, and installation authorization, then use the setup Skill's automatic closeout with both confirmation flags. Only use the PR-only route when the user explicitly limits the requested outcome. Other computers still update only from verified stable `main` through preflight and test in a new session.
