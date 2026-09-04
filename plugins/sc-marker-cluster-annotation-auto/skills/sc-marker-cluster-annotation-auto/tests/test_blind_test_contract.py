@@ -26,6 +26,7 @@ def main():
         "biological_precedence_trace": ["candidate_a"],
         "recommended_action": "retain candidate_a",
         "decision_rationale": "candidate_a was selected",
+        "identity_arbitration": [{"resolution": "left_dominant", "selected_candidate": "candidate_a"}],
         "candidate_program_audits": [
             {"label": "candidate_a", "program_gate": "pass"},
             {"label": "candidate_b", "program_gate": "fail"},
@@ -72,11 +73,12 @@ def main():
         qualitative = item["qualitative_evidence"]
         for key in ("stable_id", "suggested_identity", "primary_program", "primary_major_label", "decision_rationale", "recommended_action"):
             assert qualitative.get(key, "") == "", f"blind digest leaked {key} for cluster {cluster}"
+        assert qualitative.get("identity_arbitration", "") == "", f"blind digest leaked identity arbitration for cluster {cluster}"
         assert qualitative["candidate_program_audits"], f"candidate alternatives missing for cluster {cluster}"
         assert qualitative["supporting_markers"] == decision["supporting_markers"]
 
     assert evidence["qualitative_annotation_evidence"]["0"]["stable_id"] == "candidate_a"
-    print(json.dumps({"status": "pass", "checks": 10}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 11}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

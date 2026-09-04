@@ -28,7 +28,7 @@
         "score/confidence columns are absent",
         "per-Marker numeric evidence formatting",
         "static red fill is restricted to the Chinese annotation cell",
-        "UMAP conflict can reject provisional DC3 and reassign Cluster 7 to Classical_monocyte while Cluster 17 remains DC3",
+        "UMAP conflict can reject a provisional boundary identity and reassign it to an already-supported sibling while a concordant boundary identity is retained",
         "legacy four-sheet or QA-unbound workbooks cannot pass formal copy delivery"
       ]
     },
@@ -37,12 +37,26 @@
       "group": "blind_test_integrity",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_blind_test_contract.py",
       "work_subdir": "blind_test_contract",
-      "expected_assertions": 10,
+      "expected_assertions": 11,
       "protects": [
         "blind manifest excludes project priors and cluster-specific constraints",
-        "model-facing digest does not leak deterministic core final choices",
+        "model-facing digest does not leak deterministic core or arbitration final choices",
         "candidate program alternatives and current-case evidence remain available",
         "blind-test regression remains portable and contains no sample-specific paths or labels"
+      ]
+    },
+    {
+      "id": "subcluster_identity_arbitration",
+      "group": "generic_staged_identity_arbitration",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_subcluster_identity_arbitration.py",
+      "work_subdir": "subcluster_identity_arbitration",
+      "expected_assertions": 14,
+      "protects": [
+        "candidate eligibility is separate from final identity selection",
+        "left-dominant, right-dominant, registered-boundary, and unresolved outcomes are explicit",
+        "an absolute-gate candidate can remain subordinate when its competing identity program is weak",
+        "state and topology cannot choose or rescue an identity",
+        "the regression uses abstract synthetic identities and contains no blind-dataset details"
       ]
     }
   ]
