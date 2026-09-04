@@ -1,5 +1,5 @@
 interface:
-  display_name: "04 · 单细胞亚群注释（精细分型） v0.6.5"
+  display_name: "04 · 单细胞亚群注释（精细分型） v0.6.6"
   short_description: "完成同级亚群注释、全cluster UMAP身份复核与正式五表交付"
   default_prompt: "Use $sc-marker-cluster-annotation-auto to annotate known-parent subclusters, apply auditable all-cluster UMAP retain-or-reassign decisions, and deliver the formally validated five-sheet workbook."
 

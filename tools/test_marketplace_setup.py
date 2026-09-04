@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import tempfile
@@ -57,6 +58,72 @@ class MarketplaceSetupTests(unittest.TestCase):
         self.assertTrue(INSTALLER.plugin_is_enabled(plugin_output, "example", "workspace-local", "1.2.3+codex.test"))
         self.assertFalse(INSTALLER.plugin_is_enabled(plugin_output, "example", "workspace-local", "1.2.4+codex.test"))
         self.assertFalse(INSTALLER.plugin_is_enabled("example@workspace-local installed, disabled 1.2.3+codex.test\n", "example", "workspace-local", "1.2.3+codex.test"))
+
+    def test_cache_verification_requires_expected_directory_manifest_and_file_hashes(self) -> None:
+        with temporary_directory("marketplace-cache-verification-") as temporary:
+            base = Path(temporary)
+            root = base / "source"
+            codex_home = base / "codex-home"
+            plugin = root / "plugins" / "example"
+            (plugin / ".codex-plugin").mkdir(parents=True)
+            (plugin / "skills" / "example").mkdir(parents=True)
+            version = "1.2.3+codex.test"
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "example", "version": version}]}) + "\n",
+                encoding="utf-8",
+            )
+            (plugin / ".codex-plugin" / "plugin.json").write_text(
+                json.dumps({"name": "example", "version": version}) + "\n",
+                encoding="utf-8",
+            )
+            skill = plugin / "skills" / "example" / "SKILL.md"
+            skill.write_text("new stable content\n", encoding="utf-8")
+            stale = codex_home / "plugins" / "cache" / "workspace-local" / "example" / "1.2.2+codex.old"
+            stale.mkdir(parents=True)
+            with self.assertRaisesRegex(RuntimeError, "cache directory missing"):
+                MANAGER.verify_plugin_cache(root, codex_home)
+
+            installed = codex_home / "plugins" / "cache" / "workspace-local" / "example" / version
+            (installed / ".codex-plugin").mkdir(parents=True)
+            (installed / "skills" / "example").mkdir(parents=True)
+            (installed / ".codex-plugin" / "plugin.json").write_text(
+                json.dumps({"name": "example", "version": version}) + "\n",
+                encoding="utf-8",
+            )
+            (installed / "skills" / "example" / "SKILL.md").write_text("stale content\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "hash mismatch"):
+                MANAGER.verify_plugin_cache(root, codex_home)
+            (installed / "skills" / "example" / "SKILL.md").write_text("new stable content\n", encoding="utf-8")
+            verified = MANAGER.verify_plugin_cache(root, codex_home)
+            self.assertEqual(verified["status"], "verified")
+            self.assertEqual(verified["verifiedPluginCount"], 1)
+
+    def test_new_task_binding_is_separate_from_cache_installation(self) -> None:
+        with temporary_directory("marketplace-binding-") as temporary:
+            base = Path(temporary)
+            root = base / "source"
+            codex_home = base / "codex-home"
+            root.mkdir()
+            version = "2.0.0+codex.test"
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "example", "version": version}]}) + "\n",
+                encoding="utf-8",
+            )
+            pending = MANAGER.verify_loaded_skill_binding(root, codex_home, None)
+            self.assertEqual(pending["status"], "restart-required")
+            expected = MANAGER.expected_skill_path(root, codex_home, "example")
+            expected.parent.mkdir(parents=True)
+            expected.write_text("test\n", encoding="utf-8")
+            stale = codex_home / "plugins" / "cache" / "workspace-local" / "example" / "1.9.0" / "skills" / "example" / "SKILL.md"
+            stale.parent.mkdir(parents=True)
+            stale.write_text("old\n", encoding="utf-8")
+            self.assertEqual(
+                MANAGER.verify_loaded_skill_binding(root, codex_home, stale)["status"],
+                "loaded-path-mismatch",
+            )
+            active = MANAGER.verify_loaded_skill_binding(root, codex_home, expected)
+            self.assertEqual(active["status"], "loaded-path-verified")
+            self.assertFalse(active["newTaskRequired"])
 
     def test_workspace_and_source_cannot_overlap_codex_home(self) -> None:
         with temporary_directory("marketplace-setup-") as temporary:
@@ -203,6 +270,8 @@ class MarketplaceSetupTests(unittest.TestCase):
             self.assertIn("ask once for a single end-to-end authorization", text)
             self.assertIn("do not ask a second merge or installation question", text)
             self.assertIn("publication only, PR only, no merge, or no install", text)
+            self.assertIn("new-task Skill-path pickup", text)
+            self.assertIn("persistent clean stable clone", text)
 
     def test_read_only_publish_plan_declares_one_review_default(self) -> None:
         policy = MANAGER.release_authorization_policy(False)
@@ -221,6 +290,7 @@ class MarketplaceSetupTests(unittest.TestCase):
             "sha-pinned-merge",
             "stable-main-verification",
             "local-cache-refresh",
+            "cache-hash-verification",
             ],
         )
         self.assertTrue(MANAGER.release_authorization_policy(True)["mergeAuthorized"])
@@ -268,7 +338,7 @@ class MarketplaceSetupTests(unittest.TestCase):
             development = MANAGER.preflight_repository(client, str(remote), "main", False)
             self.assertEqual(development["status"], "development-current")
 
-    def test_registered_detached_stable_root_fast_forwards_without_touching_release_worktree(self) -> None:
+    def test_registered_detached_root_is_not_treated_as_updateable_stable_source(self) -> None:
         git = MANAGER.require_git()
         with temporary_directory("marketplace-stable-root-") as temporary:
             base = Path(temporary)
@@ -292,11 +362,52 @@ class MarketplaceSetupTests(unittest.TestCase):
             subprocess.run([git, "commit", "-m", "two"], cwd=source, check=True, capture_output=True)
             subprocess.run([git, "push", "origin", "main"], cwd=source, check=True, capture_output=True)
             result = MANAGER.synchronize_registered_stable_root(git, source, registered, str(remote), "main")
-            self.assertEqual(result["status"], "updated")
+            self.assertEqual(result["status"], "detached-source-retained")
             self.assertEqual(
                 subprocess.run([git, "rev-parse", "HEAD"], cwd=registered, check=True, text=True, capture_output=True).stdout.strip(),
-                subprocess.run([git, "rev-parse", "HEAD"], cwd=source, check=True, text=True, capture_output=True).stdout.strip(),
+                result["before"],
             )
+
+    def test_dirty_registered_source_is_not_reused_as_final_stable_registration(self) -> None:
+        git = MANAGER.require_git()
+        with temporary_directory("marketplace-persistent-stable-") as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            remote = base / "remote.git"
+            registered = base / "registered-dirty"
+            workspace = base / "workspace"
+            subprocess.run([git, "init", "--bare", str(remote)], check=True, capture_output=True)
+            subprocess.run([git, "init", "-b", "main", str(source)], check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=source, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=source, check=True)
+            (source / "tools").mkdir(parents=True)
+            (source / "plugins" / "example").mkdir(parents=True)
+            (source / "skill-pack.json").write_text('{"plugins":[]}\n', encoding="utf-8")
+            (source / "tools" / "install_personal_skill_marketplace.py").write_text("# installer\n", encoding="utf-8")
+            (source / "release.txt").write_text("stable-one\n", encoding="utf-8")
+            subprocess.run([git, "add", "."], cwd=source, check=True)
+            subprocess.run([git, "commit", "-m", "stable one"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "remote", "add", "origin", str(remote)], cwd=source, check=True)
+            subprocess.run([git, "push", "-u", "origin", "main"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote, check=True)
+            subprocess.run([git, "clone", str(remote), str(registered)], check=True, capture_output=True)
+            (registered / "local-work.txt").write_text("do not overwrite\n", encoding="utf-8")
+            (source / "release.txt").write_text("stable-two\n", encoding="utf-8")
+            subprocess.run([git, "add", "release.txt"], cwd=source, check=True)
+            subprocess.run([git, "commit", "-m", "stable two"], cwd=source, check=True, capture_output=True)
+            subprocess.run([git, "push", "origin", "main"], cwd=source, check=True, capture_output=True)
+
+            retained = MANAGER.synchronize_registered_stable_root(git, source, registered, str(remote), "main")
+            self.assertEqual(retained["status"], "dirty-source-retained")
+            self.assertIn(retained["status"], MANAGER.UNSAFE_REGISTRATION_STATUSES)
+            persistent = MANAGER.prepare_persistent_stable_root(git, source, workspace, str(remote), "main")
+            persistent_root = Path(persistent["path"])
+            self.assertNotEqual(persistent_root.resolve(), registered.resolve())
+            self.assertEqual((persistent_root / "release.txt").read_text(encoding="utf-8"), "stable-two\n")
+            self.assertEqual((registered / "local-work.txt").read_text(encoding="utf-8"), "do not overwrite\n")
+            facts = MANAGER.git_facts(persistent_root, str(remote))
+            self.assertEqual(facts["branch"], "main")
+            self.assertFalse(facts["dirty"])
 
 
 if __name__ == "__main__":

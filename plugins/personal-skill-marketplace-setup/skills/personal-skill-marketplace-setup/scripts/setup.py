@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import platform
@@ -28,6 +29,13 @@ STABLE_REF = "main"
 SETUP_SKILL_ID = "personal-skill-marketplace-setup"
 GUIDANCE_BEGIN = "<!-- BEGIN WORKSPACE-LOCAL SKILL SYNC -->"
 GUIDANCE_END = "<!-- END WORKSPACE-LOCAL SKILL SYNC -->"
+UNSAFE_REGISTRATION_STATUSES = {
+    "dirty-source-retained",
+    "divergent-source-retained",
+    "development-source-retained",
+    "detached-source-retained",
+    "non-git-source-retained",
+}
 
 
 def load_json(path: Path):
@@ -215,6 +223,8 @@ def managed_guidance_block() -> str:
             "- Create or update maintained plugins through `$skill-writing`. A new plugin must be present in `skill-pack.json` and both marketplace manifests before publication.",
             "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills, present the read-only release plan, and ask once for a single end-to-end authorization covering version update, commit, push, PR, CI, SHA-pinned merge, stable verification, and cache refresh. Never commit or push without that explicit confirmation.",
             "- After the combined authorization, invoke the setup Skill with both `--confirm-publish` and `--confirm-merge`; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use `--confirm-publish --create-pr` and stop at the open PR.",
+            "- Treat merge verification, cache directory/manifest/hash verification, restart, and new-task Skill-path pickup as separate execution gates. The last gate is not another human approval.",
+            "- Never restore a dirty, divergent, detached, development, or non-Git marketplace source as the runtime registration; preserve it and register a persistent clean stable clone.",
             GUIDANCE_END,
         )
     )
@@ -536,6 +546,8 @@ def installation_findings(root: Path, codex_home: Path, codex_cli: str | None) -
         "expectedPlugins": len(pack.get("plugins", [])),
         "enabledPlugins": 0,
         "missingOrWrongVersion": [],
+        "cacheVerified": False,
+        "cacheVerification": None,
     }
     if not codex_cli:
         result["status"] = "codex-cli-unavailable"
@@ -552,7 +564,12 @@ def installation_findings(root: Path, codex_home: Path, codex_cli: str | None) -
         else:
             missing.append(item["id"])
     result["missingOrWrongVersion"] = missing
-    result["status"] = "ok" if not missing and config_matches else "needs-repair"
+    try:
+        result["cacheVerification"] = verify_plugin_cache(root, codex_home)
+        result["cacheVerified"] = True
+    except RuntimeError as exc:
+        result["cacheVerification"] = {"status": "failed", "error": str(exc)}
+    result["status"] = "ok" if not missing and config_matches and result["cacheVerified"] else "needs-repair"
     return result
 
 
@@ -943,7 +960,92 @@ def codex_marketplace_roots(codex_cli: str, root: Path) -> list[str]:
     return roots
 
 
-def verify_enabled_plugin_versions(codex_cli: str, root: Path) -> None:
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def plugin_source_files(plugin_root: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in plugin_root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and path.suffix.lower() not in {".pyc", ".pyo"}
+        and path.name != ".DS_Store"
+    )
+
+
+def verify_plugin_cache(root: Path, codex_home: Path) -> dict:
+    pack = load_json(root / "skill-pack.json")
+    cache_root = codex_home / "plugins" / "cache" / MARKETPLACE_NAME
+    verified = []
+    failures = []
+    for item in pack.get("plugins", []):
+        plugin_id = str(item["id"])
+        expected_version = str(item["version"])
+        source_root = root / "plugins" / plugin_id
+        installed_root = cache_root / plugin_id / expected_version
+        manifest_path = installed_root / ".codex-plugin" / "plugin.json"
+        if not installed_root.is_dir():
+            failures.append(f"{plugin_id}: cache directory missing for {expected_version}")
+            continue
+        if not manifest_path.is_file():
+            failures.append(f"{plugin_id}: cached plugin manifest is missing")
+            continue
+        cached_version = str(load_json(manifest_path).get("version") or "")
+        if cached_version != expected_version:
+            failures.append(
+                f"{plugin_id}: cached manifest version is {cached_version or '[missing]'}, expected {expected_version}"
+            )
+            continue
+        source_files = plugin_source_files(source_root)
+        if not source_files:
+            failures.append(f"{plugin_id}: source plugin contains no verifiable files")
+            continue
+        digest = hashlib.sha256()
+        mismatch = None
+        for source in source_files:
+            relative = source.relative_to(source_root)
+            cached = installed_root / relative
+            source_hash = sha256_file(source)
+            if not cached.is_file():
+                mismatch = f"missing cached file {relative.as_posix()}"
+                break
+            cached_hash = sha256_file(cached)
+            if cached_hash != source_hash:
+                mismatch = f"hash mismatch for {relative.as_posix()}"
+                break
+            digest.update(relative.as_posix().encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(source_hash.encode("ascii"))
+            digest.update(b"\n")
+        if mismatch:
+            failures.append(f"{plugin_id}: {mismatch}")
+            continue
+        verified.append(
+            {
+                "id": plugin_id,
+                "version": expected_version,
+                "cachePath": str(installed_root),
+                "fileCount": len(source_files),
+                "contentSha256": digest.hexdigest(),
+            }
+        )
+    if failures:
+        raise RuntimeError("Stable cache verification failed: " + "; ".join(failures))
+    return {
+        "status": "verified",
+        "cacheRoot": str(cache_root),
+        "verifiedPluginCount": len(verified),
+        "plugins": verified,
+    }
+
+
+def verify_enabled_plugin_versions(codex_cli: str, root: Path, codex_home: Path) -> dict:
     pack = load_json(root / "skill-pack.json")
     completed = run([codex_cli, "plugin", "list"], cwd=root, capture=True, show_output=False)
     missing = []
@@ -956,6 +1058,56 @@ def verify_enabled_plugin_versions(codex_cli: str, root: Path) -> None:
             missing.append(str(item["id"]))
     if missing:
         raise RuntimeError("Stable cache refresh did not install expected plugin versions: " + ", ".join(missing))
+    cache = verify_plugin_cache(root, codex_home)
+    return {
+        "status": "installed-and-verified",
+        "enabledPluginCount": len(pack.get("plugins", [])),
+        "cache": cache,
+    }
+
+
+def expected_skill_path(root: Path, codex_home: Path, plugin_id: str) -> Path:
+    versions = {str(item["id"]): str(item["version"]) for item in load_json(root / "skill-pack.json").get("plugins", [])}
+    if plugin_id not in versions:
+        raise RuntimeError(f"Unknown plugin id for binding verification: {plugin_id}")
+    return (
+        codex_home
+        / "plugins"
+        / "cache"
+        / MARKETPLACE_NAME
+        / plugin_id
+        / versions[plugin_id]
+        / "skills"
+        / plugin_id
+        / "SKILL.md"
+    ).resolve()
+
+
+def verify_loaded_skill_binding(root: Path, codex_home: Path, loaded_skill_path: Path | None) -> dict:
+    if loaded_skill_path is None:
+        return {
+            "status": "restart-required",
+            "newTaskRequired": True,
+            "loadedSkillPath": None,
+        }
+    loaded = loaded_skill_path.expanduser().resolve()
+    for item in load_json(root / "skill-pack.json").get("plugins", []):
+        plugin_id = str(item["id"])
+        expected = expected_skill_path(root, codex_home, plugin_id)
+        if normalized_path(loaded) == normalized_path(expected):
+            return {
+                "status": "loaded-path-verified",
+                "newTaskRequired": False,
+                "pluginId": plugin_id,
+                "version": str(item["version"]),
+                "loadedSkillPath": str(loaded),
+                "expectedSkillPath": str(expected),
+            }
+    return {
+        "status": "loaded-path-mismatch",
+        "newTaskRequired": True,
+        "loadedSkillPath": str(loaded),
+    }
 
 
 def configured_workspace_any(codex_home: Path) -> Path | None:
@@ -973,8 +1125,6 @@ def synchronize_registered_stable_root(
     repository: str,
     stable_ref: str,
 ) -> dict:
-    if normalized_path(release_root) == normalized_path(registered_root):
-        return {"status": "release-worktree-retained", "path": str(registered_root)}
     facts = git_facts(registered_root, repository)
     if not facts.get("git"):
         return {"status": "non-git-source-retained", "path": str(registered_root)}
@@ -984,15 +1134,14 @@ def synchronize_registered_stable_root(
     run([git, "fetch", "origin", stable_ref], cwd=registered_root)
     remote = git_output(git, registered_root, "rev-parse", remote_ref)
     local = git_output(git, registered_root, "rev-parse", "HEAD")
-    if local == remote:
-        return {"status": "up-to-date", "path": str(registered_root), "before": local, "after": remote}
-    if not git_is_ancestor(git, registered_root, local, remote):
-        return {"status": "divergent-source-retained", "path": str(registered_root), "before": local, "stable": remote}
-    if facts.get("branch") == stable_ref:
-        run([git, "pull", "--ff-only", "origin", stable_ref], cwd=registered_root)
-    elif facts.get("branch") is None:
-        run([git, "switch", "--detach", remote_ref], cwd=registered_root)
-    else:
+    if facts.get("branch") is None:
+        return {
+            "status": "detached-source-retained",
+            "path": str(registered_root),
+            "before": local,
+            "stable": remote,
+        }
+    if facts.get("branch") != stable_ref:
         return {
             "status": "development-source-retained",
             "path": str(registered_root),
@@ -1000,10 +1149,49 @@ def synchronize_registered_stable_root(
             "before": local,
             "stable": remote,
         }
+    if local == remote:
+        return {"status": "up-to-date", "path": str(registered_root), "before": local, "after": remote}
+    if not git_is_ancestor(git, registered_root, local, remote):
+        return {"status": "divergent-source-retained", "path": str(registered_root), "before": local, "stable": remote}
+    run([git, "pull", "--ff-only", "origin", stable_ref], cwd=registered_root)
     after = git_output(git, registered_root, "rev-parse", "HEAD")
     if after != remote:
         raise RuntimeError(f"Registered stable source did not synchronize to {remote}: {after}")
     return {"status": "updated", "path": str(registered_root), "before": local, "after": after}
+
+
+def unique_managed_stable_path(workspace: Path) -> Path:
+    preferred = workspace / "local-marketplace-stable"
+    if not preferred.exists():
+        return preferred
+    return workspace / f"local-marketplace-stable-{dt.datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+
+def prepare_persistent_stable_root(
+    git: str,
+    release_root: Path,
+    workspace: Path,
+    repository: str,
+    stable_ref: str,
+) -> dict:
+    preferred = workspace / "local-marketplace-stable"
+    if preferred.exists() and is_marketplace(preferred):
+        existing = synchronize_registered_stable_root(git, release_root, preferred, repository, stable_ref)
+        if existing["status"] not in UNSAFE_REGISTRATION_STATUSES:
+            return {"status": "reused", "path": str(preferred), "synchronization": existing}
+    destination = unique_managed_stable_path(workspace)
+    run(
+        [git, "clone", "--no-hardlinks", "--branch", stable_ref, str(release_root), str(destination)],
+        cwd=release_root,
+    )
+    run([git, "remote", "set-url", "origin", repository], cwd=destination)
+    run([git, "fetch", "origin", stable_ref], cwd=destination)
+    run([git, "pull", "--ff-only", "origin", stable_ref], cwd=destination)
+    local = git_output(git, destination, "rev-parse", "HEAD")
+    remote = git_output(git, destination, "rev-parse", f"origin/{stable_ref}")
+    if local != remote or not is_marketplace(destination):
+        raise RuntimeError(f"Persistent stable marketplace did not resolve to {remote}: {destination} at {local}")
+    return {"status": "created", "path": str(destination), "stableCommit": local}
 
 
 def refresh_from_verified_stable(
@@ -1014,6 +1202,7 @@ def refresh_from_verified_stable(
 ) -> dict:
     git = require_git()
     workspace = validate_workspace(args.workspace_root or configured_workspace_any(codex_home) or root.parent, codex_home, False)
+    workspace.mkdir(parents=True, exist_ok=True)
     codex_cli = resolve_codex_cli(args.codex_cli, root, codex_home)
     if not codex_cli:
         raise FileNotFoundError("Codex CLI was not found; stable release was merged but the callable cache was not refreshed")
@@ -1027,11 +1216,19 @@ def refresh_from_verified_stable(
         args.repo_url,
         stable_ref,
     )
-    temporary_parent = workspace / "tmp"
-    temporary_parent.mkdir(parents=True, exist_ok=True)
-    stable_root = temporary_parent / f"workspace-local-stable-{uuid.uuid4().hex}"
-    run([git, "worktree", "add", "--detach", str(stable_root), f"origin/{stable_ref}"], cwd=root)
-    restored = False
+    retain_stable_root = registered_source_sync["status"] in UNSAFE_REGISTRATION_STATUSES
+    persistent = None
+    if retain_stable_root:
+        persistent = prepare_persistent_stable_root(git, root, workspace, args.repo_url, stable_ref)
+        stable_root = Path(persistent["path"])
+        final_registration_root = stable_root
+    else:
+        temporary_parent = workspace / "tmp"
+        temporary_parent.mkdir(parents=True, exist_ok=True)
+        stable_root = temporary_parent / f"workspace-local-stable-{uuid.uuid4().hex}"
+        run([git, "worktree", "add", "--detach", str(stable_root), f"origin/{stable_ref}"], cwd=root)
+        final_registration_root = original_root
+    finalized = False
     try:
         stable_commit = git_output(git, stable_root, "rev-parse", "HEAD")
         run_doctor(stable_root, False)
@@ -1047,32 +1244,45 @@ def refresh_from_verified_stable(
             "--codex-cli",
             codex_cli,
             "--skip-doctor",
-            "--skip-user-config",
             "--replace-marketplace-registration",
         ]
+        if retain_stable_root:
+            command.append("--replace-location-config")
+        else:
+            command.append("--skip-user-config")
         run(command, cwd=stable_root)
-        verify_enabled_plugin_versions(codex_cli, stable_root)
     finally:
         try:
             current_roots = codex_marketplace_roots(codex_cli, stable_root)
-            if len(current_roots) != 1 or normalized_path(current_roots[0]) != normalized_path(original_root):
+            if len(current_roots) != 1 or normalized_path(current_roots[0]) != normalized_path(final_registration_root):
                 run([codex_cli, "plugin", "marketplace", "remove", MARKETPLACE_NAME], cwd=stable_root)
-                run([codex_cli, "plugin", "marketplace", "add", str(original_root)], cwd=stable_root)
-            restored_roots = codex_marketplace_roots(codex_cli, stable_root)
-            if len(restored_roots) != 1 or normalized_path(restored_roots[0]) != normalized_path(original_root):
-                raise RuntimeError(f"Failed to restore marketplace registration to {original_root}: {restored_roots}")
-            verify_enabled_plugin_versions(codex_cli, stable_root)
-            restored = True
+                run([codex_cli, "plugin", "marketplace", "add", str(final_registration_root)], cwd=stable_root)
+            final_roots = codex_marketplace_roots(codex_cli, stable_root)
+            if len(final_roots) != 1 or normalized_path(final_roots[0]) != normalized_path(final_registration_root):
+                raise RuntimeError(f"Failed to finalize marketplace registration at {final_registration_root}: {final_roots}")
+            installation = verify_enabled_plugin_versions(codex_cli, final_registration_root, codex_home)
+            configured_root = configured_marketplace(codex_home)
+            if not configured_root or normalized_path(configured_root) != normalized_path(final_registration_root):
+                raise RuntimeError(
+                    f"Location config did not settle on the final marketplace root {final_registration_root}: {configured_root}"
+                )
+            finalized = True
         finally:
-            if restored:
+            if finalized and not retain_stable_root:
                 run([git, "worktree", "remove", str(stable_root)], cwd=root)
     return {
-        "status": "refreshed",
+        "status": "installed-and-verified",
         "stableCommit": stable_commit,
-        "restoredMarketplaceRoot": str(original_root),
+        "registeredMarketplaceRoot": str(final_registration_root),
+        "retainedPersistentStableRoot": retain_stable_root,
+        "persistentStableRoot": persistent,
         "registeredSourceSync": registered_source_sync,
+        "cacheVerified": True,
+        "installationVerification": installation,
         "workspaceRoot": str(workspace),
         "restartRequired": True,
+        "activationStatus": "restart-required",
+        "newTaskBinding": verify_loaded_skill_binding(stable_root, codex_home, None),
     }
 
 
@@ -1088,6 +1298,7 @@ def release_authorization_policy(merge_authorized: bool) -> dict:
             "sha-pinned-merge",
             "stable-main-verification",
             "local-cache-refresh",
+            "cache-hash-verification",
         ],
         "publicationOnlyRequiresExplicitLimitation": True,
         "mergeRequiresExplicitAuthorization": True,
@@ -1215,7 +1426,7 @@ def publish_changes(args, root: Path, codex_home: Path) -> dict:
         refresh = refresh_from_verified_stable(args, root, codex_home, stable_ref)
     return {
         **plan,
-        "status": "merged-and-refreshed" if refresh else "published" if pr_status != "compare-url-required" else "published-pr-required",
+        "status": "merged-cache-verified-restart-required" if refresh else "published" if pr_status != "compare-url-required" else "published-pr-required",
         "branch": branch,
         "versions": versions,
         "releaseCommit": release_commit,
@@ -1284,6 +1495,7 @@ def main() -> None:
     parser.add_argument("--confirm-merge", action="store_true")
     parser.add_argument("--ci-timeout-seconds", type=int, default=1800)
     parser.add_argument("--ci-poll-seconds", type=int, default=10)
+    parser.add_argument("--loaded-skill-path", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -1385,13 +1597,18 @@ def main() -> None:
                 if not codex_cli:
                     raise FileNotFoundError("Codex CLI was not found. The repository updated, but plugins were not reinstalled")
                 run_installer(args, root, codex_home, workspace_root, codex_cli, sync["affectedPlugins"])
+        installation = None if args.dry_run else installation_findings(root, codex_home, codex_cli)
+        binding = verify_loaded_skill_binding(root, codex_home, args.loaded_skill_path)
         result = {
             "status": sync["status"],
             "mode": args.mode,
             "marketplaceRoot": str(root),
             "workspaceRoot": str(workspace_root),
             "git": sync,
+            "installation": installation,
             "restartRequired": sync["restartRequired"],
+            "activationStatus": binding["status"],
+            "newTaskBinding": binding,
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return
@@ -1423,6 +1640,7 @@ def main() -> None:
         warnings.append("Codex CLI is unavailable; installed plugin state was not verified")
     elif installation and installation.get("status") != "ok":
         warnings.append("Installed plugin versions or workspace-local location config need repair")
+    binding = verify_loaded_skill_binding(root, codex_home, args.loaded_skill_path)
     result = {
         "status": "audited" if args.mode == "audit" else "dry-run" if args.dry_run else "completed",
         "mode": args.mode,
@@ -1435,6 +1653,8 @@ def main() -> None:
         "managedGuidance": managed_guidance,
         "bootstrapCopy": bootstrap_copy,
         "restartRequired": args.mode != "audit" and not args.dry_run,
+        "activationStatus": binding["status"],
+        "newTaskBinding": binding,
         "warnings": warnings,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

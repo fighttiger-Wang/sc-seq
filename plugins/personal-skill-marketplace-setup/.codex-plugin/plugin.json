@@ -1,13 +1,13 @@
 {
   "name": "personal-skill-marketplace-setup",
-  "version": "0.1.3+codex.20260904033542",
+  "version": "0.1.4+codex.20260904053608",
   "description": "Bootstrap, audit, preflight, install, publish, update, and repair the shared personal Codex skill marketplace across Windows and macOS.",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "13 · 共享 Skill 下载安装 v0.1.3",
+    "displayName": "13 · 共享 Skill 下载安装 v0.1.4",
     "shortDescription": "新电脑部署、按需同步并发布共享 Codex skills",
     "longDescription": "在 Windows 与 macOS 上引导部署 workspace-local marketplace，按任务检查稳定更新，安装受影响插件，并在确认后通过开发分支、测试和 Pull Request 发布 Skill 修改。",
     "developerName": "fight",
