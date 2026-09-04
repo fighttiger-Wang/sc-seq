@@ -200,6 +200,30 @@ class MarketplaceSetupTests(unittest.TestCase):
             self.assertIn("Keep this.", text)
             self.assertEqual(text.count(MANAGER.GUIDANCE_BEGIN), 1)
             self.assertEqual(text.count(MANAGER.GUIDANCE_END), 1)
+            self.assertIn("ask once for a single end-to-end authorization", text)
+            self.assertIn("do not ask a second merge or installation question", text)
+            self.assertIn("publication only, PR only, no merge, or no install", text)
+
+    def test_read_only_publish_plan_declares_one_review_default(self) -> None:
+        policy = MANAGER.release_authorization_policy(False)
+        self.assertTrue(policy["singleReviewDefault"])
+        self.assertTrue(policy["publicationOnlyRequiresExplicitLimitation"])
+        self.assertTrue(policy["mergeRequiresExplicitAuthorization"])
+        self.assertFalse(policy["mergeAuthorized"])
+        self.assertEqual(
+            policy["defaultAuthorizationScope"],
+            [
+            "version-update",
+            "commit",
+            "push",
+            "pull-request",
+            "ci-wait",
+            "sha-pinned-merge",
+            "stable-main-verification",
+            "local-cache-refresh",
+            ],
+        )
+        self.assertTrue(MANAGER.release_authorization_policy(True)["mergeAuthorized"])
 
     def test_bootstrap_copy_is_moved_to_recoverable_disabled_backup(self) -> None:
         with temporary_directory("marketplace-bootstrap-copy-") as temporary:

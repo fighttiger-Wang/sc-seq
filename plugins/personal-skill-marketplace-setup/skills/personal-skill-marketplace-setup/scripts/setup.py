@@ -213,8 +213,8 @@ def managed_guidance_block() -> str:
             "- If preflight reports that plugins were updated or `restartRequired` is true, stop the current workflow and ask the user to restart Codex and open a new task before using the updated Skill.",
             "- If preflight reports `up-to-date`, do not repeat the network check again in the same task.",
             "- Create or update maintained plugins through `$skill-writing`. A new plugin must be present in `skill-pack.json` and both marketplace manifests before publication.",
-            "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills and ask whether to publish. Never commit or push without the user's explicit confirmation.",
-            "- When the user explicitly requests publication and merge in the same request, invoke the setup Skill with both `--confirm-publish` and `--confirm-merge`; it must increment versions, test, push, create or reuse the PR, wait for CI, merge, verify stable `main`, and refresh the local callable cache.",
+            "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills, present the read-only release plan, and ask once for a single end-to-end authorization covering version update, commit, push, PR, CI, SHA-pinned merge, stable verification, and cache refresh. Never commit or push without that explicit confirmation.",
+            "- After the combined authorization, invoke the setup Skill with both `--confirm-publish` and `--confirm-merge`; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use `--confirm-publish --create-pr` and stop at the open PR.",
             GUIDANCE_END,
         )
     )
@@ -1076,6 +1076,25 @@ def refresh_from_verified_stable(
     }
 
 
+def release_authorization_policy(merge_authorized: bool) -> dict:
+    return {
+        "singleReviewDefault": True,
+        "defaultAuthorizationScope": [
+            "version-update",
+            "commit",
+            "push",
+            "pull-request",
+            "ci-wait",
+            "sha-pinned-merge",
+            "stable-main-verification",
+            "local-cache-refresh",
+        ],
+        "publicationOnlyRequiresExplicitLimitation": True,
+        "mergeRequiresExplicitAuthorization": True,
+        "mergeAuthorized": bool(merge_authorized),
+    }
+
+
 def publish_changes(args, root: Path, codex_home: Path) -> dict:
     facts = git_facts(root, args.repo_url)
     if not facts["git"] or not facts["branch"]:
@@ -1106,8 +1125,7 @@ def publish_changes(args, root: Path, codex_home: Path) -> dict:
             ".codex-plugin/marketplace.json",
         ],
         "tests": ["marketplace doctor", "setup unit tests", "version manifest check", "annotation regressions when affected"],
-        "mergeRequiresExplicitAuthorization": True,
-        "mergeAuthorized": bool(args.confirm_merge),
+        **release_authorization_policy(args.confirm_merge),
     }
     if not args.confirm_publish:
         return plan
