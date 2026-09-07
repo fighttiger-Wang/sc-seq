@@ -107,16 +107,21 @@ Allowed tones: `info`, `warning`, `danger`, `success`.
 {
   "type": "image",
   "path": "figures/result.png",
+  "mobile_path": "figures/result.mobile.svg",
+  "print_path": "figures/result.print.svg",
   "alt": "描述图中比较对象和指标",
   "title": "图题",
   "caption": "先说明图显示什么，再解释其生物学含义。",
   "source": "result.png",
   "layout": "normal",
+  "authored_concept": false,
   "pdf_page": 1
 }
 ```
 
-Allowed layouts: `normal`, `wide`. For PDF, `pdf_page` is 1-based. The renderer embeds one optimized raster image; it does not retain an additional lossless copy.
+Allowed layouts: `normal`, `wide`. For PDF, `pdf_page` is 1-based. `path` is the desktop/default source. `mobile_path` and `print_path` are optional dedicated variants; do not point them to a desktop file that was merely resized. When present, the renderer uses `<picture>` for mobile selection and a print-only source under `@media print`.
+
+Set `authored_concept` to `true` for every workflow, study-design, comparison-framework, hypothesis-matrix, evidence-chain, mechanism, or spatial schematic newly created for the report. Every declared variant must reference a finalized `.svg`; the renderer rejects PNG/JPEG/PDF input even when an older same-stem raster file exists. Each desktop/mobile/print source records its role, relative path, source format, source SHA-256, embedded MIME, embedded SHA-256, and dimensions. `validate_report.py` decodes each data URI and proves the metadata matches the actual embedded bytes.
 
 ### Image grid
 
@@ -124,13 +129,15 @@ Allowed layouts: `normal`, `wide`. For PDF, `pdf_page` is 1-based. The renderer 
 {
   "type": "image-grid",
   "images": [
-    {"path": "a.png", "alt": "A", "title": "A", "caption": "..."},
+    {"path": "a.svg", "alt": "A", "title": "A", "caption": "..."},
     {"path": "b.png", "alt": "B", "title": "B", "caption": "..."}
   ]
 }
 ```
 
 Use only when the pair answers one scientific question and both remain readable.
+
+PNG/JPEG are optimized before embedding. Authored SVG is embedded without rasterization so labels and lines remain sharp in browser zoom and print. SVG must be self-contained and may not contain scripts, event-handler attributes, `foreignObject`, or external file/network references.
 
 ### Table
 
