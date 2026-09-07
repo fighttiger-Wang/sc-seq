@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import html
 import io
 import json
@@ -14,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -26,7 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 SAFE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SAFE_STEM = re.compile(r"[<>:\"/\\|?*\x00-\x1f]")
-ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf"}
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".svg"}
 
 
 def discover_workspace_root() -> Path:
@@ -121,7 +123,57 @@ def pdf_page_to_png(path: Path, page: int, temp_dir: Path) -> Path:
     return output
 
 
+def svg_dimension(value: str | None) -> float | None:
+    if not value:
+        return None
+    matched = re.fullmatch(r"\s*([0-9]+(?:\.[0-9]+)?)\s*(?:px|pt|pc|mm|cm|in)?\s*", value)
+    return float(matched.group(1)) if matched else None
+
+
+def load_svg(path: Path, max_dimension: int) -> tuple[str, int, int]:
+    raw = path.read_bytes()
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as exc:
+        raise ValueError(f"Invalid SVG XML: {path.name}: {exc}") from exc
+    if root.tag.rsplit("}", 1)[-1].lower() != "svg":
+        raise ValueError(f"SVG root element is not <svg>: {path.name}")
+    for element in root.iter():
+        local_name = element.tag.rsplit("}", 1)[-1].lower()
+        if local_name in {"script", "foreignobject"}:
+            raise ValueError(f"SVG contains prohibited <{local_name}>: {path.name}")
+        for attribute, value in element.attrib.items():
+            attr_name = attribute.rsplit("}", 1)[-1].lower()
+            if attr_name.startswith("on"):
+                raise ValueError(f"SVG contains an event-handler attribute: {path.name}")
+            if attr_name == "href":
+                reference = value.strip()
+                if reference and not reference.startswith("#") and not reference.startswith("data:"):
+                    raise ValueError(f"SVG contains an external reference: {path.name}: {reference}")
+    width = svg_dimension(root.get("width"))
+    height = svg_dimension(root.get("height"))
+    view_box = root.get("viewBox") or root.get("viewbox")
+    if view_box:
+        try:
+            _, _, view_width, view_height = [float(part) for part in re.split(r"[\s,]+", view_box.strip())]
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"SVG has an invalid viewBox: {path.name}") from exc
+        if view_width <= 0 or view_height <= 0:
+            raise ValueError(f"SVG viewBox dimensions must be positive: {path.name}")
+        width = width or view_width
+        height = height or view_height
+    if not width or not height or width <= 0 or height <= 0:
+        raise ValueError(f"SVG requires positive width/height or a valid viewBox: {path.name}")
+    ratio = min(1.0, max_dimension / max(width, height))
+    display_width = max(1, round(width * ratio))
+    display_height = max(1, round(height * ratio))
+    encoded = base64.b64encode(raw).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}", display_width, display_height
+
+
 def optimize_image(path: Path, max_dimension: int, temp_dir: Path, pdf_page: int = 1) -> tuple[str, int, int]:
+    if path.suffix.lower() == ".svg":
+        return load_svg(path, max_dimension)
     working = pdf_page_to_png(path, pdf_page, temp_dir) if path.suffix.lower() == ".pdf" else path
     with Image.open(working) as source:
         source.load()
@@ -146,23 +198,92 @@ def optimize_image(path: Path, max_dimension: int, temp_dir: Path, pdf_page: int
     return f"data:{mime};base64,{encoded}", image.width, image.height
 
 
+def prepare_figure_asset(
+    raw_path: str,
+    role: str,
+    base_dir: Path,
+    max_dimension: int,
+    temp_dir: Path,
+    pdf_page: int,
+    authored_concept: bool,
+) -> dict[str, Any]:
+    source = resolve_source(raw_path, base_dir)
+    if authored_concept and source.suffix.lower() != ".svg":
+        sibling_svg = source.with_suffix(".svg")
+        hint = f"; use {sibling_svg.name}" if sibling_svg.is_file() else ""
+        raise ValueError(f"Authored concept figures must use SVG, not {source.suffix}: {source.name}{hint}")
+    data_uri, width, height = optimize_image(source, max_dimension, temp_dir, pdf_page)
+    source_path = source.relative_to(base_dir).as_posix()
+    source_format = source.suffix.lower().lstrip(".")
+    embedded_mime = data_uri[5:].split(";", 1)[0]
+    embedded_bytes = base64.b64decode(data_uri.split(",", 1)[1])
+    return {
+        "role": role,
+        "data_uri": data_uri,
+        "width": width,
+        "height": height,
+        "source_path": source_path,
+        "source_format": source_format,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "embedded_mime": embedded_mime,
+        "embedded_sha256": hashlib.sha256(embedded_bytes).hexdigest(),
+    }
+
+
+def asset_attributes(asset: dict[str, Any], authored_concept: bool) -> str:
+    return (
+        f'data-report-asset="true" data-asset-role="{text(asset["role"])}" '
+        f'data-source-path="{text(asset["source_path"])}" data-source-format="{text(asset["source_format"])}" '
+        f'data-source-sha256="{asset["source_sha256"]}" data-embedded-mime="{text(asset["embedded_mime"])}" '
+        f'data-embedded-sha256="{asset["embedded_sha256"]}" data-authored-concept="{str(authored_concept).lower()}" '
+        f'width="{asset["width"]}" height="{asset["height"]}"'
+    )
+
+
 def render_figure(item: dict[str, Any], base_dir: Path, max_dimension: int, temp_dir: Path) -> str:
-    source = resolve_source(str(item.get("path", "")), base_dir)
-    data_uri, width, height = optimize_image(source, max_dimension, temp_dir, int(item.get("pdf_page", 1)))
+    raw_path = str(item.get("path", ""))
+    authored_concept = item.get("authored_concept", False)
+    if not isinstance(authored_concept, bool):
+        raise ValueError(f"authored_concept must be true or false: {raw_path}")
+    pdf_page = int(item.get("pdf_page", 1))
+    desktop = prepare_figure_asset(raw_path, "desktop", base_dir, max_dimension, temp_dir, pdf_page, authored_concept)
+    mobile_path = str(item.get("mobile_path", "")).strip()
+    print_path = str(item.get("print_path", "")).strip()
+    mobile = prepare_figure_asset(mobile_path, "mobile", base_dir, max_dimension, temp_dir, pdf_page, authored_concept) if mobile_path else None
+    print_asset = prepare_figure_asset(print_path, "print", base_dir, max_dimension, temp_dir, pdf_page, authored_concept) if print_path else None
     alt = str(item.get("alt", "")).strip()
     if not alt:
-        raise ValueError(f"Figure requires a meaningful alt description: {source.name}")
+        raise ValueError(f"Figure requires a meaningful alt description: {desktop['source_path']}")
     layout = str(item.get("layout", "normal"))
     if layout not in {"normal", "wide"}:
         raise ValueError(f"Unknown figure layout: {layout}")
-    figure_class = "figure-wide" if layout == "wide" else ""
-    title_value = str(item.get("title", source.stem)).strip()
+    classes = ["figure-wide"] if layout == "wide" else []
+    if mobile:
+        classes.append("has-mobile-source")
+    if print_asset:
+        classes.append("has-print-source")
+    figure_class = " ".join(classes)
+    title_value = str(item.get("title", Path(raw_path).stem)).strip()
     caption = str(item.get("caption", "")).strip()
-    source_label = str(item.get("source", source.name)).strip()
+    source_label = str(item.get("source", desktop["source_path"])).strip()
+    mobile_source = ""
+    if mobile:
+        mobile_source = (
+            f'<source media="(max-width: 600px)" srcset="{mobile["data_uri"]}" '
+            f'{asset_attributes(mobile, authored_concept)}>'
+        )
+    print_image = ""
+    if print_asset:
+        print_image = (
+            f'<img class="figure-print-source" src="{print_asset["data_uri"]}" alt="{text(alt)}" '
+            f'{asset_attributes(print_asset, authored_concept)}>'
+        )
     return (
         f'<figure class="{figure_class}"><div class="figure-media">'
         f'<button type="button" data-image-viewer aria-label="放大查看：{text(title_value)}">'
-        f'<img src="{data_uri}" alt="{text(alt)}" width="{width}" height="{height}" loading="lazy"></button></div>'
+        f'<picture class="figure-screen-source">{mobile_source}'
+        f'<img src="{desktop["data_uri"]}" alt="{text(alt)}" loading="lazy" {asset_attributes(desktop, authored_concept)}>'
+        f'</picture>{print_image}</button></div>'
         f'<figcaption><strong>{text(title_value)}</strong><span>{text(caption)}</span>'
         f'<small class="source">来源：{text(source_label)}</small></figcaption></figure>'
     )
@@ -265,7 +386,13 @@ def next_output_path(folder: Path, stem: str) -> Path:
 
 def render(spec: dict[str, Any], spec_path: Path, template_path: Path, max_dimension: int, temp_root: Path) -> tuple[str, Path]:
     base_dir_value = spec.get("base_dir")
-    base_dir = resolve_local_path(Path(base_dir_value) if base_dir_value else spec_path.parent, "Base directory")
+    if base_dir_value:
+        base_dir_candidate = Path(base_dir_value)
+        if not base_dir_candidate.is_absolute():
+            base_dir_candidate = spec_path.parent / base_dir_candidate
+    else:
+        base_dir_candidate = spec_path.parent
+    base_dir = resolve_local_path(base_dir_candidate, "Base directory")
     if not base_dir.is_dir():
         raise ValueError(f"Base directory does not exist: {base_dir}")
     title_value = str(spec.get("title", "")).strip()

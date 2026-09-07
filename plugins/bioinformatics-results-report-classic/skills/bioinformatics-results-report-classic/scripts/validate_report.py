@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import re
 import sys
@@ -24,6 +26,7 @@ class ReportParser(HTMLParser):
         self.external_links: list[str] = []
         self.image_sources: list[str] = []
         self.image_alts: list[str | None] = []
+        self.image_assets: list[dict[str, str]] = []
         self.stylesheets: list[str] = []
         self.scripts: list[str] = []
         self.all_links: list[str] = []
@@ -61,10 +64,27 @@ class ReportParser(HTMLParser):
                 self.internal_links.append(href[1:])
             elif href.startswith(("http://", "https://")):
                 self.external_links.append(href)
-        elif tag == "img":
-            if "src" in values:
-                self.image_sources.append(values.get("src") or "")
-            self.image_alts.append(values.get("alt"))
+        elif tag in {"img", "source"}:
+            source_value = values.get("src") if tag == "img" else values.get("srcset")
+            if source_value is not None:
+                self.image_sources.append(source_value or "")
+            if tag == "img":
+                self.image_alts.append(values.get("alt"))
+            if values.get("data-report-asset") == "true":
+                self.image_assets.append(
+                    {
+                        "role": values.get("data-asset-role") or "",
+                        "source_path": values.get("data-source-path") or "",
+                        "source_format": values.get("data-source-format") or "",
+                        "source_sha256": values.get("data-source-sha256") or "",
+                        "embedded_mime": values.get("data-embedded-mime") or "",
+                        "embedded_sha256": values.get("data-embedded-sha256") or "",
+                        "authored_concept": values.get("data-authored-concept") or "",
+                        "width": values.get("width") or "",
+                        "height": values.get("height") or "",
+                        "src": source_value or "",
+                    }
+                )
         elif tag == "link" and values.get("rel") == "stylesheet":
             self.stylesheets.append(values.get("href") or "")
         elif tag == "script" and values.get("src"):
@@ -120,6 +140,56 @@ def main() -> int:
             errors.append("one or more images are not embedded data URIs")
         if any(not alt or not alt.strip() for alt in parsed.image_alts):
             errors.append("one or more images have empty alt text")
+        if len(parsed.image_assets) != len(parsed.image_sources):
+            errors.append(
+                f"embedded-asset metadata count {len(parsed.image_assets)} does not match embedded image count {len(parsed.image_sources)}"
+            )
+        for index, asset in enumerate(parsed.image_assets, 1):
+            missing = [
+                key
+                for key in ("role", "source_path", "source_format", "source_sha256", "embedded_mime", "embedded_sha256", "authored_concept", "width", "height")
+                if not asset[key]
+            ]
+            if missing:
+                errors.append(f"image {index} is missing embedded-asset metadata: {', '.join(missing)}")
+                continue
+            if Path(asset["source_path"]).is_absolute() or ".." in Path(asset["source_path"]).parts:
+                errors.append(f"image {index} exposes an unsafe source path")
+            if not re.fullmatch(r"[0-9a-f]{64}", asset["source_sha256"]):
+                errors.append(f"image {index} has an invalid source SHA-256")
+            if not re.fullmatch(r"[0-9a-f]{64}", asset["embedded_sha256"]):
+                errors.append(f"image {index} has an invalid embedded SHA-256")
+            if asset["role"] not in {"desktop", "mobile", "print"}:
+                errors.append(f"image {index} has an invalid asset role")
+            expected_prefix = f'data:{asset["embedded_mime"]};'
+            if not asset["src"].startswith(expected_prefix):
+                errors.append(f"image {index} declared MIME does not match its data URI")
+            else:
+                try:
+                    encoded = asset["src"].split(",", 1)[1].split()[0]
+                    embedded = base64.b64decode(encoded, validate=True)
+                    actual_embedded_sha = hashlib.sha256(embedded).hexdigest()
+                    if actual_embedded_sha != asset["embedded_sha256"]:
+                        errors.append(f"image {index} embedded SHA-256 does not match its data URI")
+                except (IndexError, ValueError) as exc:
+                    errors.append(f"image {index} contains an invalid embedded data URI: {exc}")
+            if asset["authored_concept"] not in {"true", "false"}:
+                errors.append(f"image {index} has an invalid authored-concept flag")
+            if asset["authored_concept"] == "true" and asset["embedded_mime"] != "image/svg+xml":
+                errors.append(f"image {index} is an authored concept figure but is not embedded as SVG")
+            expected_mime = {
+                "svg": "image/svg+xml",
+                "png": "image/png",
+                "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "pdf": "image/png",
+            }.get(asset["source_format"])
+            if expected_mime is None:
+                errors.append(f"image {index} has an unsupported source format")
+            elif asset["embedded_mime"] != expected_mime:
+                errors.append(f"image {index} source format does not match its embedded MIME")
+            if asset["source_format"] == "svg" and asset["source_sha256"] != asset["embedded_sha256"]:
+                errors.append(f"image {index} SVG source SHA-256 does not match embedded bytes")
         if parsed.stylesheets:
             errors.append("external stylesheets present: " + ", ".join(parsed.stylesheets))
         if parsed.scripts:
@@ -158,6 +228,10 @@ def main() -> int:
             "bytes": len(raw),
             "sections": len(parsed.ids),
             "embedded_images": len(parsed.image_sources),
+            "embedded_assets": [
+                {key: value for key, value in asset.items() if key != "src"}
+                for asset in parsed.image_assets
+            ],
             "external_citation_links": len(parsed.external_links),
             "evidence_notes": parsed.evidence_notes,
             "errors": errors,

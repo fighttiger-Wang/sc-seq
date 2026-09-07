@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 15,
+  "expectedPluginCount": 16,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -58,11 +58,15 @@
     },
     {
       "id": "bioinformatics-results-report-classic",
-      "version": "0.1.0+codex.20260902152211"
+      "version": "0.1.1+codex.20260907002131"
     },
     {
       "id": "celltype-function-heatmap",
       "version": "0.1.0+codex.20260902152211"
+    },
+    {
+      "id": "scientific-diagram-016",
+      "version": "0.1.0+codex.20260907002131"
     }
   ],
   "sharedPaths": [

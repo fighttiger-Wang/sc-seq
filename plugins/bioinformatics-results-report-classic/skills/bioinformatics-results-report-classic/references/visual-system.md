@@ -40,16 +40,22 @@ Use system Chinese fonts. Prefer a readable Song-style serif stack for narrative
 ## Figures
 
 - Preserve the original background, palette, labels, and aspect ratio.
+- Prefer self-contained SVG for newly authored workflows, study-design diagrams, mechanism schematics, and expected-pattern figures. Do not convert an authored SVG to PNG before report embedding.
+- Declare newly authored concept figures with `authored_concept: true`; treat any raster reference or SVG/hash mismatch in the final HTML as a failed regression.
+- For newly authored workflows and study designs, delegate only to the exact `scientific-diagram-016` Skill. Prefer its fixed Typst/CeTZ desktop, mobile, and print templates; if that route fails, use a plain table, numbered steps, or a simple direct-box SVG.
+- Keep connectors thin and orthogonal where possible, avoid diagonal crossings, and give every node a clear hierarchy: phase label, concise title, then optional one-line detail.
+- Use color semantically and sparingly. Required, conditional, validation, and warning states may have distinct soft fills, but peer nodes should not receive arbitrary rainbow colors.
+- Concept figures must visibly state when they are literature-informed hypotheses rather than calculated project results.
 - Center figures within the document and place title, interpretation, and source immediately below.
 - Use a one- or two-column figure arrangement only when both remain readable.
-- Wide heatmaps and networks should scroll within the figure container rather than widening the page.
+- Wide supplied heatmaps and networks should scroll within the figure container rather than widening the page. A specialist-authored wide figure with `mobile_path` must switch to the dedicated mobile layout instead of forcing horizontal scrolling.
 - Optimize embedded images to a readable maximum dimension and use one native `<dialog>` enlargement viewer.
 
 ## Interaction and accessibility
 
 - A thin burgundy reading-progress line is allowed.
 - Contents links may update their active state, but the contents block remains in normal document flow.
-- Image enlargement must support visible close text, keyboard focus, Escape closing, backdrop closing, descriptive alt text, and focus restoration.
+- Image enlargement must use the active `<picture>` image's `currentSrc` and support visible close text, keyboard focus, Escape closing, backdrop closing, descriptive alt text, and focus restoration.
 - Keep feedback transitions under 200 ms and respect `prefers-reduced-motion`.
 - Do not require network access, web fonts, frameworks, icon libraries, or external CSS.
 
@@ -59,4 +65,4 @@ Do not add a sticky side navigation, navy hero banner, dashboard tiles, dark mod
 
 ## QA
 
-Check desktop and 390 px mobile layouts, title wrapping, chapter bands, table overflow, figure distortion, caption readability, contents navigation, keyboard focus, Escape and backdrop dialog closing, print behavior, contrast, clickable citations, and absence of external asset dependencies.
+Check desktop and 390 px mobile layouts, title wrapping, chapter bands, table overflow, figure distortion, caption readability, contents navigation, keyboard focus, Escape and backdrop dialog closing, print behavior, contrast, clickable citations, and absence of external asset dependencies. Before inspecting a figure, verify from the embedded-asset metadata that the final HTML contains the intended source path, format, and SHA-256.

@@ -26,8 +26,9 @@ Turn a completed local result folder into a professional Chinese report without 
 5. Build an evidence ledger for every major conclusion: direct source file/table or figure, comparison, direction/effect, significance basis, evidence level, and nearby literature support. Interpret exact adjusted significance and effect fields when available; otherwise use descriptive wording.
 6. Search recent peer-reviewed literature, authoritative guidance, and necessary landmark studies using scientific concepts only. Put short clickable `author–year / journal` citations beside supported interpretation. Label unsupported mechanisms exactly `未获文献验证的机制推测`.
 7. Select only figures that advance the scientific storyline. Preserve their original palette, labels, aspect ratio, and scientific meaning.
-8. Read [report schema](references/report-schema.md) and [visual system](references/visual-system.md), draft a fresh JSON specification, and render with `scripts/render_report.py`. Do not reuse prose or specifications from another project.
-9. Run `scripts/validate_report.py`, then inspect desktop and mobile rendering, print layout, table/figure overflow, image enlargement, focus behavior, contrast, and citations. If browser inspection is unavailable, report `仅完成静态检查，视觉质检未完成`.
+8. When the report needs a newly authored workflow, study-design, comparison-framework, hypothesis-matrix, evidence-chain, simple-mechanism, or simple-spatial-schema figure, use the exact local specialist skill `scientific-diagram-016` through the routing in [scientific diagrams](references/scientific-diagrams.md). Do not substitute a fuzzy-matched drawing skill. If the exact skill is absent, ambiguous, unreadable, or fails rendering/QA, use only the documented simple fallback and disclose the downgrade.
+9. Read [report schema](references/report-schema.md) and [visual system](references/visual-system.md), draft a fresh JSON specification, and render with `scripts/render_report.py`. Do not reuse prose or specifications from another project.
+10. Run `scripts/validate_report.py`, confirm its desktop/mobile/print role, path, format, source SHA-256, embedded SHA-256, and MIME list matches the intended finalized figures, then inspect desktop and mobile rendering, print layout, table/figure overflow, image enlargement, focus behavior, contrast, and citations. For newly authored SVG, set `authored_concept: true` and provide dedicated `mobile_path`/`print_path` when the specialist produced them. Inspect both the SVGs and the exact embedded report rendering. If browser inspection is unavailable, report `仅完成静态检查，视觉质检未完成`.
 
 ## Required Report Layers
 
@@ -52,6 +53,7 @@ The visual language is fixed but the section structure is adaptive: a centered w
 - For pseudotime, trajectories, branches, or dynamic genes, read [trajectory](references/trajectory.md).
 - Before drafting the JSON specification, read [report schema](references/report-schema.md).
 - Before rendering or changing the shell, read [visual system](references/visual-system.md).
+- Before creating or replacing conceptual figures, read [scientific diagrams](references/scientific-diagrams.md).
 
 ## Completion gate
 

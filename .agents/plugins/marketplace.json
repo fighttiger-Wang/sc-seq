@@ -183,6 +183,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Education & Research"
+    },
+    {
+      "name": "scientific-diagram-016",
+      "source": {
+        "source": "local",
+        "path": "./plugins/scientific-diagram-016"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
     }
   ]
 }
