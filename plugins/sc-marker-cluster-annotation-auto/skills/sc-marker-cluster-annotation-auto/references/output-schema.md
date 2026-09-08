@@ -65,6 +65,10 @@ matrix.
 Exactly `细胞类型 | 文献 | 经典鉴定 Marker | 本次鉴定使用的 Marker`.
 One cell type x one reference is one row. Do not merge cells. Every final type
 has at least one reference with a clickable PMID, DOI, or URL when available.
+The visible text in `文献` must be `DOI:<value>; PMID:<value>` when those
+identifiers are known, falling back to the available identifier or URL only
+when DOI/PMID is unavailable. Do not use the article title as the visible
+hyperlink text.
 
 ## 说明与数据来源
 
@@ -75,8 +79,12 @@ rules, limitations, and the no-auto-modification declaration.
 ## Shared QA
 
 - All three Cluster sheets use the same numeric ascending order and exact IDs.
-- Fixed widths and row heights; wrapping, shrink-to-fit, and autofilters are
-  disabled.
+- Use Cambria 11 as the workbook font.
+- Save concrete column widths/row heights rather than relying on future dynamic
+  AutoFit rules. Apply content-fit sizing only to `绘图列表` all columns,
+  frozen columns A:C in `注释结果`, frozen columns A:C in `详细证据`, and frozen
+  column A in `细胞类型与文献`. Keep the long-text evidence/reference columns at
+  fixed widths. Wrapping, shrink-to-fit, and autofilters are disabled.
 - Freeze first row; freeze first three columns in result/evidence and first
   column in literature.
 - Static red fill applies only to `中文名称` for coherent significant state,
@@ -84,7 +92,10 @@ rules, limitations, and the no-auto-modification declaration.
   or lineage/off-parent boundary.
 - Every cluster receives a final annotation. Subcluster output cannot retreat to
   the supplied parent solely because evidence is incomplete.
-- Every formal workbook is bound to its passing QA sidecar by SHA-256. The
-  delivery copier rechecks sheet order, headers, freeze panes, fixed row
-  heights, no-wrap/no-filter formatting, red-fill location, and the hash; old
-  four-sheet or QA-unbound workbooks cannot be copied as formal output.
+- Every formal workbook is bound to its passing QA sidecar by SHA-256 in the
+  workspace build location. The delivery copier rechecks sheet order, headers,
+  freeze panes, fixed row heights, no-wrap/no-filter formatting, red-fill
+  location, and the hash; old four-sheet or QA-unbound workbooks cannot be
+  copied as formal output. Final delivery copies only the `.xlsx` workbook to
+  the original data directory; QA JSON sidecars stay in the workspace unless
+  the user explicitly asks for them.

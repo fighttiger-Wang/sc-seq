@@ -434,24 +434,55 @@ def _warning(record):
     return False
 
 
+def _clean_doi(value):
+    text = str(value or "").strip()
+    text = re.sub(r"^(doi:|https?://doi\.org/)", "", text, flags=re.IGNORECASE).strip()
+    return text.rstrip(" .;,") if text else ""
+
+
+def _clean_pmid(value):
+    digits = re.sub(r"\D", "", str(value or ""))
+    return digits
+
+
+def _doi_from_text(text):
+    match = re.search(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", str(text or ""), flags=re.IGNORECASE)
+    return _clean_doi(match.group(0)) if match else ""
+
+
+def _pmid_from_text(text):
+    match = re.search(r"PMID\s*:?\s*(\d+)", str(text or ""), flags=re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def _literature_display(doi, pmid, fallback):
+    parts = []
+    if doi:
+        parts.append(f"DOI:{doi}")
+    if pmid:
+        parts.append(f"PMID:{pmid}")
+    return "; ".join(parts) if parts else str(fallback or "").strip()
+
+
 def _citation_text(source):
     if isinstance(source, str):
-        return source.strip(), ""
+        doi = _doi_from_text(source)
+        pmid = _pmid_from_text(source)
+        text = _literature_display(doi, pmid, source)
+        url = f"https://doi.org/{doi}" if doi else (f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "")
+        return text, url
     author = source.get("first_author") or source.get("author") or source.get("authors") or ""
     year = source.get("year") or ""
     journal = source.get("journal") or ""
     title = source.get("title") or ""
-    pmid = source.get("pmid") or ""
-    doi = source.get("doi") or ""
-    locator = pmid or doi
-    text = ", ".join(str(item) for item in (author, year, journal, title, locator) if item)
+    pmid = _clean_pmid(source.get("pmid") or "")
+    doi = _clean_doi(source.get("doi") or "")
+    text = _literature_display(doi, pmid, ", ".join(str(item) for item in (author, year, journal, title) if item))
     url = source.get("url") or source.get("link") or ""
     if not url and doi:
-        url = f"https://doi.org/{str(doi).replace('DOI:', '').strip()}"
+        url = f"https://doi.org/{doi}"
     if not url and pmid:
-        digits = re.sub(r"\D", "", str(pmid))
-        if digits:
-            url = f"https://pubmed.ncbi.nlm.nih.gov/{digits}/"
+        url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
     return text, url
 
 
@@ -514,12 +545,13 @@ def _style_sheet(ws, widths, freeze, row_height=24):
     thin = Side(style="thin", color="D9E2F3")
     for cell in ws[1]:
         cell.fill = header_fill
-        cell.font = Font(bold=True, color="FFFFFF")
+        cell.font = Font(name="Cambria", size=11, bold=True, color="FFFFFF")
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
     ws.row_dimensions[1].height = 26
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
         ws.row_dimensions[row[0].row].height = row_height
         for cell in row:
+            cell.font = Font(name="Cambria", size=11)
             cell.alignment = Alignment(vertical="top", wrap_text=False, shrink_to_fit=False)
             cell.border = Border(bottom=thin)
     for index, width in enumerate(widths, 1):
@@ -563,6 +595,13 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
     _style_sheet(literature, [24, 72, 44, 44], "B2", 24)
     _style_sheet(source, [24, 88], "A2", 24)
+    for worksheet, columns in ((plot, range(1, plot.max_column + 1)), (result, range(1, 4)), (detail, range(1, 4)), (literature, range(1, 2))):
+        for col in columns:
+            max_len = 0
+            for cell in worksheet[get_column_letter(col)]:
+                text = "" if cell.value is None else str(cell.value)
+                max_len = max(max_len, sum(2 if ord(ch) > 127 else 1 for ch in text))
+            worksheet.column_dimensions[get_column_letter(col)].width = min(max(max_len + 2, 10), 55)
 
     red_fill = PatternFill("solid", fgColor="FFF8696B")
     for row_index, record in enumerate(records, 2):
@@ -598,6 +637,13 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         "qualitative_gate_values": sorted(GATE_VALUES), "aggregate_scores_exported": False,
         "confidence_exported": False, "deprecated_input_fields_ignored": deprecated,
         "red_fill_column": "中文名称", "auto_filter_enabled": False,
+        "font": "Cambria 11", "literature_display": "DOI/PMID when available; clickable hyperlink preserved",
+        "autofit_scope": {
+            "绘图列表": "all columns, fixed saved widths",
+            "注释结果": "frozen columns A:C, fixed saved widths",
+            "详细证据": "frozen columns A:C, fixed saved widths",
+            "细胞类型与文献": "frozen column A, fixed saved widths",
+        },
         "fixed_row_height": True, "wrap_text": False, "shrink_to_fit": False,
         "source_files_unchanged": True,
     }

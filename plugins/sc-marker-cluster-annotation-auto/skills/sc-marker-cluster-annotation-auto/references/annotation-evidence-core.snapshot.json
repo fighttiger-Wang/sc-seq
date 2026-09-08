@@ -11,7 +11,7 @@
     "qualitative_evidence_core.py": "7696bee2e78bb201a3dbc074e357ea3eb980fae0083fd615a468dcf60d7e6370",
     "qualitative_gate_helpers.py": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
     "qualitative_override_policy.py": "b6038ab57c68f12219339c574348cd45118d1b322a74b54b592f9b0601bcf75c",
-    "qualitative_annotation_workbook.py": "615b48d445c185b6096f2eefaf282f1b8c30fc4a76cdcdbc922fd558331588b7",
+    "qualitative_annotation_workbook.py": "1dfed643d9b872f3165078f2a4fe399519e707a07226f91ef81e546309adb829",
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
     "annotation-evidence-config.v1.json": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
     "evidence-scoring-policy.md": "294988da426da1491270a4a8e6890c5ff2eda9252a0075fd54d7e3cab4eb4b1c",
