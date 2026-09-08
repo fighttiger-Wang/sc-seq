@@ -21,6 +21,10 @@ Read this reference before running the paired-Excel or Seurat route.
 
 ## Source versus cache
 
+- An installed plugin runs its bundled, versioned evidence core and reads `references/annotation-universal-contract.md`; it does not require a marketplace-level `shared` directory beside the cache.
+- Independent subcluster runtime fixes are declared in `annotation-evidence-core.snapshot.json` under `plugin_overrides`, with the shared base SHA-256, package SHA-256, and reason. Run `tools/sync_annotation_evidence_core.py --check --skill sc-marker-cluster-annotation-auto` from the marketplace to verify every bundled runtime file. A changed shared base or payload blocks synchronization; never silently absorb another Skill's release.
+- `prepare_annotation.py` resolves an unambiguous conventional parent shorthand such as `Endothelial` to `Endothelial_cell`, and records both supplied and resolved names in the manifest. It does not use this normalization to choose cluster identities.
+
 - Never edit `plugins/cache/...` as the maintained source. Cache edits disappear on reinstall.
 - Update the personal plugin source, validate it, update its cachebuster, then reinstall.
 - Keep exactly one active source. Do not add a same-named bare skill.

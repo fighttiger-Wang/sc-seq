@@ -5,7 +5,7 @@ description: Expert-style subcluster annotation within a declared parent populat
 
 # Subcluster annotation
 
-Before making any annotation decision, apply the shared [universal annotation contract](../../../../shared/annotation-universal-contract.md). This skill adds the parent-restricted sibling-level rules below; it does not replace the shared evidence, UMAP, naming, or workbook QA requirements.
+Before making any annotation decision, apply the bundled [universal annotation contract](references/annotation-universal-contract.md). This versioned copy is included in the plugin so an installed cache does not depend on a marketplace checkout outside its package. This skill adds the parent-restricted sibling-level rules below; it does not replace the shared evidence, UMAP, naming, or workbook QA requirements.
 
 Use this skill only when the supplied dataset is already restricted to one
 parent population. The complete table is annotated at one consistent

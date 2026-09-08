@@ -16,6 +16,12 @@ from subcluster_identity_arbitration import apply_subcluster_identity_arbitratio
 
 
 def _load_qualitative_core():
+    # The installed plugin contains a versioned snapshot. Never borrow a
+    # different checkout's runtime merely because it is an ancestor.
+    local = Path(__file__).resolve().parent
+    if (local / "qualitative_evidence_core.py").is_file():
+        from qualitative_evidence_core import enrich_evidence as qualitative_enrich
+        return qualitative_enrich
     for parent in Path(__file__).resolve().parents:
         shared = parent / "shared" / "sc-annotation-evidence-core"
         if (shared / "qualitative_evidence_core.py").is_file():
@@ -27,6 +33,21 @@ def _load_qualitative_core():
 
 
 enrich_evidence = _load_qualitative_core()
+
+
+def resolve_parent_population(parent, knowledge_base_path=None):
+    """Resolve an unambiguous conventional *_cell shorthand, not a guessed lineage."""
+    from knowledge_base import load_knowledge_base
+    import re
+    def normalize(value):
+        return re.sub(r"[\s_-]+", "_", value.strip().lower())
+    value = normalize(parent)
+    nodes = [row["cell_id"] for row in load_knowledge_base(knowledge_base_path).get("ontology", []) if row.get("cell_id")]
+    exact = [node for node in nodes if normalize(node) == value]
+    if len(exact) == 1:
+        return exact[0]
+    matches = [node for node in nodes if node.endswith("_cell") and normalize(node[:-5]) == value]
+    return matches[0] if len(matches) == 1 else parent
 
 
 STATE_PARENT_TOKENS = ("dividing", "cycling", "prolifer", "activated", "stress", "interferon", "hypoxi", "增殖", "活化", "应激")
@@ -269,6 +290,8 @@ def main():
         raise ValueError(f"Output path contains a symlink/junction/reparse point, which can break sandbox refresh: {reparse}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    supplied_parent_population = args.parent_population
+    args.parent_population = resolve_parent_population(supplied_parent_population, knowledge_base)
     parent_kind = infer_parent_kind(args.parent_population, args.parent_kind)
     project_prior = load_project_prior(project_prior_path)
     sample_context = load_sample_context(context_path)
@@ -315,6 +338,7 @@ def main():
         "context_sources": [str(assert_e_drive(path, "context source")) for path in args.context_source],
         "annotation_level": args.annotation_level,
         "parent_population": args.parent_population, "parent_kind": parent_kind,
+        "supplied_parent_population": supplied_parent_population,
         "project_major_vocabulary": project_major_vocabulary,
         "project_prior_clusters": sorted(project_prior),
         "blind_test": bool(args.blind_test),

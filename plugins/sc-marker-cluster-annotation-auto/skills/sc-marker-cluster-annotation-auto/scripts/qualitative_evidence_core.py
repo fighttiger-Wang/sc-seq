@@ -97,9 +97,14 @@ def _evaluate_panel(label, panel, cluster, values, clusters, thresholds, full_ra
     # A passed explicit boundary program may reinterpret a broad panel
     # exclusion (for example, non-dominant gamma-delta background in DNT).
     # It cannot bypass the dedicated program's own forbidden/absence checks.
-    exclusion_passed = bool(not conflicts or identity_program.get('passed', False))
-    identity_passed = bool(identity_passed or identity_program.get('passed', False))
-    branch_passed = bool(branch.get('passed', True) or identity_program.get('passed', False))
+    explicit_program_passed = bool(
+        identity_program.get("rule_id")
+        and identity_program.get("assessed")
+        and identity_program.get("passed")
+    )
+    exclusion_passed = bool(not conflicts or explicit_program_passed)
+    identity_passed = bool(identity_passed or explicit_program_passed)
+    branch_passed = bool(branch.get('passed', True) or explicit_program_passed)
     program_passed = bool(
         identity_passed
         and branch_passed
