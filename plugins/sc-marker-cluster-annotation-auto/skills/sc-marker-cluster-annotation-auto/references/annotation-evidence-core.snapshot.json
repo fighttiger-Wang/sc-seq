@@ -8,8 +8,8 @@
     "annotation_evidence_core.py": "b91699d55918c8ff3aabf3d9ca3307d84b69862a9fcfa4e0a6baceb94aaf7931",
     "annotation_override_policy.py": "db3d688b295727f94a899ea62be6d8509984f375882c14c61eb477b3c1a7c25a",
     "knowledge_base.py": "7ab61a83f1de82128135937dd049dc4f8ed856a3725224586441da60d34e3063",
-    "qualitative_evidence_core.py": "e2264ba0b0a517b9f7bbe16cf9e3f17d520d33a02625ff96a45123e2480d6374",
-    "qualitative_gate_helpers.py": "718f7f94cceb008496eea681f8546ad229596a2ae01b3f71d4ac37b00d6c96ae",
+    "qualitative_evidence_core.py": "7696bee2e78bb201a3dbc074e357ea3eb980fae0083fd615a468dcf60d7e6370",
+    "qualitative_gate_helpers.py": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
     "qualitative_override_policy.py": "b6038ab57c68f12219339c574348cd45118d1b322a74b54b592f9b0601bcf75c",
     "qualitative_annotation_workbook.py": "615b48d445c185b6096f2eefaf282f1b8c30fc4a76cdcdbc922fd558331588b7",
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
@@ -21,5 +21,12 @@
     "knowledge-base/decision-rules.v3.json": "05fac484036361a69e31d2cf308e67596360192bd39eccad8106eb27b7e5be0e",
     "knowledge-base/naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
     "knowledge-base/calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"
+  },
+  "plugin_overrides": {
+    "qualitative_evidence_core.py": {
+      "base_sha256": "e2264ba0b0a517b9f7bbe16cf9e3f17d520d33a02625ff96a45123e2480d6374",
+      "sha256": "7696bee2e78bb201a3dbc074e357ea3eb980fae0083fd615a468dcf60d7e6370",
+      "reason": "Require an applicable assessed identity program before overriding panel gates; independent subcluster fix."
+    }
   }
 }

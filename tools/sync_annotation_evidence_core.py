@@ -83,40 +83,61 @@ def expected_snapshot(version: dict, hashes: dict[str, str]) -> dict:
     }
 
 
-def synchronize(check: bool = False) -> list[dict]:
+def synchronize(check: bool = False, skill_ids=None) -> list[dict]:
     version = canonical_version()
     shared_hashes = {name: sha256(SHARED / name) for name in FILES}
     expected_manifest = expected_snapshot(version, shared_hashes)
     results = []
+    unknown = set(skill_ids or []) - {target.name for target in TARGETS}
+    if unknown:
+        raise ValueError(f"Unknown annotation Skill(s): {sorted(unknown)}")
     for target in TARGETS:
+        if skill_ids and target.name not in skill_ids:
+            continue
         if not target.is_dir():
             raise FileNotFoundError(f"Plugin skill source missing: {target}")
+        manifest_path = target / "references" / "annotation-evidence-core.snapshot.json"
+        existing = load_json(manifest_path) if manifest_path.is_file() else {}
+        overrides = existing.get("plugin_overrides", {})
+        target_manifest = {**expected_manifest, "files": dict(shared_hashes)}
+        if overrides:
+            # An independently released plugin can retain an explicitly hashed
+            # runtime fix without silently rebuilding the other annotation Skill.
+            for name, override in overrides.items():
+                if name not in FILES or not override.get("reason"):
+                    raise RuntimeError(f"Invalid plugin snapshot override: {target}: {name}")
+                if override.get("base_sha256") != shared_hashes[name]:
+                    raise RuntimeError(f"Shared base changed; review plugin override before syncing: {target}: {name}")
+                folder, filename = FILES[name]
+                if sha256(target / folder / filename) != override.get("sha256"):
+                    raise RuntimeError(f"Plugin override hash mismatch: {target}: {name}")
+                target_manifest["files"][name] = override["sha256"]
+            target_manifest["plugin_overrides"] = overrides
         for source_name, (folder, destination_name) in FILES.items():
             source = SHARED / source_name
             destination = target / folder / destination_name
-            if not check:
+            if not check and source_name not in overrides:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, destination)
             if not destination.is_file():
                 raise FileNotFoundError(f"Vendored snapshot missing: {destination}")
-            if sha256(destination) != shared_hashes[source_name]:
+            if sha256(destination) != target_manifest["files"][source_name]:
                 raise RuntimeError(f"Snapshot hash mismatch: {destination}")
-        manifest_path = target / "references" / "annotation-evidence-core.snapshot.json"
         if check:
             if not manifest_path.is_file():
                 raise FileNotFoundError(f"Snapshot manifest missing: {manifest_path}")
             actual_manifest = load_json(manifest_path)
-            if actual_manifest != expected_manifest:
+            if actual_manifest != target_manifest:
                 raise RuntimeError(f"Snapshot manifest mismatch: {manifest_path}")
         else:
             with manifest_path.open("w", encoding="utf-8", newline="\n") as handle:
-                handle.write(json.dumps(expected_manifest, ensure_ascii=False, indent=2) + "\n")
+                handle.write(json.dumps(target_manifest, ensure_ascii=False, indent=2) + "\n")
         results.append({
             "status": "verified" if check else "synced",
             "target": str(target),
             "snapshot": str(manifest_path),
             "versions": version,
-            "files": shared_hashes,
+            "files": target_manifest["files"],
         })
     return results
 
@@ -124,8 +145,9 @@ def synchronize(check: bool = False) -> list[dict]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="Verify vendored snapshots without writing.")
+    parser.add_argument("--skill", action="append", help="Limit synchronization to explicitly selected independent Skill(s).")
     args = parser.parse_args()
-    for result in synchronize(check=args.check):
+    for result in synchronize(check=args.check, skill_ids=args.skill):
         print(json.dumps(result, ensure_ascii=False))
 
 

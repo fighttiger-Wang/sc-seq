@@ -58,6 +58,18 @@
         "state and topology cannot choose or rescue an identity",
         "the regression uses abstract synthetic identities and contains no blind-dataset details"
       ]
+    },
+    {
+      "id": "runtime_integrity",
+      "group": "independent_plugin_runtime",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_runtime_integrity.py",
+      "work_subdir": "runtime_integrity",
+      "expected_assertions": 16,
+      "protects": [
+        "No unsupported identity-program bypass",
+        "Installed package loads its own core and contract",
+        "Unambiguous parent shorthand retains lineage scope"
+      ]
     }
   ]
 }

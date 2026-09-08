@@ -67,10 +67,45 @@ def hierarchy_depth_conflicts(records):
     return sorted(conflicts, key=lambda item: (item["ancestor"], item["descendant"]))
 
 
+def validate_candidate_semantics(evidence):
+    """Reject a formal core state that passes an identity program without evidence."""
+    decisions = evidence.get("qualitative_annotation_evidence", {}) or {}
+    errors = []
+    for cluster, decision in decisions.items():
+        if not isinstance(decision, dict):
+            continue
+        for candidate in decision.get("candidate_program_audits", []) or []:
+            if str(candidate.get("program_gate", "")) not in {"通过", "pass", "passed"}:
+                continue
+            identity_audit = candidate.get("identity_program_audit", {}) or {}
+            explicit_program = bool(
+                identity_audit.get("rule_id")
+                and identity_audit.get("assessed")
+                and identity_audit.get("passed")
+            )
+            if explicit_program:
+                continue
+            required = int(candidate.get("required_identity_anchors") or 0)
+            supported_core = [
+                item for item in (candidate.get("supporting_core") or [])
+                if isinstance(item, dict) and item.get("review")
+            ]
+            if len(supported_core) < required:
+                errors.append(
+                    f"Cluster {cluster} candidate {candidate.get('label', '')} has "
+                    f"program_gate=通过 with {len(supported_core)}/{required} supported "
+                    "core markers and no applicable explicit identity program"
+                )
+    if errors:
+        raise ValueError("\n".join(errors))
+    return True
+
+
 def validate(records, clusters, evidence):
     normalized = _SHARED.normalize_records(records, evidence)
     records[:] = normalized
     result = _SHARED.validate(records, clusters, evidence, annotation_level="subcluster")
+    validate_candidate_semantics(evidence)
     conflicts = hierarchy_depth_conflicts(records)
     if conflicts:
         raise ValueError(f"Subcluster table mixes ancestor and descendant identities: {conflicts}")
