@@ -10,7 +10,7 @@ from umap_audit import load_umap_audit, validate_umap_audit
 
 
 SKILL_NAME = "sc-marker-cluster-annotation-auto"
-SKILL_VERSION = "0.6.7"
+SKILL_VERSION = "0.6.8"
 
 
 def _load_shared():

@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
-    repo = next(parent for parent in work.parents if (parent / "local-marketplace").is_dir()) / "local-marketplace"
+    repo = next(parent for parent in Path(__file__).resolve().parents if (parent / "skill-pack.json").is_file())
     skill = repo / "plugins" / "sc-marker-cluster-annotation-auto" / "skills" / "sc-marker-cluster-annotation-auto"
     evidence = {
         "clusters": ["3", "0", "1"], "average_shape": [8, 3], "average_reader": "test",
@@ -41,7 +41,7 @@ def main():
         "broad_type": "T_NK", "supporting_markers": marker, "candidate_labels": en,
         "rationale": "Sibling-level qualitative program retained.",
         "review_action": "Validate with complementary markers and UMAP topology.",
-        "literature_source": "Curated T/NK atlas reference",
+        "literature_details": [{"doi": "10.1000/test.subcluster", "pmid": "12345678", "title": "Curated T/NK atlas reference"}],
     } for cluster, cn, en, marker in rows]
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -84,6 +84,11 @@ def main():
     marker_text = workbook["详细证据"].cell(3, evidence_headers["支持 Marker 证据"]).value
     assert "FGFBP2(mean=4.67, ratio=70.20%" in marker_text
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
+    assert workbook["绘图列表"]["A1"].font.name == "Cambria"
+    assert workbook["绘图列表"]["A1"].font.sz == 11
+    lit_cell = workbook["细胞类型与文献"].cell(2, 2)
+    assert lit_cell.value == "DOI:10.1000/test.subcluster; PMID:12345678"
+    assert lit_cell.hyperlink.target == "https://doi.org/10.1000/test.subcluster"
 
     # A label that disagrees with the qualitative core must not be made
     # acceptable by copying the same label into the workbook-facing record.
@@ -247,6 +252,8 @@ def main():
     if delivered.returncode:
         raise RuntimeError(delivered.stdout + delivered.stderr)
     assert (delivery_dir / myeloid_output.name).is_file()
+    assert not (delivery_dir / myeloid_output.with_suffix(".qa.json").name).exists()
+    assert '"qa_sidecar_copied": false' in delivered.stdout.lower()
 
     legacy = work / "legacy_four_sheet.xlsx"
     legacy_book = Workbook()

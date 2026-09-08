@@ -120,9 +120,19 @@ rationale in a reusable evidence sheet.
 
 Record versions, hashes, counter, source paths, cluster order, parent context,
 and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook
-and a hash-matching passing QA sidecar; legacy four-sheet output is invalid.
-Deliver a timestamped Excel workbook to the supplied E-drive input directory.
-Do not automatically edit or filter the underlying object.
+and a hash-matching passing QA sidecar in the workspace build location; legacy
+four-sheet output is invalid. Deliver only the timestamped Excel workbook to
+the supplied E-drive input directory and keep QA JSON sidecars in the workspace
+unless the user explicitly asks for them. Do not automatically edit or filter
+the underlying object.
+
+Workbook formatting is part of the delivery contract. Use Cambria 11 as the
+workbook font. Save content-fit column widths/row heights for `绘图列表`, for
+frozen columns A:C in `注释结果`, for frozen columns A:C in `详细证据`, and for
+frozen column A in `细胞类型与文献`; keep long text columns at fixed widths with
+wrapping and shrink-to-fit disabled. In `细胞类型与文献`, the visible hyperlink
+text in `文献` must show DOI/PMID identifiers when available, not the article
+title, while preserving the clickable link.
 
 For a blind test, invoke the preparation entry point with `--blind-test`.
 Do not pass a prior annotation workbook, old records, old UMAP audit,

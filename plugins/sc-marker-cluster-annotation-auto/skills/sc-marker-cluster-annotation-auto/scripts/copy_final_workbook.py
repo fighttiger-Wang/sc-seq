@@ -169,6 +169,7 @@ def main() -> None:
         "status": "copied", "source": str(source), "destination": str(destination),
         "destination_mode": "explicit" if args.destination else "inferred_from_original_inputs",
         "sha256": source_hash, "qa_status": qa.get("status"), "copied_files": 1,
+        "qa_sidecar_copied": False,
     }, ensure_ascii=False))
 
 
