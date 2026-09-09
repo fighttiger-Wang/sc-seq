@@ -9,7 +9,8 @@ Before making any annotation decision, apply the shared [universal annotation co
 
 Use this skill only for mixed/all-cell collections. The complete table is
 annotated at one major-celltype level; never refine only one lineage because its
-markers are clearer.
+markers are clearer. Candidate discovery may be open-ended, but final plotting
+labels must use controlled, reusable names at one presentation level.
 
 ## Inputs
 
@@ -47,14 +48,33 @@ For every cluster:
    list concrete components. Aggregate evidence cannot prove same-cell
    coexpression.
 
+## Open candidate discovery and controlled delivery
+
+Do not use a closed ontology as a whitelist for biological discovery. Search
+current species/tissue atlases and literature when a tissue-specific, transitional,
+or naming-conflicted program is encountered. Before binding a final label, verify
+that it is a stable, same-level major label; keep finer identity, synonyms,
+parent compartment, alternatives, and unresolved interpretation in separate
+fields. `Fibroblast_like` is not a default label: use `Fibroblast` when the
+program is supported, and reserve `*_like` for a documented evidence gap.
+
+Broad compartments may contain explicit branches. For example,
+`Mesenchymal_stromal` may contain `Fibroblast`, `Decidual_stromal_cell`,
+`Pericyte`, and `Vascular_smooth_muscle_cell`. Preserve the branch in
+`Parent_compartment` or `细胞谱系` so the final label remains useful without
+creating a false claim that all terms are identical in ontology depth.
+
 ## Output
 
 Produce a cluster-level mapping with one stable plotting label per cluster.
-Keep identity, state, abnormality, components, characteristic genes, UMAP
-judgment, evidence, literature, and handling recommendation in separate
-fields. Do not create confidence or score fields. For an impurity or non-pure plotting cluster, retain the most
-likely主体细胞类型 and mark its annotation cell red; do not replace the
-plotting identity with `Doublet` or `Debris`.
+Keep identity, parent compartment, optional finer identity, state, abnormality,
+components, characteristic genes, UMAP judgment, evidence, literature, and
+handling recommendation in separate fields. The finer-identity field is blank
+when it merely repeats `Celltype_EN`; it is populated only when it adds a
+supported lower-level interpretation. Do not create confidence or score fields.
+For an impurity or non-pure plotting cluster, retain the most likely主体细胞类型
+and mark its annotation cell red; do not replace the plotting identity with
+`Doublet` or `Debris`.
 
 Use the versioned naming dictionary. Established unambiguous abbreviations such
 as `gdT` or `Tn` are allowed; short common labels such as B cell and T cell
@@ -71,7 +91,13 @@ date, species, tissue, defining program, exclusions, and adoption rationale.
 Write a reusable data-specific evidence sheet listing involved types, markers,
 definitions, and sources. Record versions, hashes, counter, input paths, cluster
 order, context, and UMAP audit. Deliver a timestamped Excel workbook to the
-supplied E-drive input directory. Do not automatically modify or filter data.
+order, context, and UMAP audit. Deliver only the timestamped Excel workbook to
+the supplied E-drive input directory. Internal evidence/QA JSON sidecars remain
+in the E-drive workspace build directory and are not copied to the input
+directory unless explicitly requested. Use the approved subcluster workbook as
+the formatting baseline: Cambria 11, content-fit frozen columns, fixed long-text
+widths, wrapping and shrink-to-fit disabled, sample freeze panes, and red fill
+`#F8696B` only on the Chinese-name cell.
 
 Never output generic `Cell`, silently discard a cluster, use one marker or one
 UMAP location as sole proof, or claim confirmed doublet from aggregate evidence.
