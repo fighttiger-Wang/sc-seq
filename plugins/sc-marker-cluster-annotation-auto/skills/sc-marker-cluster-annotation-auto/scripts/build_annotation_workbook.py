@@ -55,14 +55,20 @@ def hierarchy_depth_conflicts(records):
     def allowed_multi_cell(record):
         return str(record.get("stable_id", "")) == "Multi_cell" and not bool(record.get("auto_merge_allowed", True))
 
-    labels = {str(item.get("stable_id", "")) for item in records if item.get("stable_id") and not allowed_multi_cell(item)}
+    # Validate the final presentation/plotting level. ``stable_id`` may remain
+    # a leaf identity when a mixed-depth result is projected to a shared parent.
+    labels = {
+        str(item.get("celltype_en", ""))
+        for item in records
+        if item.get("celltype_en") and not allowed_multi_cell(item)
+    }
     conflicts = []
     for record in records:
         if allowed_multi_cell(record):
             continue
-        child = str(record.get("stable_id", ""))
+        child = str(record.get("celltype_en", ""))
         for ancestor in _structured_list(record.get("parent_path", []))[:-1]:
-            if ancestor in labels:
+            if ancestor in labels and ancestor != child:
                 conflicts.append({"ancestor": ancestor, "descendant": child})
     return sorted(conflicts, key=lambda item: (item["ancestor"], item["descendant"]))
 

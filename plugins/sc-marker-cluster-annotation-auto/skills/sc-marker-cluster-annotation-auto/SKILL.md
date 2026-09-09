@@ -12,6 +12,13 @@ parent population. The complete table is annotated at one consistent
 subcluster level within that parent. Do not mix a parent label with its
 descendant or refine only the clearest lineage.
 
+When the current evidence resolves some clusters to a registered leaf while
+other clusters remain at that leaf's parent, apply a presentation-level
+projection after identity arbitration: keep the leaf in internal `stable_id`,
+use the shared parent as `Celltype_EN` for the mixed branch, and place the leaf
+in `下位亚类`. This projection is deterministic, does not change marker/UMAP
+decisions, and must be validated so the plotting mapping contains one level.
+
 ## Inputs
 
 Require species, tissue/organ, parent population, average-expression input,
@@ -101,6 +108,10 @@ Keep the most likely主体细胞类型 even for impurity, low quality, abnormal,
 debris, or suspected doublet clusters. Put abnormality, components,
 characteristic genes, UMAP judgment, explanation, literature, and handling
 recommendation in separate fields. Do not create confidence or score fields.
+The `注释结果` sheet may additionally contain an optional `下位亚类` field
+before `细胞谱系`: populate it only when a lower-level subtype is supported in
+the current case, leave it blank otherwise, and never use it to alter the
+existing identity, UMAP, state, or red-fill logic.
 Mark the annotation cell red when
 the cluster should not be interpreted as a normal pure type; do not replace the
 plotting label with `Doublet` or `Debris`.

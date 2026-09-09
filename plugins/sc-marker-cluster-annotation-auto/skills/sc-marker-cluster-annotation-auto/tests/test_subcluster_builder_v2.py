@@ -42,6 +42,7 @@ def main():
         "rationale": "Sibling-level qualitative program retained.",
         "review_action": "Validate with complementary markers and UMAP topology.",
         "literature_details": [{"doi": "10.1000/test.subcluster", "pmid": "12345678", "title": "Curated T/NK atlas reference"}],
+        "lower_level_subtype": "Naive_like_gdT" if cluster == "0" else "",
     } for cluster, cn, en, marker in rows]
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -79,6 +80,9 @@ def main():
     assert [workbook["绘图列表"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
     result_headers = {cell.value: cell.column for cell in workbook["注释结果"][1]}
     assert "质量评分" not in result_headers and "置信度" not in result_headers
+    assert result_headers["下位亚类"] == result_headers["Celltype_EN"] + 1
+    assert workbook["注释结果"].cell(2, result_headers["下位亚类"]).value == "Naive_like_gdT"
+    assert workbook["注释结果"].cell(3, result_headers["下位亚类"]).value in (None, "")
     assert workbook["注释结果"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
     evidence_headers = {cell.value: cell.column for cell in workbook["详细证据"][1]}
     marker_text = workbook["详细证据"].cell(3, evidence_headers["支持 Marker 证据"]).value
@@ -214,12 +218,29 @@ def main():
     }
     assert plot_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
     result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果"][1]}
+    assert result_headers["下位亚类"] == result_headers["Celltype_EN"] + 1
     result_rows = {
         str(myeloid_book["注释结果"].cell(row, 1).value): row
         for row in range(2, myeloid_book["注释结果"].max_row + 1)
     }
     assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["中文名称"]).value == "经典单核细胞"
     assert myeloid_book["注释结果"].cell(result_rows["B2"], result_headers["Celltype_EN"]).value == "DC3"
+
+    # Mixed-depth ontology labels are projected to one plotting level while
+    # retaining the biological leaf as stable_id/lower_level_subtype.
+    sys.path.insert(0, str(skill / "scripts"))
+    import qualitative_annotation_workbook as contract  # noqa: WPS433
+    mixed_records = [
+        {"cluster_id": "2", "stable_id": "Tissue_resident_macrophage", "celltype_en": "Tissue_resident_macrophage", "celltype_cn": "组织驻留巨噬细胞"},
+        {"cluster_id": "3", "stable_id": "Macrophage", "celltype_en": "Macrophage", "celltype_cn": "巨噬细胞"},
+    ]
+    mixed_evidence = {"clusters": ["2", "3"], "qualitative_annotation_evidence": {}}
+    mixed_normalized = contract.normalize_records(mixed_records, mixed_evidence)
+    by_cluster = {row["cluster_id"]: row for row in mixed_normalized}
+    assert by_cluster["2"]["celltype_en"] == "Macrophage"
+    assert by_cluster["2"]["lower_level_subtype"] == "Tissue_resident_macrophage"
+    assert by_cluster["2"]["stable_id"] == "Tissue_resident_macrophage"
+    assert by_cluster["3"]["celltype_en"] == "Macrophage"
 
     interim = work / "myeloid_mapping.tsv"
     completed = subprocess.run([

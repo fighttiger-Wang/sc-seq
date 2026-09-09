@@ -21,18 +21,31 @@ Columns:
 1. Cluster
 2. 中文名称
 3. Celltype_EN
-4. 细胞谱系
-5. 发育/成熟阶段
-6. 细胞状态
-7. 组织/疾病相关角色
-8. 关键 Marker
-9. 主要竞争候选
-10. UMAP 判断摘要
-11. 异常/边界标记
-12. 可能组成
-13. 判定摘要
-14. 验证建议
-15. 下游处理建议
+4. 下位亚类
+5. 细胞谱系
+6. 发育/成熟阶段
+7. 细胞状态
+8. 组织/疾病相关角色
+9. 关键 Marker
+10. 主要竞争候选
+11. UMAP 判断摘要
+12. 异常/边界标记
+13. 可能组成
+14. 判定摘要
+15. 验证建议
+16. 下游处理建议
+
+`下位亚类` is an optional presentation-only field. It may contain a
+case-supported lower-level subtype when the current evidence justifies one;
+otherwise it remains blank. It does not replace `Celltype_EN`, does not enter
+identity arbitration or UMAP resolution, and cannot be used to mix ancestor
+and descendant labels in the plotting mapping.
+
+If a result contains both a registered parent and one of its registered
+descendants, the parent is used as the shared `Celltype_EN` display level for
+that branch, while the descendant is retained in `下位亚类` and in the
+internal `stable_id`. This is a presentation projection only; it must not
+rewrite the biological evidence or final identity binding.
 
 The sheet contains no score, confidence, candidate rank, or numeric quality
 field. `关键 Marker` contains gene symbols only.

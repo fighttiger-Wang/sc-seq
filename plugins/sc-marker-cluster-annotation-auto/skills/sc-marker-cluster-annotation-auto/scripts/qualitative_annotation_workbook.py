@@ -12,6 +12,7 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from functools import lru_cache
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -28,13 +29,13 @@ PLOT_FIELDS = ["cluster_id", "celltype_en"]
 PLOT_HEADERS = ["Cluster", "Celltype_EN"]
 
 RESULT_FIELDS = [
-    "cluster_id", "celltype_cn", "celltype_en", "broad_type",
+    "cluster_id", "celltype_cn", "celltype_en", "lower_level_subtype", "broad_type",
     "developmental_stage", "state", "disease_role", "key_markers",
     "candidate_labels", "umap_summary", "boundary_flags",
     "possible_components", "rationale", "validation_advice", "handling_advice",
 ]
 RESULT_HEADERS = [
-    "Cluster", "中文名称", "Celltype_EN", "细胞谱系", "发育/成熟阶段",
+    "Cluster", "中文名称", "Celltype_EN", "下位亚类", "细胞谱系", "发育/成熟阶段",
     "细胞状态", "组织/疾病相关角色", "关键 Marker", "主要竞争候选",
     "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定摘要", "验证建议",
     "下游处理建议",
@@ -62,6 +63,75 @@ EVIDENCE_HEADERS = [
 
 LITERATURE_HEADERS = ["细胞类型", "文献", "经典鉴定 Marker", "本次鉴定使用的 Marker"]
 SOURCE_HEADERS = ["项目", "内容"]
+
+
+@lru_cache(maxsize=1)
+def _ontology_index():
+    """Load the bundled ontology for presentation-level hierarchy checks."""
+    path = Path(__file__).resolve().parents[1] / "references" / "cell-annotation-knowledge-base.v2.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, {}
+    nodes = {
+        str(item.get("cell_id", "")).strip(): item
+        for item in payload.get("ontology", [])
+        if str(item.get("cell_id", "")).strip()
+    }
+    parents = {node_id: str(item.get("parent_id", "")).strip() for node_id, item in nodes.items()}
+    return nodes, parents
+
+
+def _ontology_path(stable_id):
+    """Return the canonical root-to-node path when the node is in the dictionary."""
+    nodes, parents = _ontology_index()
+    stable_id = str(stable_id or "").strip()
+    if stable_id not in nodes:
+        return []
+    path = []
+    seen = set()
+    current = stable_id
+    while current and current not in seen and current in nodes:
+        seen.add(current)
+        path.append(current)
+        current = parents.get(current, "")
+    return list(reversed(path))
+
+
+def _project_mixed_hierarchy(records):
+    """Project mixed-depth identities to one plotting level per branch.
+
+    The biological leaf remains in ``stable_id``. If a parent identity is also
+    present in the same result, the parent becomes the display/plotting label
+    and the leaf is retained in ``lower_level_subtype``. This keeps the result
+    sheet and UMAP labels at one level without changing identity arbitration.
+    """
+    present = {
+        str(record.get("stable_id", "")).strip()
+        for record in records
+        if str(record.get("stable_id", "")).strip()
+    }
+    nodes, _ = _ontology_index()
+    for record in records:
+        stable = str(record.get("stable_id", "")).strip()
+        path = _ontology_path(stable)
+        if path:
+            # Repair incomplete hand-authored paths for evidence rendering,
+            # while leaving the stable identity itself untouched.
+            record["parent_path"] = path
+        ancestors = [node for node in reversed(path[:-1]) if node in present]
+        if not ancestors:
+            continue
+        display = ancestors[0]
+        if display == stable:
+            continue
+        record["celltype_en"] = normalize_final_label(display)
+        record["lower_level_subtype"] = stable
+        display_node = nodes.get(display, {})
+        display_cn = str(display_node.get("name_cn", "")).strip()
+        if display_cn:
+            record["celltype_cn"] = display_cn
+    return records
 
 
 def cluster_sort_key(value):
@@ -256,6 +326,9 @@ def normalize_records(records, evidence, umap_audit=None):
         record.update({
             "cluster_id": cluster,
             "celltype_en": celltype_en,
+            # Optional presentation-only refinement. It is intentionally not
+            # used for identity binding, UMAP resolution, or validation.
+            "lower_level_subtype": human_value(_first(record, decision, "lower_level_subtype")),
             "celltype_cn": _first(record, decision, "celltype_cn", default=celltype_en),
             "stable_id": normalize_final_label(stable or celltype_en),
             "broad_type": _first(record, decision, "broad_type", "primary_major_label", "expected_parent_id"),
@@ -297,6 +370,7 @@ def normalize_records(records, evidence, umap_audit=None):
         record["_decision"] = decision
         record["_umap"] = umap
         normalized.append(record)
+    _project_mixed_hierarchy(normalized)
     return sorted(normalized, key=lambda item: cluster_sort_key(item["cluster_id"]))
 
 
@@ -398,6 +472,14 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
             if parent and record.get("celltype_en") == normalize_final_label(parent):
                 errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
+            stable = str(record.get("stable_id", "")).strip()
+            display = str(record.get("celltype_en", "")).strip()
+            lower = str(record.get("lower_level_subtype", "")).strip()
+            if stable != display and lower != stable:
+                errors.append(
+                    f"Cluster {cluster} projects stable identity {stable} to {display} "
+                    "but does not retain it in lower_level_subtype"
+                )
     if errors:
         raise ValueError("\n".join(errors))
 
@@ -591,7 +673,7 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         source.append(row)
 
     _style_sheet(plot, [12, 26], "A2", 22)
-    _style_sheet(result, [10, 22, 22, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
+    _style_sheet(result, [10, 22, 22, 28, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
     _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
     _style_sheet(literature, [24, 72, 44, 44], "B2", 24)
     _style_sheet(source, [24, 88], "A2", 24)
