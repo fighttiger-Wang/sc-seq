@@ -13,16 +13,25 @@ from __future__ import annotations
 import hashlib
 import json
 import csv
+import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 
 SKILL_ID = "sc-marker-cluster-annotation-auto"
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 PASS_STATES = {"通过", "pass", "passed"}
+CLAIM_LEVELS = {"identity", "identity_like", "state", "program", "lineage_identity"}
+LINEAGE_REQUIREMENTS = {"not_required", "lineage_tracing_required", "not_established"}
+CONTEXT_CLASSES = {"native", "disease_induced", "context_dependent", "not_established"}
+IDENTITY_DERIVATIONS = {
+    "source_exact_identity", "source_qualified_identity", "neutral_contextual_identity",
+}
+PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 SOURCE_FIELDS = {
     "title", "doi_or_pmid_or_url", "retrieval_date", "species", "tissue",
     "supported_program", "exclusions", "adoption_or_rejection_reason",
+    "claim_level", "source_wording", "lineage_requirement", "native_or_disease_induced",
 }
 
 
@@ -270,14 +279,163 @@ def build_research_requests(evidence, calibration, force_research=False, expert_
     return document
 
 
+def _claim_wording_matches(level, wording):
+    text = str(wording or "").strip().lower()
+    identity_hedges = (
+        "-like", " like", "resembles", "resembling", "similar to",
+        "state", "phenotype", "program", "signature",
+        "样", "状态", "表型", "程序",
+    )
+    tokens = {
+        "identity_like": ("-like", " like", "resembles", "resembling", "similar to", "样"),
+        "state": ("state", "phenotype", "状态", "表型"),
+        "program": ("program", "signature", "程序", "特征"),
+        "lineage_identity": ("derived", "lineage", "fate", "origin", "谱系", "来源"),
+    }
+    if level == "identity":
+        return not any(token in text for token in identity_hedges)
+    return any(token in text for token in tokens.get(level, ()))
+
+
+def conservative_claim_level(levels):
+    """Return the strongest semantic claim jointly supported by all sources."""
+    unique = set(levels)
+    if not unique or not unique <= CLAIM_LEVELS:
+        raise ValueError(f"Invalid source claim levels: {sorted(unique)}")
+    if len(unique) == 1:
+        return next(iter(unique))
+    if unique <= {"identity", "identity_like"}:
+        return "identity_like"
+    # State, program, and lineage wording do not share the same identity axis.
+    # A mixed source set therefore supports only a program-level interpretation.
+    return "program"
+
+
+def _label_stem(label):
+    text = str(label or "").strip()
+    lower = text.lower()
+    for suffix in ("_like", "-like", " like"):
+        if lower.endswith(suffix):
+            return text[:-len(suffix)].rstrip("_- ").lower()
+    return text.lower()
+
+
 def _validate_source(source, cluster, index):
     if not isinstance(source, dict):
         raise ValueError(f"Cluster {cluster} source {index} must be an object")
     missing = sorted(field for field in SOURCE_FIELDS if not str(source.get(field, "")).strip())
     if missing:
         raise ValueError(f"Cluster {cluster} source {index} missing fields: {missing}")
+    claim_level = str(source.get("claim_level", "")).strip()
+    if claim_level not in CLAIM_LEVELS:
+        raise ValueError(f"Cluster {cluster} source {index} invalid claim_level: {claim_level}")
+    wording = str(source.get("source_wording", "")).strip()
+    if not _claim_wording_matches(claim_level, wording):
+        raise ValueError(
+            f"Cluster {cluster} source {index} source_wording does not support claim_level={claim_level}"
+        )
+    lineage_requirement = str(source.get("lineage_requirement", "")).strip()
+    if lineage_requirement not in LINEAGE_REQUIREMENTS:
+        raise ValueError(
+            f"Cluster {cluster} source {index} invalid lineage_requirement: {lineage_requirement}"
+        )
+    context_class = str(source.get("native_or_disease_induced", "")).strip()
+    if context_class not in CONTEXT_CLASSES:
+        raise ValueError(
+            f"Cluster {cluster} source {index} invalid native_or_disease_induced: {context_class}"
+        )
     identifier = str(source.get("doi_or_pmid_or_url", "")).strip().lower()
-    return identifier
+    return {
+        "identifier": identifier,
+        "claim_level": claim_level,
+        "source_wording": wording,
+        "lineage_requirement": lineage_requirement,
+        "native_or_disease_induced": context_class,
+    }
+
+
+def _validate_claim_semantics(evidence, cluster, resolution, source_claims):
+    candidate = str(resolution.get("candidate_label", "")).strip()
+    claim_level = str(resolution.get("claim_level", "")).strip()
+    source_supported_label = str(resolution.get("source_supported_label", "")).strip()
+    source_wording = str(resolution.get("source_wording", "")).strip()
+    derivation = str(resolution.get("identity_derivation", "")).strip()
+    lineage_requirement = str(resolution.get("lineage_requirement", "")).strip()
+    context_class = str(resolution.get("native_or_disease_induced", "")).strip()
+    if claim_level not in CLAIM_LEVELS:
+        raise ValueError(f"Cluster {cluster} invalid or missing resolution claim_level")
+    admitted = conservative_claim_level(item["claim_level"] for item in source_claims)
+    if claim_level != admitted:
+        raise ValueError(
+            f"Cluster {cluster} claim_level={claim_level} exceeds or conflicts with jointly supported level {admitted}"
+        )
+    if not source_supported_label or not source_wording:
+        raise ValueError(f"Cluster {cluster} requires source_supported_label and source_wording")
+    if derivation not in IDENTITY_DERIVATIONS:
+        raise ValueError(f"Cluster {cluster} invalid or missing identity_derivation: {derivation}")
+    if lineage_requirement not in LINEAGE_REQUIREMENTS:
+        raise ValueError(f"Cluster {cluster} invalid lineage_requirement: {lineage_requirement}")
+    if context_class not in CONTEXT_CLASSES:
+        raise ValueError(f"Cluster {cluster} invalid native_or_disease_induced: {context_class}")
+    if not PLOT_LABEL.fullmatch(candidate):
+        raise ValueError(f"Cluster {cluster} candidate_label must match [A-Za-z0-9_]+")
+
+    qualified = str(resolution.get("qualified_label", "")).strip()
+    state_label = str(resolution.get("state_label", "")).strip()
+    program_label = str(resolution.get("program_label", "")).strip()
+    if qualified and not PLOT_LABEL.fullmatch(qualified):
+        raise ValueError(f"Cluster {cluster} qualified_label must match [A-Za-z0-9_]+")
+    if claim_level == "identity":
+        if any(token in candidate.lower() for token in ("derived", "lineage")):
+            raise ValueError(f"Cluster {cluster} lineage-derived label requires claim_level=lineage_identity")
+        if derivation != "source_exact_identity" or candidate != source_supported_label:
+            raise ValueError(
+                f"Cluster {cluster} exact identity requires source_exact_identity and an exact source-supported label"
+            )
+    elif claim_level == "identity_like":
+        if not qualified or not qualified.lower().endswith("_like"):
+            raise ValueError(f"Cluster {cluster} identity_like claim requires qualified_label ending in _like")
+        if candidate.lower().endswith("_like"):
+            if derivation != "source_qualified_identity":
+                raise ValueError(f"Cluster {cluster} retained _like label requires source_qualified_identity")
+        elif derivation != "neutral_contextual_identity":
+            raise ValueError(f"Cluster {cluster} neutral identity for an identity_like claim is required")
+        if _label_stem(candidate) == _label_stem(qualified) and not candidate.lower().endswith("_like"):
+            raise ValueError(f"Cluster {cluster} cannot remove the literature qualifier from {qualified}")
+    elif claim_level in {"state", "program"}:
+        if derivation != "neutral_contextual_identity":
+            raise ValueError(f"Cluster {cluster} {claim_level} evidence cannot be promoted to a stable source identity")
+        if claim_level == "state" and not state_label:
+            raise ValueError(f"Cluster {cluster} state claim requires state_label")
+        if claim_level == "program" and not (program_label or state_label or qualified):
+            raise ValueError(f"Cluster {cluster} program claim requires a visible program/state/qualified descriptor")
+        if _label_stem(candidate) == _label_stem(source_supported_label):
+            raise ValueError(
+                f"Cluster {cluster} {claim_level} wording cannot be converted into the same stable identity"
+            )
+    elif claim_level == "lineage_identity":
+        if derivation != "source_exact_identity" or lineage_requirement != "lineage_tracing_required":
+            raise ValueError(f"Cluster {cluster} lineage_identity requires explicit lineage-tracing semantics")
+        lineage_evidence = resolution.get("current_case_lineage_evidence", [])
+        if not isinstance(lineage_evidence, list) or not lineage_evidence:
+            raise ValueError(f"Cluster {cluster} lineage_identity lacks current-case lineage evidence")
+        allowed_types = {"lineage_tracing", "genetic_fate_mapping", "orthogonally_validated_trajectory"}
+        for item in lineage_evidence:
+            if not isinstance(item, dict) or str(item.get("type", "")).strip() not in allowed_types:
+                raise ValueError(f"Cluster {cluster} lineage evidence must be lineage tracing or orthogonally validated")
+            if not str(item.get("source", "")).strip():
+                raise ValueError(f"Cluster {cluster} lineage evidence requires a current-case source")
+    return {
+        "claim_level": claim_level,
+        "source_supported_label": source_supported_label,
+        "source_wording": source_wording,
+        "identity_derivation": derivation,
+        "qualified_label": qualified,
+        "state_label": state_label,
+        "program_label": program_label,
+        "lineage_requirement": lineage_requirement,
+        "native_or_disease_induced": context_class,
+    }
 
 
 def validate_and_apply_research_evidence(evidence, requests, research_path):
@@ -314,7 +472,8 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             sources = [source_library.get(str(source_id)) for source_id in resolution.get("source_ids", [])]
         if not isinstance(sources, list) or len(sources) < 2:
             raise ValueError(f"Cluster {cluster} requires at least two independent research sources")
-        identifiers = [_validate_source(source, cluster, index) for index, source in enumerate(sources, 1)]
+        source_claims = [_validate_source(source, cluster, index) for index, source in enumerate(sources, 1)]
+        identifiers = [item["identifier"] for item in source_claims]
         if len(set(identifiers)) < 2:
             raise ValueError(f"Cluster {cluster} research sources are not independent")
         markers = _genes(resolution.get("current_case_support_markers", []))
@@ -331,6 +490,7 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             raise ValueError(
                 f"Cluster {cluster} candidate {candidate} requires label_basis={expected_basis}, observed {label_basis}"
             )
+        claim = _validate_claim_semantics(evidence, cluster, resolution, source_claims)
         normalized_resolution = {
             **resolution,
             "status": status,
@@ -339,6 +499,8 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "current_case_support_markers": markers,
             "ratio_verified_support_markers": sorted(ratio_supported),
             "source_evidence_ids": identifiers,
+            "source_claim_levels": [item["claim_level"] for item in source_claims],
+            **claim,
         }
         normalized[cluster] = normalized_resolution
         if label_basis == "validated_external_candidate":
@@ -348,6 +510,7 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
                 "current_case_support_markers": markers,
                 "sources": sources,
                 "adoption_or_rejection_rationale": rationale,
+                **claim,
             })
     normalized_document = {
         "schema_version": SCHEMA_VERSION,
@@ -369,10 +532,24 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "research_status": resolution["status"],
             "research_selected_identity": resolution["candidate_label"],
             "research_label_basis": resolution["label_basis"],
+            "research_claim_level": resolution["claim_level"],
+            "research_source_supported_label": resolution["source_supported_label"],
+            "research_source_wording": resolution["source_wording"],
+            "research_identity_derivation": resolution["identity_derivation"],
+            "research_qualified_label": resolution.get("qualified_label", ""),
+            "research_state_label": resolution.get("state_label", ""),
+            "research_program_label": resolution.get("program_label", ""),
+            "research_lineage_requirement": resolution["lineage_requirement"],
+            "research_native_or_disease_induced": resolution["native_or_disease_induced"],
             "research_artifact_sha256": artifact_sha,
             "research_evidence_ids": resolution["source_evidence_ids"],
             "formal_identity_binding_allowed": True,
         })
+        if resolution.get("qualified_label"):
+            decision["lower_level_subtype"] = resolution["qualified_label"]
+        if resolution.get("state_label"):
+            decision["state"] = resolution["state_label"]
+            decision["primary_state"] = resolution["state_label"]
     return normalized_document, external
 
 
@@ -433,6 +610,21 @@ def validate_formal_research_binding(records, evidence):
             errors.append(
                 f"Cluster {cluster} formal label_basis must match research admission basis {basis}"
             )
+        claim_level = str(decision.get("research_claim_level", "")).strip()
+        if claim_level not in CLAIM_LEVELS:
+            errors.append(f"Cluster {cluster} formal research claim_level is missing or invalid")
+        qualified = str(decision.get("research_qualified_label", "")).strip()
+        state_label = str(decision.get("research_state_label", "")).strip()
+        if qualified and selected != qualified:
+            observed_lower = str(record.get("lower_level_subtype", "")).strip()
+            if observed_lower != qualified:
+                errors.append(
+                    f"Cluster {cluster} must retain research qualifier {qualified} in lower_level_subtype"
+                )
+        if state_label:
+            observed_state = str(record.get("state") or record.get("primary_state") or "").strip()
+            if state_label.lower() not in observed_state.lower():
+                errors.append(f"Cluster {cluster} must retain research state {state_label} in the formal record")
     if errors:
         raise ValueError("\n".join(errors))
     return True

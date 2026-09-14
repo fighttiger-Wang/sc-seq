@@ -108,17 +108,25 @@ def main():
         "retrieval_date": "2026-09-14", "species": "Mouse", "tissue": "Aorta",
         "supported_program": "fibroblast contractile program", "exclusions": "not mature SMC alone",
         "adoption_or_rejection_reason": "supports the boundary",
+        "claim_level": "identity", "source_wording": "Myofibroblast",
+        "lineage_requirement": "not_required", "native_or_disease_induced": "context_dependent",
     }
     source_b = {
         "title": "Independent atlas B", "doi_or_pmid_or_url": "PMID:2",
         "retrieval_date": "2026-09-14", "species": "Mouse", "tissue": "Aorta",
         "supported_program": "fibroblast contractile program", "exclusions": "not pericyte alone",
         "adoption_or_rejection_reason": "independent validation",
+        "claim_level": "identity", "source_wording": "Myofibroblast",
+        "lineage_requirement": "not_required", "native_or_disease_induced": "context_dependent",
     }
     resolution = {
         "status": "resolved", "query": "mouse aorta myofibroblast COL1A1 ACTA2 TAGLN",
         "retrieval_date": "2026-09-14", "candidate_label": "Myofibroblast",
         "label_basis": "validated_external_candidate",
+        "claim_level": "identity", "source_supported_label": "Myofibroblast",
+        "source_wording": "Both independent sources use Myofibroblast as an identity.",
+        "identity_derivation": "source_exact_identity",
+        "lineage_requirement": "not_required", "native_or_disease_induced": "context_dependent",
         "current_case_support_markers": ["COL1A1", "ACTA2"],
         "exclusions": ["mature SMC and pericyte programs reviewed"],
         "adoption_or_rejection_rationale": "Current case retains fibroblast and contractile programs.",
@@ -167,6 +175,141 @@ def main():
         "validated_external_candidate",
     )
 
+    legacy = copy.deepcopy(resolution)
+    legacy["sources"] = [copy.deepcopy(source_a), copy.deepcopy(source_b)]
+    legacy["sources"][0].pop("claim_level")
+    legacy_path = work / "legacy-missing-claim.json"
+    legacy_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": legacy}
+    }), encoding="utf-8")
+    expect_failure(
+        lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", legacy_path),
+        "missing fields",
+    )
+
+    like_a = {
+        **source_a,
+        "doi_or_pmid_or_url": "DOI:10.1161/CIRCULATIONAHA.120.048378",
+        "claim_level": "identity_like", "source_wording": "fibrochondrocyte-like cells",
+        "supported_program": "fibrochondrocyte-like extracellular-matrix program",
+        "native_or_disease_induced": "disease_induced",
+    }
+    like_b = {
+        **source_b,
+        "doi_or_pmid_or_url": "PMID:33303074",
+        "claim_level": "identity_like", "source_wording": "fibrochondrocyte-like cells",
+        "supported_program": "fibrochondrocyte-like extracellular-matrix program",
+        "native_or_disease_induced": "disease_induced",
+    }
+    unqualified = {
+        **resolution,
+        "candidate_label": "Fibrochondrocyte",
+        "claim_level": "identity_like", "source_supported_label": "Fibrochondrocyte_like",
+        "source_wording": "Both sources say fibrochondrocyte-like cells.",
+        "identity_derivation": "neutral_contextual_identity",
+        "qualified_label": "Fibrochondrocyte_like",
+        "native_or_disease_induced": "disease_induced",
+        "sources": [like_a, like_b],
+    }
+    unqualified_path = work / "unqualified-like.json"
+    unqualified_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": unqualified}
+    }), encoding="utf-8")
+    expect_failure(
+        lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", unqualified_path),
+        "cannot remove the literature qualifier",
+    )
+
+    misclassified = copy.deepcopy(resolution)
+    misclassified["candidate_label"] = "Fibrochondrocyte"
+    misclassified["source_supported_label"] = "Fibrochondrocyte"
+    misclassified["sources"] = [copy.deepcopy(like_a), copy.deepcopy(like_b)]
+    for source in misclassified["sources"]:
+        source["claim_level"] = "identity"
+    misclassified_path = work / "misclassified-like-as-identity.json"
+    misclassified_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": misclassified}
+    }), encoding="utf-8")
+    expect_failure(
+        lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", misclassified_path),
+        "source_wording does not support claim_level=identity",
+    )
+
+    state_source = {
+        **source_b,
+        "doi_or_pmid_or_url": "DOI:10.1161/ATVBAHA.124.322045",
+        "claim_level": "state", "source_wording": "osteochondrogenic state",
+        "supported_program": "osteochondrogenic state",
+        "native_or_disease_induced": "disease_induced",
+    }
+    mixed_claim = {
+        **resolution,
+        "candidate_label": "Osteochondrogenic_stromal_cell",
+        "claim_level": "program", "source_supported_label": "Fibrochondrocyte_like",
+        "source_wording": "One source says fibrochondrocyte-like; one says osteochondrogenic state.",
+        "identity_derivation": "neutral_contextual_identity",
+        "qualified_label": "Fibrochondrocyte_like", "state_label": "osteochondrogenic",
+        "program_label": "osteochondrogenic_matrix_program",
+        "native_or_disease_induced": "disease_induced",
+        "sources": [like_a, state_source],
+    }
+    mixed_claim_path = work / "mixed-claim.json"
+    mixed_claim_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": mixed_claim}
+    }), encoding="utf-8")
+    mixed_resolved = copy.deepcopy(evidence)
+    _, mixed_normalized, mixed_external = apply_research_stage(
+        mixed_resolved, policy, state, "0.6.10-test", mixed_claim_path
+    )
+    mixed_decision = mixed_resolved["qualitative_annotation_evidence"]["0"]
+    assert mixed_normalized["resolutions"]["0"]["claim_level"] == "program"
+    assert mixed_decision["stable_id"] == "Osteochondrogenic_stromal_cell"
+    assert mixed_decision["lower_level_subtype"] == "Fibrochondrocyte_like"
+    assert mixed_decision["state"] == "osteochondrogenic"
+    assert mixed_external[0]["claim_level"] == "program"
+    expect_failure(
+        lambda: validate_formal_research_binding([{
+            "cluster_id": "0", "stable_id": "Osteochondrogenic_stromal_cell",
+            "label_basis": "validated_external_candidate", "state": "osteochondrogenic",
+        }], mixed_resolved),
+        "must retain research qualifier",
+    )
+    assert validate_formal_research_binding([{
+        "cluster_id": "0", "stable_id": "Osteochondrogenic_stromal_cell",
+        "label_basis": "validated_external_candidate", "state": "osteochondrogenic",
+        "lower_level_subtype": "Fibrochondrocyte_like",
+    }], mixed_resolved) is True
+
+    lineage_a = {
+        **source_a,
+        "doi_or_pmid_or_url": "DOI:10.2/LINEAGE-A",
+        "claim_level": "lineage_identity", "source_wording": "SMC-derived lineage identity",
+        "lineage_requirement": "lineage_tracing_required",
+    }
+    lineage_b = {
+        **source_b,
+        "doi_or_pmid_or_url": "PMID:LINEAGE-B",
+        "claim_level": "lineage_identity", "source_wording": "fate-mapped SMC-derived lineage",
+        "lineage_requirement": "lineage_tracing_required",
+    }
+    lineage_resolution = {
+        **resolution,
+        "candidate_label": "SMC_derived_fibroblast",
+        "claim_level": "lineage_identity", "source_supported_label": "SMC_derived_fibroblast",
+        "source_wording": "Both sources claim an SMC-derived lineage identity.",
+        "identity_derivation": "source_exact_identity",
+        "lineage_requirement": "lineage_tracing_required",
+        "sources": [lineage_a, lineage_b],
+    }
+    lineage_path = work / "lineage-without-case-evidence.json"
+    lineage_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": lineage_resolution}
+    }), encoding="utf-8")
+    expect_failure(
+        lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", lineage_path),
+        "lacks current-case lineage evidence",
+    )
+
     valid_path = work / "valid.json"
     valid_path.write_text(json.dumps({
         "schema_version": "1.0.0",
@@ -199,7 +342,7 @@ def main():
     assert json.loads(state.read_text(encoding="utf-8"))["completed_uses"]
     assert complete_calibration_use(resolved)["updated"] is False
 
-    print(json.dumps({"status": "pass", "checks": 22}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 36}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
