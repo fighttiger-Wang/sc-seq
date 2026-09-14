@@ -12,6 +12,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from inspect_annotation_inputs import build_evidence
+from research_workflow import apply_research_stage, plugin_version
 from subcluster_identity_arbitration import apply_subcluster_identity_arbitration
 
 
@@ -258,6 +259,10 @@ def main():
     parser.add_argument("--exclude-marker", action="append", default=[], help="Treat a marker as conflict/contamination evidence, not positive identity/state evidence; repeat as needed.")
     parser.add_argument("--allow-partial-ratios", action="store_true", help="Allow a marker-only ratio table for provisional review; formal full-ratio claims remain disabled.")
     parser.add_argument("--blind-test", action="store_true", help="Run without project priors or cluster-specific annotation constraints; labels must come only from current expression/marker/UMAP evidence.")
+    parser.add_argument("--research-evidence", help="JSON evidence resolving the request_sha256 emitted by this exact run.")
+    parser.add_argument("--calibration-state", help="Optional persistent calibration counter JSON; defaults inside the approved workspace root.")
+    parser.add_argument("--force-research", action="store_true", help="Force open-world research because an expert identified a biological concern.")
+    parser.add_argument("--research-reason", action="append", default=[], help="Expert research escalation reason; repeat as needed.")
     parser.add_argument("--top-n", type=int, default=60)
     parser.add_argument("--informative-n", type=int, default=25)
     args = parser.parse_args()
@@ -279,10 +284,11 @@ def main():
     project_prior_path = assert_e_drive(args.project_prior, "project prior") if args.project_prior else None
     context_path = assert_e_drive(args.context_json, "sample context") if args.context_json else None
     constraints_path = assert_e_drive(args.annotation_constraints, "annotation constraints") if args.annotation_constraints else None
+    research_evidence_path = assert_e_drive(args.research_evidence, "research evidence") if args.research_evidence else None
     output_dir = assert_within(assert_e_drive(args.output_dir, "output directory"), workspace, "output directory")
     if not avg.is_file() or not markers.is_file():
         raise FileNotFoundError(f"Input file missing: avg={avg.exists()}, markers={markers.exists()}")
-    for role, optional in (("ratios", ratios), ("gene map", gene_map), ("cell evidence", cell_evidence), ("UMAP", umap), ("evidence config", evidence_config), ("knowledge base", knowledge_base), ("project prior", project_prior_path), ("sample context", context_path), ("annotation constraints", constraints_path)):
+    for role, optional in (("ratios", ratios), ("gene map", gene_map), ("cell evidence", cell_evidence), ("UMAP", umap), ("evidence config", evidence_config), ("knowledge base", knowledge_base), ("project prior", project_prior_path), ("sample context", context_path), ("annotation constraints", constraints_path), ("research evidence", research_evidence_path)):
         if optional is not None and not optional.is_file():
             raise FileNotFoundError(f"Optional {role} input missing: {optional}")
     reparse = has_reparse_component(output_dir.parent, workspace)
@@ -364,7 +370,34 @@ def main():
         "project_prior": str(project_prior_path) if project_prior_path else "",
         "context_json": str(context_path) if context_path else "",
         "annotation_constraints": str(constraints_path) if constraints_path else "",
+        "research_evidence": str(research_evidence_path) if research_evidence_path else "",
     }
+    calibration_state = (
+        assert_within(assert_e_drive(args.calibration_state, "calibration state"), workspace, "calibration state")
+        if args.calibration_state else workspace / ".sc-annotation-calibration" / "counters.v1.json"
+    )
+    calibration_policy = Path(__file__).resolve().parents[1] / "references" / "calibration-policy.v1.json"
+    requests, normalized_research, external_candidates = apply_research_stage(
+        evidence,
+        calibration_policy_path=calibration_policy,
+        calibration_state_path=calibration_state,
+        runtime_version=plugin_version(Path(__file__)),
+        research_evidence_path=research_evidence_path,
+        force_research=bool(args.force_research),
+        expert_reasons=args.research_reason,
+    )
+    requests_path = output_dir / "research_requests.json"
+    requests_path.write_text(json.dumps(requests, ensure_ascii=False, indent=2), encoding="utf-8")
+    normalized_research_path = output_dir / "research_evidence.normalized.json"
+    if normalized_research:
+        normalized_research_path.write_text(
+            json.dumps(normalized_research, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    external_candidates_path = output_dir / "external_candidates.json"
+    external_candidates_path.write_text(
+        json.dumps({"schema_version": "1.0.0", "candidates": external_candidates}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     evidence_path = output_dir / "annotation_evidence_pack.json"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     digest_path = output_dir / "annotation_evidence_digest.json"
@@ -372,13 +405,17 @@ def main():
     template_path = output_dir / "annotation_records.template.json"
     template_path.write_text(json.dumps([template_record(c) for c in evidence["clusters"]], ensure_ascii=False, indent=2), encoding="utf-8")
     manifest = {
-        "status": "prepared", "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "status": "research_required" if requests["requests"] and not normalized_research else "prepared",
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "workspace_root": str(workspace), "output_dir": str(output_dir),
         "metadata": metadata, "average_reader": evidence["average_reader"],
         "average_matrix_semantics": evidence.get("average_matrix_semantics", {}),
         "input_shape": evidence["average_shape"], "cluster_count": len(evidence["clusters"]),
         "evidence_pack": str(evidence_path), "evidence_digest": str(digest_path),
         "annotation_template": str(template_path),
+        "research_requests": str(requests_path),
+        "research_evidence_normalized": str(normalized_research_path) if normalized_research else "",
+        "external_candidates": str(external_candidates_path),
         "path_policy": {"write_drive": "E:", "c_drive_input_allowed": False, "junctions_in_output_allowed": False},
         "naming_marker_policy": evidence.get("naming_marker_policy", {}),
         "annotation_evidence_policy": evidence.get("annotation_evidence_policy", {}),
@@ -388,7 +425,8 @@ def main():
     manifest_path = output_dir / "annotation_run_manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({
-        "status": "prepared", "parent_kind": parent_kind, "clusters": evidence["clusters"],
+        "status": "research_required" if requests["requests"] and not normalized_research else "prepared",
+        "parent_kind": parent_kind, "clusters": evidence["clusters"],
         "average_reader": evidence["average_reader"],
         "average_gene_header": evidence.get("average_gene_header", "GeneName"),
         "average_matrix_semantics": evidence.get("average_matrix_semantics", {}),
@@ -397,6 +435,11 @@ def main():
         "evidence_bytes": evidence_path.stat().st_size, "digest_bytes": digest_path.stat().st_size,
         "evidence_pack": str(evidence_path), "evidence_digest": str(digest_path),
         "annotation_template": str(template_path),
+        "research_requests": str(requests_path),
+        "research_required_clusters": [item["cluster_id"] for item in requests["requests"]],
+        "research_resolved": bool(normalized_research),
+        "research_evidence_normalized": str(normalized_research_path) if normalized_research else "",
+        "external_candidates": str(external_candidates_path),
         "manifest": str(manifest_path),
     }, ensure_ascii=False))
 

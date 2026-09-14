@@ -60,6 +60,20 @@
       ]
     },
     {
+      "id": "open_world_research",
+      "group": "research_trigger_and_external_candidate_admission",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_open_world_research.py",
+      "work_subdir": "open_world_research",
+      "expected_assertions": 22,
+      "protects": [
+        "calibration and knowledge-gap triggers block silent fallback binding",
+        "research requests have stable hashes across reruns",
+        "stale hashes, duplicate sources, and single-marker evidence fail",
+        "external candidates require two independent sources and current-case multi-gene support",
+        "formal records and UMAP audits bind to the validated research artifact"
+      ]
+    },
+    {
       "id": "runtime_integrity",
       "group": "independent_plugin_runtime",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_runtime_integrity.py",
