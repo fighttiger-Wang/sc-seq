@@ -107,6 +107,7 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None, ev
         if cluster not in entries:
             continue
         item = entries[cluster]
+        decision = (evidence or {}).get("qualitative_annotation_evidence", {}).get(cluster, {})
         relation = _RESOLUTION.normalize_relation(item.get("marker_umap_relation", ""))
         item["marker_umap_relation"] = relation
         research_status = str(item.get("research_status", ""))
@@ -125,6 +126,24 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None, ev
             errors.append(f"Cluster {cluster} invalid marker_umap_relation: {relation}")
         if research_status not in RESEARCH_STATUSES:
             errors.append(f"Cluster {cluster} invalid research_status: {research_status}")
+        if formal and decision.get("research_required"):
+            if item.get("research_required") is not True:
+                errors.append(
+                    f"Cluster {cluster} evidence-triggered research requires research_required=true in UMAP audit"
+                )
+            expected_status = str(decision.get("research_status", ""))
+            if research_status != expected_status:
+                errors.append(
+                    f"Cluster {cluster} UMAP research_status {research_status} does not match evidence {expected_status}"
+                )
+            expected_artifact = str(decision.get("research_artifact_sha256", "")).strip()
+            observed_artifact = str(item.get("research_artifact_sha256", "")).strip()
+            if research_status in {"resolved", "reused"} and (
+                not expected_artifact or observed_artifact != expected_artifact
+            ):
+                errors.append(
+                    f"Cluster {cluster} resolved/reused research lacks a matching research_artifact_sha256"
+                )
         if same_label_topology not in SAME_LABEL_TOPOLOGIES:
             errors.append(f"Cluster {cluster} invalid same_label_topology: {same_label_topology}")
         if separation_explanation not in SEPARATION_EXPLANATIONS:

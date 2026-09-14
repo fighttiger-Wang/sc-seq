@@ -6,11 +6,16 @@ import json
 import sys
 from pathlib import Path
 
+from research_workflow import (
+    complete_calibration_use,
+    plugin_version,
+    validate_formal_research_binding,
+)
 from umap_audit import load_umap_audit, validate_umap_audit
 
 
 SKILL_NAME = "sc-marker-cluster-annotation-auto"
-SKILL_VERSION = "0.6.8"
+SKILL_VERSION = plugin_version(Path(__file__))
 
 
 def _load_shared():
@@ -112,6 +117,7 @@ def validate(records, clusters, evidence):
     records[:] = normalized
     result = _SHARED.validate(records, clusters, evidence, annotation_level="subcluster")
     validate_candidate_semantics(evidence)
+    validate_formal_research_binding(records, evidence)
     conflicts = hierarchy_depth_conflicts(records)
     if conflicts:
         raise ValueError(f"Subcluster table mixes ancestor and descendant identities: {conflicts}")
@@ -138,6 +144,8 @@ def main():
     records = json.loads(records_path.read_text(encoding="utf-8"))
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     clusters = sorted((str(item) for item in evidence.get("clusters", [])), key=cluster_sort_key)
+    validate_candidate_semantics(evidence)
+    validate_formal_research_binding(records, evidence)
     umap_source = str(evidence.get("source_paths", {}).get("umap", "")).strip()
     if not umap_source:
         raise ValueError("Formal subcluster delivery requires a supplied UMAP source")
@@ -150,6 +158,8 @@ def main():
     qa = _SHARED.build_workbook(
         records, evidence, output, "subcluster", SKILL_NAME, SKILL_VERSION, normalized_audit
     )
+    qa["open_world_research"] = evidence.get("annotation_evidence_policy", {}).get("open_world_research", {})
+    qa["calibration_completion"] = complete_calibration_use(evidence)
     output.with_suffix(".qa.json").write_text(
         json.dumps(qa, ensure_ascii=False, indent=2), encoding="utf-8"
     )

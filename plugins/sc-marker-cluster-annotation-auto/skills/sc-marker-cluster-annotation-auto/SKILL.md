@@ -90,9 +90,12 @@ interferon response, cytotoxicity, antigen presentation, and stress remain
 states unless a coherent identity program supports a subtype. For every lineage
 boundary record both candidate programs, prevalence, relative dominance,
 exclusions, and the decision. If the knowledge base lacks a defensible leaf,
-perform targeted research and use a validated external candidate only with two
-independent sources and current-case supporting markers; do not silently choose
-an arbitrary ancestor.
+enter the executable open-world research stage described in
+[open-world-research-workflow.md](references/open-world-research-workflow.md).
+The ontology result may remain visible only as an explicitly unbound fallback.
+Do not bind it formally until the exact `research_requests.json` is resolved.
+Use a validated external candidate only with two independent sources and
+current-case supporting markers; do not silently choose an arbitrary ancestor.
 
 Apply the versioned
 [identity arbitration policy](references/identity-arbitration-policy.v1.json)
@@ -128,6 +131,18 @@ literature and curated atlases. From use six onward retrieve only for
 marker/context/UMAP conflicts or knowledge-base gaps. Record source, retrieval
 date, species, tissue, supported program, exclusions, and adoption/rejection
 rationale in a reusable evidence sheet.
+
+Run preparation once without research evidence. If it emits
+`status=research_required`, immediately use available online retrieval tools to
+resolve every request; this is a required task action, not an optional report
+note. Write a structured `research_evidence.json` bound to the emitted
+`request_sha256`, then rerun preparation with `--research-evidence`. A DOI list,
+article titles copied from memory, or a hand-authored `research_status=resolved`
+is invalid. Formal workbook construction remains blocked until the research
+artifact passes source independence, current-case multi-gene support, exclusion,
+and hash checks. If UMAP review later exposes a new unexplained island or
+identity conflict, rerun preparation with `--force-research` and a concrete
+`--research-reason`; do not reuse an earlier request hash.
 
 Record versions, hashes, counter, source paths, cluster order, parent context,
 and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook
