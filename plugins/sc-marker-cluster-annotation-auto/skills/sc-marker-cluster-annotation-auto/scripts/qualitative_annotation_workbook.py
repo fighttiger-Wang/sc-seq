@@ -98,39 +98,77 @@ def _ontology_path(stable_id):
     return list(reversed(path))
 
 
-def _project_mixed_hierarchy(records):
-    """Project mixed-depth identities to one plotting level per branch.
+WEAK_RESEARCH_CLAIMS = {"identity_like", "state", "program"}
 
-    The biological leaf remains in ``stable_id``. If a parent identity is also
-    present in the same result, the parent becomes the display/plotting label
-    and the leaf is retained in ``lower_level_subtype``. This keeps the result
-    sheet and UMAP labels at one level without changing identity arbitration.
+
+def _requires_provisional_display(record):
+    """Return True when the displayed identity is only a contextual research bridge."""
+    if str(record.get("umap_identity_action", "")).strip() == "reject_and_reassign":
+        return False
+    decision = record.get("_decision", {}) or {}
+    claim = str(_first(record, decision, "research_claim_level")).strip()
+    derivation = str(_first(record, decision, "research_identity_derivation")).strip()
+    basis = str(_first(record, decision, "label_basis")).strip()
+    return derivation == "neutral_contextual_identity" or (
+        basis == "validated_external_candidate" and claim in WEAK_RESEARCH_CLAIMS
+    )
+
+
+def _state_qualified_identities(records):
+    """Find repeated identities whose distinct recorded states explain subclusters."""
+    grouped = {}
+    for record in records:
+        stable = str(record.get("stable_id", "")).strip()
+        if stable:
+            grouped.setdefault(stable, []).append(record)
+    qualified = set()
+    for stable, items in grouped.items():
+        states = {
+            normalize_final_label(item.get("state"))
+            for item in items
+            if str(item.get("state", "")).strip()
+        }
+        if len(items) > 1 and len(states) > 1:
+            qualified.add(stable)
+    return qualified
+
+
+def _expected_expert_display(record, state_qualified):
+    stable = str(record.get("stable_id", "")).strip()
+    if _requires_provisional_display(record):
+        return normalize_final_label(f"{stable}_provisional"), "provisional"
+    state = str(record.get("state", "")).strip()
+    if stable in state_qualified and state:
+        return normalize_final_label(f"{stable}_state_{state}"), "state"
+    return normalize_final_label(stable), ""
+
+
+def _apply_expert_display_labels(records):
+    """Preserve supported leaf identities and expose weak contextual labels.
+
+    ``Celltype_EN`` is the expert-facing subcluster plotting label. A supported
+    leaf is never collapsed merely because its registered parent is also
+    present. Research-derived contextual identities supported only at
+    identity-like/state/program level receive an explicit ``_provisional``
+    suffix so the UMAP cannot visually overstate them as stable lineages.
     """
-    present = {
-        str(record.get("stable_id", "")).strip()
-        for record in records
-        if str(record.get("stable_id", "")).strip()
-    }
     nodes, _ = _ontology_index()
+    state_qualified = _state_qualified_identities(records)
     for record in records:
         stable = str(record.get("stable_id", "")).strip()
         path = _ontology_path(stable)
         if path:
-            # Repair incomplete hand-authored paths for evidence rendering,
-            # while leaving the stable identity itself untouched.
             record["parent_path"] = path
-        ancestors = [node for node in reversed(path[:-1]) if node in present]
-        if not ancestors:
-            continue
-        display = ancestors[0]
-        if display == stable:
-            continue
-        record["celltype_en"] = normalize_final_label(display)
-        record["lower_level_subtype"] = stable
-        display_node = nodes.get(display, {})
-        display_cn = str(display_node.get("name_cn", "")).strip()
-        if display_cn:
-            record["celltype_cn"] = display_cn
+        stable_cn = str(nodes.get(stable, {}).get("name_cn", "")).strip()
+        if stable_cn:
+            record["celltype_cn"] = stable_cn
+        display, qualifier = _expected_expert_display(record, state_qualified)
+        record["celltype_en"] = display
+        record["presentation_qualifier"] = qualifier
+        if qualifier == "provisional":
+            celltype_cn = str(record.get("celltype_cn", "")).strip()
+            if celltype_cn and not celltype_cn.endswith("（暂定）"):
+                record["celltype_cn"] = f"{celltype_cn}（暂定）"
     return records
 
 
@@ -370,12 +408,13 @@ def normalize_records(records, evidence, umap_audit=None):
         record["_decision"] = decision
         record["_umap"] = umap
         normalized.append(record)
-    _project_mixed_hierarchy(normalized)
+    _apply_expert_display_labels(normalized)
     return sorted(normalized, key=lambda item: cluster_sort_key(item["cluster_id"]))
 
 
 def validate(records, clusters, evidence, umap_audit=None, annotation_level="major"):
     errors = []
+    state_qualified = _state_qualified_identities(records)
     expected = sorted((str(item) for item in clusters), key=cluster_sort_key)
     observed = [str(item.get("cluster_id", "")) for item in records]
     if observed != expected:
@@ -470,15 +509,18 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                 errors.append(f"Cluster {cluster} invalid qualitative gate {field}: {record.get(field)}")
         if annotation_level == "subcluster":
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
-            if parent and record.get("celltype_en") == normalize_final_label(parent):
-                errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
             stable = str(record.get("stable_id", "")).strip()
             display = str(record.get("celltype_en", "")).strip()
-            lower = str(record.get("lower_level_subtype", "")).strip()
-            if stable != display and lower != stable:
+            if parent and (
+                display == normalize_final_label(parent)
+                or stable == normalize_final_label(parent)
+            ):
+                errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
+            expected_display, _ = _expected_expert_display(record, state_qualified)
+            if display != expected_display:
                 errors.append(
-                    f"Cluster {cluster} projects stable identity {stable} to {display} "
-                    "but does not retain it in lower_level_subtype"
+                    f"Cluster {cluster} plotting label {display} does not preserve stable identity {stable}; "
+                    f"expected {expected_display}"
                 )
     if errors:
         raise ValueError("\n".join(errors))
@@ -611,6 +653,7 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["生成时间", datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")],
         ["限定条件", human_value(constraints)],
         ["排序规则", "所有含 Cluster 的表均按数值升序，再按自然字母数字顺序"],
+        ["绘图标签规则", "Celltype_EN 保留当前病例支持的下位身份；弱语义中性身份追加 _provisional；重复身份存在不同状态时使用 identity_state_state"],
         ["红色填充规则", "仅中文名称列；用于显著状态程序、Multi_cell、疑似双细胞、低质量/碎片/背景干扰及谱系边界"],
         ["证据解释", "不使用评分或置信度；原始数值仅作为单个 Marker 的证据，身份由生物学门控和专家推理决定"],
         ["局限性", "Cluster 汇总证据不能证明同一细胞共表达，也不能确认 doublet；UMAP 仅作一致性审计"],
@@ -728,6 +771,17 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         },
         "fixed_row_height": True, "wrap_text": False, "shrink_to_fit": False,
         "source_files_unchanged": True,
+        "expert_display_labels_exported": True,
+        "hierarchy_projection_applied": False,
+        "provisional_suffix": "_provisional",
+        "provisional_clusters": [
+            record["cluster_id"] for record in records
+            if record.get("presentation_qualifier") == "provisional"
+        ],
+        "state_qualified_clusters": [
+            record["cluster_id"] for record in records
+            if record.get("presentation_qualifier") == "state"
+        ],
     }
 
 

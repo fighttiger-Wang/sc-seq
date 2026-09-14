@@ -21,13 +21,16 @@
       "group": "formal_and_temporary_delivery",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_subcluster_builder_v2.py",
       "work_subdir": "subcluster_workbook_and_umap",
-      "expected_assertions": 20,
+      "expected_assertions": 28,
       "protects": [
         "five-sheet workbook contract",
         "numeric ascending cluster joins",
         "score/confidence columns are absent",
         "per-Marker numeric evidence formatting",
         "static red fill is restricted to the Chinese annotation cell",
+        "supported descendant identities remain visible when their registered parent is also present",
+        "weak research-derived contextual identities carry an explicit provisional plotting qualifier",
+        "repeated stable identities with distinct states receive identity-plus-state plotting labels without changing stable identity",
         "UMAP conflict can reject a provisional boundary identity and reassign it to an already-supported sibling while a concordant boundary identity is retained",
         "legacy four-sheet or QA-unbound workbooks cannot pass formal copy delivery"
       ]

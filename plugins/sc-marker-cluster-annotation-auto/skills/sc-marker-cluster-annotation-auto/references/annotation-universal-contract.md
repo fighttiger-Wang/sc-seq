@@ -68,7 +68,15 @@ The final Excel workbook contains exactly these sheets in this order:
 `详细证据`, and `绘图列表` contain every cluster, use exact cluster-ID joins,
 and share numeric ascending order followed by natural alphanumeric order.
 Repeated labels are allowed. `Celltype_EN` must match `[A-Za-z0-9_]+` and must
-not be decorated with cluster IDs or marker prefixes.
+not be decorated with cluster IDs or marker prefixes. In subcluster work it
+must preserve a supported leaf even if the corresponding parent label occurs
+elsewhere; do not flatten biological resolution for legend uniformity. A
+standardized `_provisional` suffix is permitted only to disclose that a neutral
+contextual label is supported at identity-like/state/program level rather than
+as a stable identity. A standardized `<identity>_state_<state>` label is also
+permitted when the same stable identity is repeated across clusters with two or
+more distinct supported states; this remains a plotting disclosure and does not
+change the bound ontology identity.
 
 The result sheet contains no score or confidence field. The evidence sheet has
 one row per cluster and includes the final identity, parent context, primary and
