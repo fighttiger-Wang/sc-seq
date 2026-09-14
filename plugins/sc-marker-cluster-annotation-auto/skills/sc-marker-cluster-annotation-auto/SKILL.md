@@ -96,6 +96,16 @@ The ontology result may remain visible only as an explicitly unbound fallback.
 Do not bind it formally until the exact `research_requests.json` is resolved.
 Use a validated external candidate only with two independent sources and
 current-case supporting markers; do not silently choose an arbitrary ancestor.
+External research is also bounded by the source's semantic claim. Classify each
+source as `identity`, `identity_like`, `state`, `program`, or
+`lineage_identity`, preserve its verbatim qualifying wording, and bind no label
+above the conservative level jointly supported by all sources. A `-like`,
+`resembles`, or `similar to` statement cannot become the unqualified identity;
+a state or program cannot become a literature-established stable identity; and
+a lineage-derived label requires current-case lineage evidence, not aggregate
+cluster expression. When the literature supports only a state/program, retain a
+same-level neutral contextual identity and place the qualified comparison and
+state in `下位亚类` and `细胞状态` rather than narrowing the ontology vocabulary.
 
 Apply the versioned
 [identity arbitration policy](references/identity-arbitration-policy.v1.json)

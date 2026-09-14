@@ -148,6 +148,7 @@ def template_record(cluster):
         "disease_role": [], "state_list": [], "primary_state": "",
         "cross_species_inference": False, "panel_species": "", "marker_panel_evidence_ids": [],
         "label_basis": "", "canonical_subtype": "", "top_marker_gene": "",
+        "lower_level_subtype": "", "research_claim_level": "",
         "literature_source": "", "naming_grammar": "",
         "contextually_excluded_naming_markers": [],
         "user_constraint_audit": {},
