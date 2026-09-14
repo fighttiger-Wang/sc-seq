@@ -29,7 +29,7 @@ def main():
             "3": {"top_markers": [{"gene": "TRDC", "mean_expr": 3.1, "pct1": 0.65, "pct2": 0.05, "log2FC": 2.0}]},
         },
         "qualitative_annotation_evidence": {
-            "0": {"stable_id": "Tn", "primary_program": "Tn", "candidate_program_audits": [{"label": "Tn", "program_gate": "通过"}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
+            "0": {"stable_id": "Tn", "primary_program": "Tn", "candidate_program_audits": [{"label": "Tn", "program_gate": "通过"}, {"label": "Unbound_sibling", "program_gate": "通过", "identity_program_eligible": False, "required_identity_anchors": 3, "supporting_core": []}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
             "1": {"stable_id": "NK_cell", "primary_program": "NK_cell", "candidate_program_audits": [{"label": "NK_cell", "program_gate": "通过"}], "state_program": [{"program": "activation", "status": "通过", "marker_count": 3}], "qualitative_gates": {"identity_anchor": "通过", "state_program": "通过"}},
             "3": {"stable_id": "gdT", "primary_program": "gdT", "candidate_program_audits": [{"label": "gdT", "program_gate": "通过"}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
         },
@@ -226,8 +226,8 @@ def main():
     assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["中文名称"]).value == "经典单核细胞"
     assert myeloid_book["注释结果"].cell(result_rows["B2"], result_headers["Celltype_EN"]).value == "DC3"
 
-    # Mixed-depth ontology labels are projected to one plotting level while
-    # retaining the biological leaf as stable_id/lower_level_subtype.
+    # Mixed-depth ontology labels preserve the evidence-supported leaf instead
+    # of hiding it under a co-occurring registered parent.
     sys.path.insert(0, str(skill / "scripts"))
     import qualitative_annotation_workbook as contract  # noqa: WPS433
     mixed_records = [
@@ -237,10 +237,43 @@ def main():
     mixed_evidence = {"clusters": ["2", "3"], "qualitative_annotation_evidence": {}}
     mixed_normalized = contract.normalize_records(mixed_records, mixed_evidence)
     by_cluster = {row["cluster_id"]: row for row in mixed_normalized}
-    assert by_cluster["2"]["celltype_en"] == "Macrophage"
-    assert by_cluster["2"]["lower_level_subtype"] == "Tissue_resident_macrophage"
+    assert by_cluster["2"]["celltype_en"] == "Tissue_resident_macrophage"
+    assert by_cluster["2"]["lower_level_subtype"] == ""
     assert by_cluster["2"]["stable_id"] == "Tissue_resident_macrophage"
     assert by_cluster["3"]["celltype_en"] == "Macrophage"
+
+    # A neutral contextual identity derived only from program-level research
+    # remains internally stable but is visibly qualified in the UMAP mapping.
+    weak_records = [{
+        "cluster_id": "4", "stable_id": "Remodeling_stromal_cell",
+        "celltype_en": "Remodeling_stromal_cell", "celltype_cn": "重塑型基质细胞",
+        "label_basis": "validated_external_candidate",
+    }]
+    weak_evidence = {
+        "clusters": ["4"],
+        "qualitative_annotation_evidence": {"4": {
+            "research_claim_level": "program",
+            "research_identity_derivation": "neutral_contextual_identity",
+        }},
+    }
+    weak = contract.normalize_records(weak_records, weak_evidence)[0]
+    assert weak["celltype_en"] == "Remodeling_stromal_cell_provisional"
+    assert weak["stable_id"] == "Remodeling_stromal_cell"
+    assert weak["celltype_cn"] == "重塑型基质细胞（暂定）"
+    assert weak["presentation_qualifier"] == "provisional"
+
+    state_records = [
+        {"cluster_id": "5", "stable_id": "Pericyte", "celltype_en": "Pericyte", "celltype_cn": "周细胞", "state": "contractile"},
+        {"cluster_id": "6", "stable_id": "Pericyte", "celltype_en": "Pericyte", "celltype_cn": "周细胞", "state": "lipid_enriched"},
+    ]
+    state_normalized = contract.normalize_records(
+        state_records, {"clusters": ["5", "6"], "qualitative_annotation_evidence": {}}
+    )
+    state_by_cluster = {row["cluster_id"]: row for row in state_normalized}
+    assert state_by_cluster["5"]["celltype_en"] == "Pericyte_state_contractile"
+    assert state_by_cluster["6"]["celltype_en"] == "Pericyte_state_lipid_enriched"
+    assert state_by_cluster["5"]["stable_id"] == "Pericyte"
+    assert state_by_cluster["6"]["presentation_qualifier"] == "state"
 
     interim = work / "myeloid_mapping.tsv"
     completed = subprocess.run([
@@ -293,7 +326,7 @@ def main():
     ], text=True, capture_output=True)
     assert legacy_copy.returncode != 0
     assert "violates the five-sheet contract" in legacy_copy.stdout
-    print(json.dumps({"status": "pass", "checks": 20, "output": str(output)}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 28, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

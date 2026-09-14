@@ -12,7 +12,14 @@ The final workbook contains exactly these sheets in order:
 
 Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
 Repeated labels are allowed and are not decorated with cluster IDs or Marker
-prefixes.
+prefixes. `Celltype_EN` is the expert-facing subcluster label. Preserve a
+case-supported leaf even when its registered parent is also present elsewhere.
+For a neutral contextual identity supported only by identity-like, state, or
+program literature, append `_provisional`; this suffix discloses evidence
+level and does not create a new ontology identity. If a repeated stable
+identity has at least two distinct supported states across clusters, use
+`<identity>_state_<state>` so the plotting map communicates the recorded
+subcluster difference while internal `stable_id` remains unchanged.
 
 ## 注释结果
 
@@ -35,17 +42,25 @@ Columns:
 15. 验证建议
 16. 下游处理建议
 
-`下位亚类` is an optional presentation-only field. It may contain a
+`下位亚类` is an optional evidence-description field. It may contain a
 case-supported lower-level subtype when the current evidence justifies one;
 otherwise it remains blank. It does not replace `Celltype_EN`, does not enter
-identity arbitration or UMAP resolution, and cannot be used to mix ancestor
-and descendant labels in the plotting mapping.
+identity arbitration or UMAP resolution, and cannot be used to hide a supported
+identity from the plotting mapping.
 
 If a result contains both a registered parent and one of its registered
-descendants, the parent is used as the shared `Celltype_EN` display level for
-that branch, while the descendant is retained in `下位亚类` and in the
-internal `stable_id`. This is a presentation projection only; it must not
-rewrite the biological evidence or final identity binding.
+descendants, keep each cluster's evidence-bound identity in `Celltype_EN`.
+Mixed depths are valid when they reflect real differences in evidence
+resolution. Do not force a descendant back to the parent for visual uniformity.
+If the final identity is a neutral bridge admitted from weak literature
+semantics, use `<stable_id>_provisional` in `Celltype_EN`, retain the unsuffixed
+identity internally, and preserve the qualified comparison and state in
+`下位亚类` and `细胞状态`.
+
+State qualification is a display operation only. Apply it only when one stable
+identity is repeated and the current records contain at least two distinct,
+non-empty states. Do not invent a state, add cluster IDs, or use a Marker name
+as a substitute when no state distinction is supported.
 
 The sheet contains no score, confidence, candidate rank, or numeric quality
 field. `关键 Marker` contains gene symbols only.

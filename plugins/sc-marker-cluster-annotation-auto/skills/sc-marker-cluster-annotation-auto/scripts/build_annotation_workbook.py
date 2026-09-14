@@ -56,26 +56,18 @@ def _structured_list(value):
     return []
 
 
-def hierarchy_depth_conflicts(records):
-    def allowed_multi_cell(record):
-        return str(record.get("stable_id", "")) == "Multi_cell" and not bool(record.get("auto_merge_allowed", True))
-
-    # Validate the final presentation/plotting level. ``stable_id`` may remain
-    # a leaf identity when a mixed-depth result is projected to a shared parent.
-    labels = {
-        str(item.get("celltype_en", ""))
-        for item in records
-        if item.get("celltype_en") and not allowed_multi_cell(item)
-    }
+def lossy_display_conflicts(records):
+    """Reject plotting labels that hide or rewrite the bound biological identity."""
     conflicts = []
     for record in records:
-        if allowed_multi_cell(record):
-            continue
-        child = str(record.get("celltype_en", ""))
-        for ancestor in _structured_list(record.get("parent_path", []))[:-1]:
-            if ancestor in labels and ancestor != child:
-                conflicts.append({"ancestor": ancestor, "descendant": child})
-    return sorted(conflicts, key=lambda item: (item["ancestor"], item["descendant"]))
+        stable = str(record.get("stable_id", "")).strip()
+        display = str(record.get("celltype_en", "")).strip()
+        allowed = {stable, f"{stable}_provisional"}
+        if record.get("presentation_qualifier") == "state":
+            allowed.add(f"{stable}_state_{_SHARED.normalize_final_label(record.get('state'))}")
+        if stable and display not in allowed:
+            conflicts.append({"stable_id": stable, "plotting_label": display})
+    return sorted(conflicts, key=lambda item: (item["stable_id"], item["plotting_label"]))
 
 
 def validate_candidate_semantics(evidence):
@@ -88,6 +80,13 @@ def validate_candidate_semantics(evidence):
         for candidate in decision.get("candidate_program_audits", []) or []:
             if str(candidate.get("program_gate", "")) not in {"通过", "pass", "passed"}:
                 continue
+            # Candidate audits contain broad sibling alternatives, many of
+            # which intentionally carry a permissive program flag while
+            # remaining unbound.  Only an identity-eligible candidate may
+            # participate in the formal semantic gate; otherwise a rejected
+            # sibling can make an otherwise valid case impossible to rebuild.
+            if candidate.get("identity_program_eligible") is False:
+                continue
             identity_audit = candidate.get("identity_program_audit", {}) or {}
             explicit_program = bool(
                 identity_audit.get("rule_id")
@@ -95,6 +94,14 @@ def validate_candidate_semantics(evidence):
                 and identity_audit.get("passed")
             )
             if explicit_program:
+                continue
+            absolute_audit = candidate.get("absolute_identity_audit", {}) or {}
+            if (
+                absolute_audit.get("assessed") is True
+                and absolute_audit.get("passed") is True
+                and str(candidate.get("eligibility_basis", "")).strip()
+                == "absolute_panel_identity"
+            ):
                 continue
             required = int(candidate.get("required_identity_anchors") or 0)
             supported_core = [
@@ -118,9 +125,9 @@ def validate(records, clusters, evidence):
     result = _SHARED.validate(records, clusters, evidence, annotation_level="subcluster")
     validate_candidate_semantics(evidence)
     validate_formal_research_binding(records, evidence)
-    conflicts = hierarchy_depth_conflicts(records)
+    conflicts = lossy_display_conflicts(records)
     if conflicts:
-        raise ValueError(f"Subcluster table mixes ancestor and descendant identities: {conflicts}")
+        raise ValueError(f"Subcluster plotting labels hide or rewrite stable identities: {conflicts}")
     return result
 
 
