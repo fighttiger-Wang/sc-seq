@@ -14,12 +14,17 @@ Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
 Repeated labels are allowed and are not decorated with cluster IDs or Marker
 prefixes. `Celltype_EN` is the expert-facing subcluster label. Preserve a
 case-supported leaf even when its registered parent is also present elsewhere.
-For a neutral contextual identity supported only by identity-like, state, or
-program literature, append `_provisional`; this suffix discloses evidence
-level and does not create a new ontology identity. If a repeated stable
-identity has at least two distinct supported states across clusters, use
-`<identity>_state_<state>` so the plotting map communicates the recorded
-subcluster difference while internal `stable_id` remains unchanged.
+`Celltype_EN` is a stable identity display label. Do not append state,
+functional program, disease role, marker names, or cluster IDs to create a
+new plotting identity. A provisional or unresolved decision is recorded in
+the expert verdict, state, evidence, and handling fields; it must not be
+hidden by a state-qualified identity string.
+
+An abbreviation may be used only when `display_name_type=approved_abbreviation`,
+`canonical_name` contains the complete standard identity, and
+`expert_name_review=approved`. The abbreviation must be a recognized,
+unambiguous name from the naming dictionary; the builder must reject invented
+or unreviewed abbreviations.
 
 ## 注释结果
 
@@ -57,10 +62,11 @@ semantics, use `<stable_id>_provisional` in `Celltype_EN`, retain the unsuffixed
 identity internally, and preserve the qualified comparison and state in
 `下位亚类` and `细胞状态`.
 
-State qualification is a display operation only. Apply it only when one stable
-identity is repeated and the current records contain at least two distinct,
-non-empty states. Do not invent a state, add cluster IDs, or use a Marker name
-as a substitute when no state distinction is supported.
+The expert plotting decision is mandatory. `allow_specific_label` is required
+for a specific subtype. `allow_parent_label_only`, `allow_unresolved_label`,
+or `allow_provisional_label` may produce conservative labels. `block_plot_label`,
+`recommend_recluster`, `recommend_merge`, and `recommend_manual_review` block
+formal workbook delivery.
 
 The sheet contains no score, confidence, candidate rank, or numeric quality
 field. `关键 Marker` contains gene symbols only.
@@ -118,8 +124,9 @@ rules, limitations, and the no-auto-modification declaration.
 - Static red fill applies only to `中文名称` for coherent significant state,
   `Multi_cell`, suspected doublet, low quality, debris, background interference,
   or lineage/off-parent boundary.
-- Every cluster receives a final annotation. Subcluster output cannot retreat to
-  the supplied parent solely because evidence is incomplete.
+- Every cluster receives a gate-reviewed plotting label. Subcluster output may
+  remain at the parent or unresolved level when the expert plotting standard
+  is not reached; evidence incompleteness must not force a fine-grained label.
 - Every formal workbook is bound to its passing QA sidecar by SHA-256 in the
   workspace build location. The delivery copier rechecks sheet order, headers,
   freeze panes, fixed row heights, no-wrap/no-filter formatting, red-fill

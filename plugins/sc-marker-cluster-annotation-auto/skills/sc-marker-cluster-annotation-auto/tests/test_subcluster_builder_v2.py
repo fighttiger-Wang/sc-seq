@@ -50,6 +50,11 @@ def main():
             "expert_review_basis": "Complete identity program reviewed against sibling alternatives.",
             "identity_review_summary": "Primary identity retained after reviewing the nearest sibling boundary.",
             "optimization_recommendations": "No additional optimization is currently required.",
+            "expert_plot_verdict": "allow_specific_label",
+            "approved_plot_label": record["celltype_en"],
+            "canonical_name": record["celltype_en"],
+            "display_name_type": "full_name",
+            "expert_name_review": "approved",
         })
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -114,6 +119,20 @@ def main():
         "--output", str(work / "rejected.xlsx"), "--workspace-root", str(work.parents[1]), "--force",
     ], text=True, capture_output=True)
     assert rejected.returncode != 0
+
+    # An abbreviated plotting name without explicit expert naming approval is
+    # not a formal deliverable, even when the underlying identity is valid.
+    bad_name_records = json.loads(json.dumps(records))
+    bad_name_records[0]["display_name_type"] = "approved_abbreviation"
+    bad_name_records[0]["expert_name_review"] = "pending"
+    bad_name_path = work / "bad_name_records.json"
+    bad_name_path.write_text(json.dumps(bad_name_records, ensure_ascii=False), encoding="utf-8")
+    bad_name = subprocess.run([
+        sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
+        "--records", str(bad_name_path), "--evidence", str(ep), "--umap-audit", str(up),
+        "--output", str(work / "bad_name.xlsx"), "--workspace-root", str(work.parents[1]), "--force",
+    ], text=True, capture_output=True)
+    assert bad_name.returncode != 0
 
     myeloid_evidence = {
         "clusters": ["B2", "A1"],
@@ -205,12 +224,18 @@ def main():
         },
     }}
     for record in myeloid_records:
+        approved = "Classical_monocyte" if record["cluster_id"] == "A1" else "DC3"
         record.update({
             "expert_review_status": "conditional",
             "expert_review_basis": "DC3/monocyte programs and topology were independently reviewed.",
             "identity_review_summary": "The final sibling assignment follows the dominant program and topology boundary.",
             "optimization_recommendations": "Validate the boundary with orthogonal markers and cell-level coexpression.",
             "validation_advice": "Obtain orthogonal markers and cell-level validation.",
+            "expert_plot_verdict": "allow_specific_label",
+            "approved_plot_label": approved,
+            "canonical_name": approved,
+            "display_name_type": "full_name",
+            "expert_name_review": "approved",
         })
     myeloid_ep = work / "myeloid_evidence.json"
     myeloid_rp = work / "myeloid_records.json"
@@ -258,7 +283,7 @@ def main():
     assert by_cluster["3"]["celltype_en"] == "Macrophage"
 
     # A neutral contextual identity derived only from program-level research
-    # remains internally stable but is visibly qualified in the UMAP mapping.
+    # remains internally stable and does not create a fabricated plotting name.
     weak_records = [{
         "cluster_id": "4", "stable_id": "Remodeling_stromal_cell",
         "celltype_en": "Remodeling_stromal_cell", "celltype_cn": "重塑型基质细胞",
@@ -272,10 +297,9 @@ def main():
         }},
     }
     weak = contract.normalize_records(weak_records, weak_evidence)[0]
-    assert weak["celltype_en"] == "Remodeling_stromal_cell_provisional"
+    assert weak["celltype_en"] == "Remodeling_stromal_cell"
     assert weak["stable_id"] == "Remodeling_stromal_cell"
-    assert weak["celltype_cn"] == "重塑型基质细胞（暂定）"
-    assert weak["presentation_qualifier"] == "provisional"
+    assert weak["celltype_cn"] == "重塑型基质细胞"
 
     state_records = [
         {"cluster_id": "5", "stable_id": "Pericyte", "celltype_en": "Pericyte", "celltype_cn": "周细胞", "state": "contractile"},
@@ -285,10 +309,9 @@ def main():
         state_records, {"clusters": ["5", "6"], "qualitative_annotation_evidence": {}}
     )
     state_by_cluster = {row["cluster_id"]: row for row in state_normalized}
-    assert state_by_cluster["5"]["celltype_en"] == "Pericyte_state_contractile"
-    assert state_by_cluster["6"]["celltype_en"] == "Pericyte_state_lipid_enriched"
+    assert state_by_cluster["5"]["celltype_en"] == "Pericyte"
+    assert state_by_cluster["6"]["celltype_en"] == "Pericyte"
     assert state_by_cluster["5"]["stable_id"] == "Pericyte"
-    assert state_by_cluster["6"]["presentation_qualifier"] == "state"
 
     interim = work / "myeloid_mapping.tsv"
     completed = subprocess.run([

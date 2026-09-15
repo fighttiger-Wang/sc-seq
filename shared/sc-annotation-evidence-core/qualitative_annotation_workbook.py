@@ -23,6 +23,20 @@ from qualitative_umap_resolution import apply_identity_resolution, normalize_rel
 GATE_VALUES = {"通过", "不通过", "未确定", "不适用"}
 PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 INVALID_LABEL = re.compile(r"[^A-Za-z0-9_]+")
+PLOT_VERDICTS = {
+    "allow_specific_label",
+    "allow_parent_label_only",
+    "allow_unresolved_label",
+    "allow_provisional_label",
+    "block_plot_label",
+    "recommend_recluster",
+    "recommend_merge",
+    "recommend_manual_review",
+}
+NON_DELIVERABLE_VERDICTS = {
+    "block_plot_label", "recommend_recluster", "recommend_merge", "recommend_manual_review"
+}
+DISPLAY_NAME_TYPES = {"full_name", "approved_abbreviation"}
 
 PLOT_FIELDS = ["cluster_id", "celltype_en"]
 PLOT_HEADERS = ["Cluster", "Celltype_EN"]
@@ -49,6 +63,8 @@ EVIDENCE_FIELDS = [
     "state_program", "state_gate", "umap_gate", "umap_summary",
     "cross_island_audit", "mixed_doublet_gate", "mixed_doublet_explanation",
     "rationale", "evidence_gaps", "validation_advice", "handling_advice",
+    "expert_plot_verdict", "approved_plot_label", "canonical_name",
+    "display_name_type", "expert_name_review",
 ]
 EVIDENCE_HEADERS = [
     "Cluster", "中文名称", "Celltype_EN", "父群/谱系背景", "主要身份程序",
@@ -57,7 +73,8 @@ EVIDENCE_HEADERS = [
     "离群/跨谱系门控", "离群/跨谱系审计", "发育/成熟程序", "状态程序",
     "状态门控", "UMAP 门控", "UMAP 判断摘要", "跨岛一致性审计",
     "混合/双细胞门控", "混合/双细胞解释", "判定依据", "证据缺口",
-    "验证建议", "下游处理建议",
+    "验证建议", "下游处理建议", "专家绘图结论", "批准绘图标签",
+    "标准身份名称", "显示名称类型", "专家命名审核",
 ]
 
 LITERATURE_HEADERS = ["细胞类型", "文献", "经典鉴定 Marker", "本次鉴定使用的 Marker"]
@@ -286,6 +303,11 @@ def normalize_records(records, evidence, umap_audit=None):
             "cross_island_audit": human_value(_first(record, umap, "cross_island_audit", "same_label_topology", "separation_explanation", "separation_evidence")),
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),
+            "expert_plot_verdict": human_value(_first(record, decision, "expert_plot_verdict")),
+            "approved_plot_label": normalize_final_label(_first(record, decision, "approved_plot_label")),
+            "canonical_name": normalize_final_label(_first(record, decision, "canonical_name", "stable_id")),
+            "display_name_type": human_value(_first(record, decision, "display_name_type")),
+            "expert_name_review": human_value(_first(record, decision, "expert_name_review")),
         })
         gates = _qualitative_gates(record, decision, umap)
         for field, value in zip(
@@ -298,6 +320,44 @@ def normalize_records(records, evidence, umap_audit=None):
         record["_umap"] = umap
         normalized.append(record)
     return sorted(normalized, key=lambda item: cluster_sort_key(item["cluster_id"]))
+
+
+def _validate_plot_binding(record, decision, annotation_level):
+    if annotation_level != "subcluster":
+        return []
+    cluster = str(record.get("cluster_id", ""))
+    verdict = str(record.get("expert_plot_verdict", "")).strip()
+    actual = normalize_final_label(record.get("celltype_en", ""))
+    approved = normalize_final_label(record.get("approved_plot_label", ""))
+    canonical = normalize_final_label(record.get("canonical_name", ""))
+    display_type = str(record.get("display_name_type", "")).strip()
+    name_review = str(record.get("expert_name_review", "")).strip().lower()
+    errors = []
+    if verdict not in PLOT_VERDICTS:
+        errors.append(f"Cluster {cluster} requires a valid expert_plot_verdict")
+    if not approved:
+        errors.append(f"Cluster {cluster} lacks approved_plot_label")
+    elif approved != actual:
+        errors.append(f"Cluster {cluster} Celltype_EN must equal approved_plot_label")
+    if verdict in NON_DELIVERABLE_VERDICTS:
+        errors.append(f"Cluster {cluster} expert_plot_verdict={verdict} blocks formal delivery")
+    if verdict == "allow_specific_label" and not actual:
+        errors.append(f"Cluster {cluster} specific plotting approval requires Celltype_EN")
+    if verdict == "allow_parent_label_only":
+        parent = normalize_final_label(record.get("broad_type", "")) if record.get("broad_type") else ""
+        if parent and actual != parent:
+            errors.append(f"Cluster {cluster} parent-only approval must use the declared parent label {parent}")
+    if verdict != "allow_specific_label" and actual != approved:
+        errors.append(f"Cluster {cluster} non-specific plotting verdict has an unbound label")
+    if display_type not in DISPLAY_NAME_TYPES:
+        errors.append(f"Cluster {cluster} requires display_name_type=full_name or approved_abbreviation")
+    if not canonical:
+        errors.append(f"Cluster {cluster} lacks canonical_name")
+    if display_type == "approved_abbreviation" and name_review != "approved":
+        errors.append(f"Cluster {cluster} abbreviation requires expert_name_review=approved")
+    if "_state_" in actual.lower() or actual.lower().startswith("identity_state_"):
+        errors.append(f"Cluster {cluster} Celltype_EN must not encode state in the identity name")
+    return errors
 
 
 def validate(records, clusters, evidence, umap_audit=None, annotation_level="major"):
@@ -355,6 +415,7 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                     errors.append(
                         f"Cluster {cluster} UMAP reassignment {resolved} is absent from qualitative-core candidates"
                     )
+            errors.extend(_validate_plot_binding(matching, decision, annotation_level))
     umap_source = str(evidence.get("source_paths", {}).get("umap", "")).strip()
     if umap_source:
         if not isinstance(umap_audit, dict):
@@ -396,7 +457,10 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                 errors.append(f"Cluster {cluster} invalid qualitative gate {field}: {record.get(field)}")
         if annotation_level == "subcluster":
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
-            if parent and record.get("celltype_en") == normalize_final_label(parent):
+            verdict = str(record.get("expert_plot_verdict", "")).strip()
+            if parent and record.get("celltype_en") == normalize_final_label(parent) and verdict not in {
+                "allow_parent_label_only", "allow_unresolved_label", "allow_provisional_label"
+            }:
                 errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
     if errors:
         raise ValueError("\n".join(errors))

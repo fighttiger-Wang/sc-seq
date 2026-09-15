@@ -115,43 +115,61 @@ def _requires_provisional_display(record):
 
 
 def _state_qualified_identities(records):
-    """Find repeated identities whose distinct recorded states explain subclusters."""
-    grouped = {}
-    for record in records:
-        stable = str(record.get("stable_id", "")).strip()
-        if stable:
-            grouped.setdefault(stable, []).append(record)
-    qualified = set()
-    for stable, items in grouped.items():
-        states = {
-            normalize_final_label(item.get("state"))
-            for item in items
-            if str(item.get("state", "")).strip()
-        }
-        if len(items) > 1 and len(states) > 1:
-            qualified.add(stable)
-    return qualified
+    """Legacy compatibility hook; state never changes the plotting identity."""
+    return set()
 
 
 def _expected_expert_display(record, state_qualified):
     stable = str(record.get("stable_id", "")).strip()
-    if _requires_provisional_display(record):
-        return normalize_final_label(f"{stable}_provisional"), "provisional"
-    state = str(record.get("state", "")).strip()
-    if stable in state_qualified and state:
-        return normalize_final_label(f"{stable}_state_{state}"), "state"
-    return normalize_final_label(stable), ""
+    approved = str(record.get("approved_plot_label", "")).strip()
+    return normalize_final_label(approved or stable), "approved" if approved else ""
+
+
+PLOT_VERDICTS = {
+    "allow_specific_label", "allow_parent_label_only", "allow_unresolved_label",
+    "allow_provisional_label", "block_plot_label", "recommend_recluster",
+    "recommend_merge", "recommend_manual_review",
+}
+NON_DELIVERABLE_VERDICTS = {
+    "block_plot_label", "recommend_recluster", "recommend_merge", "recommend_manual_review",
+}
+
+
+def _validate_plot_binding(record, annotation_level):
+    if annotation_level != "subcluster":
+        return []
+    cluster = str(record.get("cluster_id", ""))
+    verdict = str(record.get("expert_plot_verdict", "")).strip()
+    actual = normalize_final_label(record.get("celltype_en", ""))
+    approved = normalize_final_label(record.get("approved_plot_label", "")) if record.get("approved_plot_label") else ""
+    display_type = str(record.get("display_name_type", "")).strip()
+    name_review = str(record.get("expert_name_review", "")).strip().lower()
+    errors = []
+    if verdict not in PLOT_VERDICTS:
+        errors.append(f"Cluster {cluster} requires a valid expert_plot_verdict")
+    if not approved:
+        errors.append(f"Cluster {cluster} lacks approved_plot_label")
+    elif approved != actual:
+        errors.append(f"Cluster {cluster} Celltype_EN must equal approved_plot_label")
+    if verdict in NON_DELIVERABLE_VERDICTS:
+        errors.append(f"Cluster {cluster} expert_plot_verdict={verdict} blocks formal delivery")
+    if display_type not in {"full_name", "approved_abbreviation"}:
+        errors.append(f"Cluster {cluster} requires display_name_type=full_name or approved_abbreviation")
+    if verdict == "allow_parent_label_only":
+        parent = normalize_final_label(record.get("broad_type", "")) if record.get("broad_type") else ""
+        if parent and actual != parent:
+            errors.append(f"Cluster {cluster} parent-only approval must use the declared parent label {parent}")
+    if not str(record.get("canonical_name", "")).strip():
+        errors.append(f"Cluster {cluster} lacks canonical_name")
+    if display_type == "approved_abbreviation" and name_review != "approved":
+        errors.append(f"Cluster {cluster} abbreviation requires expert_name_review=approved")
+    if "_state_" in actual.lower() or actual.lower().startswith("identity_state_"):
+        errors.append(f"Cluster {cluster} Celltype_EN must not encode state in the identity name")
+    return errors
 
 
 def _apply_expert_display_labels(records):
-    """Preserve supported leaf identities and expose weak contextual labels.
-
-    ``Celltype_EN`` is the expert-facing subcluster plotting label. A supported
-    leaf is never collapsed merely because its registered parent is also
-    present. Research-derived contextual identities supported only at
-    identity-like/state/program level receive an explicit ``_provisional``
-    suffix so the UMAP cannot visually overstate them as stable lineages.
-    """
+    """Apply the expert-approved identity display without inventing qualifiers."""
     nodes, _ = _ontology_index()
     state_qualified = _state_qualified_identities(records)
     for record in records:
@@ -397,6 +415,11 @@ def normalize_records(records, evidence, umap_audit=None):
             "cross_island_audit": human_value(_first(record, umap, "cross_island_audit", "same_label_topology", "separation_explanation", "separation_evidence")),
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),
+            "expert_plot_verdict": human_value(_first(record, decision, "expert_plot_verdict")),
+            "approved_plot_label": normalize_final_label(_first(record, decision, "approved_plot_label")) if _first(record, decision, "approved_plot_label") else "",
+            "canonical_name": normalize_final_label(_first(record, decision, "canonical_name", "stable_id")),
+            "display_name_type": human_value(_first(record, decision, "display_name_type")),
+            "expert_name_review": human_value(_first(record, decision, "expert_name_review")),
         })
         gates = _qualitative_gates(record, decision, umap)
         for field, value in zip(
@@ -511,7 +534,8 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
             stable = str(record.get("stable_id", "")).strip()
             display = str(record.get("celltype_en", "")).strip()
-            if parent and (
+            verdict = str(record.get("expert_plot_verdict", "")).strip()
+            if parent and verdict not in {"allow_parent_label_only", "allow_unresolved_label", "allow_provisional_label"} and (
                 display == normalize_final_label(parent)
                 or stable == normalize_final_label(parent)
             ):
@@ -522,6 +546,7 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                     f"Cluster {cluster} plotting label {display} does not preserve stable identity {stable}; "
                     f"expected {expected_display}"
                 )
+            errors.extend(_validate_plot_binding(record, annotation_level))
     if errors:
         raise ValueError("\n".join(errors))
 

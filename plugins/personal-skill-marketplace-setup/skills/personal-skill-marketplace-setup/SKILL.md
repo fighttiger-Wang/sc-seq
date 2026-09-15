@@ -18,6 +18,22 @@ Every maintained Skill has two independent identities:
 
 The immutable release identity is the tuple `skill id + release version + Git commit + content SHA-256`. A version string without the commit and hash is insufficient evidence of equality.
 
+## Source and candidate isolation
+
+Before editing any maintained Skill, resolve exactly one authoritative
+marketplace root from the workspace configuration and record it as the active
+stable source. Candidate worktrees and staging copies must be explicitly
+classified and must not be discoverable as additional active marketplace
+roots. When more than one marketplace root is present, stop and report the
+roots; do not guess which one is authoritative and do not publish from the
+newest-looking directory.
+
+All candidate validation and read-only publish planning must receive the
+candidate root explicitly. A candidate may be tested by path, but it must not
+change the active location configuration, installed cache, plugin registry, or
+callable `/` entry. Only a clean candidate proven to contain the latest
+remote stable ref may proceed to release planning.
+
 ## Old-version handling and transactional installation
 
 Classify every source and artifact as `stable`, `candidate`, `rollback`, or

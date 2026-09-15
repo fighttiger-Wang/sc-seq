@@ -11,6 +11,55 @@ Build user-facing callable skills as plugins in the shared local marketplace, no
 
 Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode once for the task. If it installs an update, stop and ask the user to restart Codex and open a new task before continuing. Never edit an installed plugin cache as source.
 
+## Existing-rule baseline and anti-regression gate
+
+When modifying an existing Skill or any of its shared evidence, policy, schema,
+or builder resources, first read the current authoritative Skill instructions
+and every directly loaded rule resource that can affect the requested workflow.
+Do not rely on the user's issue description to enumerate the existing rules.
+The maintainer is responsible for discovering and preserving them.
+
+This is a semantic maintenance task, not a mechanical rewrite task. Do not
+rewrite an entire `SKILL.md`, reference, schema, or policy from the latest
+request alone. First inspect the existing implementation, its callers, its
+generated outputs, and its tests; then make the smallest change that satisfies
+the requested behavior while preserving unrelated behavior. A local incident
+may justify a narrowly scoped guard or regression test, but it does not by
+itself authorize replacing the Skill's general workflow, deleting an existing
+decision layer, or generalizing one domain's terminology into another domain.
+
+For every requested change, record the impact boundary: target files, direct
+callers, output fields, affected gates, and explicitly unaffected behavior.
+If the requested wording conflicts with an existing executable rule, stop and
+resolve the conflict from the implementation and tests before editing. Keep
+the old rule when the conflict is only apparent; change it only when the user
+has clearly authorized a semantic change.
+
+Before editing, create a compact rule baseline that records, at minimum:
+
+- required inputs, parent scope, and output schema;
+- biological identity, exclusion, hierarchy, state, off-parent, doublet, and
+  low-quality rules;
+- UMAP/topology and research/retrieval gates;
+- naming dictionary, approved abbreviations, display-label restrictions, and
+  expert-review requirements;
+- workbook, QA, hash, provenance, delivery, and no-auto-modification rules;
+- existing regression tests and known failure cases.
+
+Every proposed change must be classified as `add`, `clarify`, `strengthen`,
+or `replace`. `replace` is allowed only when the user explicitly authorizes
+retiring or changing the prior rule. Otherwise, preserve the prior rule and
+layer the new requirement on top of it. A shorter or more general rewrite is
+not evidence that an old rule is obsolete.
+
+After editing, run a rule-diff review against the baseline. The review must
+identify each removed, weakened, renamed, or behaviorally changed rule and
+prove that it was either preserved or explicitly authorized. Add a regression
+test for every incident that motivated the change, including a test that the
+previously protected behavior still blocks the original failure. Do not
+promote a candidate when this rule-diff is missing, when a directly loaded
+resource was not inspected, or when a test result is unavailable.
+
 ## Candidate, release, and callable states
 
 Keep the stable marketplace checkout and its `main`-derived working tree clean while a Skill is being drafted. Perform unapproved edits in a session-local isolated worktree or staging copy. A candidate may be tested through an explicit file/path handoff in the current task, but it must not be registered, installed, or exposed through `/`.
@@ -76,8 +125,9 @@ Assign later maintained skills the next unused two-digit number, currently `17`.
 1. Read the current `skill-creator` and `plugin-creator` instructions if available.
 2. Pick one normalized internal id for both plugin and skill.
 3. Check the shared marketplace source and existing `workspace-local` plugin before writing.
-4. Update an existing shared plugin in an isolated main-derived candidate worktree. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched only as an explicitly marked rollback copy.
-5. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
+4. For an existing Skill, read the authoritative `SKILL.md`, directly loaded references, executable scripts, schemas, and relevant tests; write the rule baseline before changing any of them.
+5. Update an existing shared plugin in an isolated main-derived candidate worktree. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched only as an explicitly marked rollback copy.
+6. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
    - `skill-pack.json`, including its manifest version and the incremented `expectedPluginCount`;
    - `.agents/plugins/marketplace.json`;
    - `.codex-plugin/marketplace.json`.
