@@ -8,24 +8,21 @@ description: Expert-style subcluster annotation within a declared parent populat
 Before making any annotation decision, apply the bundled [universal annotation contract](references/annotation-universal-contract.md). This versioned copy is included in the plugin so an installed cache does not depend on a marketplace checkout outside its package. This skill adds the parent-restricted sibling-level rules below; it does not replace the shared evidence, UMAP, naming, or workbook QA requirements.
 
 Use this skill only when the supplied dataset is already restricted to one
-parent population. Annotate every cluster at the most specific level supported
-by its current evidence; do not refine only the clearest lineage or retreat to
-the supplied parent because another cluster resolved more deeply.
+parent population. Review every cluster at the most specific level supported
+by its current evidence, but do not force a fine-grained label when the expert
+plotting standard is not reached. Parent-level, unresolved, provisional,
+manual-review, merge, or recluster outcomes are valid formal decisions when
+the evidence cannot support a defensible subtype.
 
 When the current evidence resolves some clusters to a registered leaf while
-other clusters remain at that leaf's parent, preserve the supported leaf in
-`Celltype_EN`; do not collapse it merely to make the legend ontologically
-uniform. Mixed parent/descendant labels are acceptable when they truthfully
-represent different evidence resolution. Retain `下位亚类` for qualified
-comparisons or additional refinements, not as a place to hide a supported
-identity from the UMAP. A neutral contextual identity admitted only from
-`identity_like`, `state`, or `program` literature must carry an explicit
-`_provisional` suffix in `Celltype_EN` and preserve the original qualifier and
-state in their dedicated fields. When the same stable identity occurs in
-multiple clusters with at least two distinct evidence-supported states, expose
-that distinction as `<identity>_state_<state>` in `Celltype_EN`; keep the
-unsuffixed identity in internal `stable_id` so a state-qualified plotting label
-is never mistaken for a new ontology identity.
+other clusters remain at that leaf's parent, preserve the supported leaf only
+when its expert plotting verdict is `allow_specific_label`. Otherwise retain a
+conservative parent or unresolved label and record the evidence gap. Mixed
+parent/descendant labels are acceptable when they truthfully represent
+different evidence resolution. Keep `下位亚类` for qualified comparisons or
+additional refinements, not as a place to hide a supported identity from the
+UMAP. States, programs, and disease roles remain separate fields and must not
+be concatenated into `Celltype_EN`.
 
 ## Inputs
 
@@ -85,6 +82,12 @@ For every cluster:
    concrete components and red warning formatting. If one program dominates,
    retain its identity and explain the secondary signal as background,
    contamination, or state, and record the unresolved evidence explicitly.
+8. Before formal workbook construction, require the expert plotting and naming
+   gate. `allow_specific_label` is required for a specific subtype. Parent,
+   unresolved, provisional, manual-review, merge, or recluster outcomes must
+   be represented by structured verdict and handling fields; do not encode
+   them by inventing a longer `Celltype_EN` string. An approved abbreviation
+   requires a canonical full name and explicit expert naming approval.
 
 ## Boundary behavior
 
@@ -129,16 +132,13 @@ Keep the most likely主体细胞类型 even for impurity, low quality, abnormal,
 debris, or suspected doublet clusters. Put abnormality, components,
 characteristic genes, UMAP judgment, explanation, literature, and handling
 recommendation in separate fields. Do not create confidence or score fields.
-For a subcluster deliverable, `Celltype_EN` is the expert-facing plotting
-label: it preserves a supported leaf such as a myofibroblast rather than
-projecting it to a co-occurring parent, while a state/program-derived neutral
-contextual identity is visibly marked `_provisional`. The plotting label may
-therefore contain evidence-resolved parent and descendant identities together;
-this is preferable to erasing a supported subtype or visually overstating a
-weak contextual candidate. Repeated stable identities with distinct states use
-the standardized `<identity>_state_<state>` display form so disconnected or
-embedded UMAP groups remain interpretable without promoting the state itself to
-identity status.
+For a subcluster deliverable, `Celltype_EN` is the expert-approved identity
+plotting label. It may contain a supported parent or descendant identity, but
+only the structured expert verdict can authorize a specific subtype. Keep
+state, program, disease role, and UMAP topology in dedicated evidence fields.
+Never manufacture a state-qualified or Marker-derived plotting name. Use a
+shortened professional name only when the naming dictionary and expert review
+explicitly approve the abbreviation.
 The `注释结果` sheet may additionally contain an optional `下位亚类` field
 before `细胞谱系`: populate it only when a lower-level subtype is supported in
 the current case, leave it blank otherwise, and never use it to alter the

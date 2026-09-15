@@ -35,12 +35,11 @@ marker, one high average, a shared pan-lineage gene, or one state marker cannot
 define identity. Evaluate positive and negative evidence together and keep
 identity, development, state, abnormality, and handling as separate concepts.
 
-Every cluster receives a final annotation. In subcluster work, remain at the
-requested sibling/leaf level: incomplete evidence triggers further sibling
-comparison, exclusion review, and targeted literature research, not retreat to
-the supplied parent. If ambiguity remains, report the most biologically
-defensible same-level identity, the evidence gap, and a concrete validation
-route.
+Every cluster receives a gate-reviewed plotting decision. In subcluster work,
+incomplete evidence triggers further sibling comparison, exclusion review, and
+targeted literature research; it does not force a fine-grained subtype. A
+parent-level, unresolved, provisional, manual-review, merge, or recluster
+decision is valid when the expert plotting standard is not reached.
 
 ## UMAP and mixed populations
 
@@ -68,7 +67,11 @@ The final Excel workbook contains exactly these sheets in this order:
 `详细证据`, and `绘图列表` contain every cluster, use exact cluster-ID joins,
 and share numeric ascending order followed by natural alphanumeric order.
 Repeated labels are allowed. `Celltype_EN` must match `[A-Za-z0-9_]+` and must
-not be decorated with cluster IDs or marker prefixes.
+not be decorated with cluster IDs or marker prefixes. State, program,
+disease-role, and topology qualifiers remain in dedicated fields and must not
+be concatenated into `Celltype_EN`. A shortened professional name is permitted
+only when it is a recognized naming-dictionary abbreviation and receives
+explicit expert naming approval.
 
 The result sheet contains no score or confidence field. The evidence sheet has
 one row per cluster and includes the final identity, parent context, primary and
