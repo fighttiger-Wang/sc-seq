@@ -101,7 +101,19 @@ available in the formula bar. Freeze the first row in every sheet; additionally
 freeze the first three columns in `注释结果` and `详细证据`, and the first column
 in `细胞类型与文献`.
 
-Apply a static red background only to the `中文名称` cell when a cluster carries
-a coherent significant state program, `Multi_cell`, suspected doublet,
+Apply a static red background to the plotting label in `绘图列表/Celltype_EN`
+and, when present, the evidence label in `注释结果/中文名称` when a cluster
+carries a coherent significant state program, `Multi_cell`, suspected doublet,
 low-quality/debris/background interference, or lineage/off-parent boundary.
-One isolated state marker does not trigger red fill.
+The fill is a visual warning only: it must not alter the machine-readable
+`Celltype_EN` value, and plotting scripts must continue to consume the clean
+label text. One isolated state marker does not trigger red fill. A conditional
+label can remain UMAP-usable while being ineligible for quantitative downstream
+analysis; store that handling decision in structured fields rather than in the
+label text.
+
+Expert review status is evidence-derived, never cluster-ID-derived. `passed`
+is invalid when a mandatory identity gate is failed or unknown, when a material
+off-parent/boundary/background/mixed flag is present, when a material evidence
+gap remains, or when a marker/UMAP conflict is unresolved. The builder must
+reject such contradictions instead of silently downgrading or accepting them.

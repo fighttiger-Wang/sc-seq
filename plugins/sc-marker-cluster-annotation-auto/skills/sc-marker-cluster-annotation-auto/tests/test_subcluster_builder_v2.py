@@ -9,6 +9,38 @@ import sys
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from PIL import Image, ImageDraw
+
+
+def _core_provenance(evidence):
+    decisions = evidence["qualitative_annotation_evidence"]
+    payload = json.dumps(decisions, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    evidence["core_provenance"] = {
+        "generated_by": "qualitative_evidence_core",
+        "core_version": "test",
+        "qualitative_decisions_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+    }
+
+
+def _umap_facts(work, name, clusters, nearest_k):
+    image_path = work / f"{name}.png"
+    image = Image.new("RGB", (80, 80), "white")
+    draw = ImageDraw.Draw(image)
+    palette = [(230, 112, 112), (72, 145, 210), (86, 177, 132), (241, 174, 56)]
+    colors = {}
+    for index, cluster in enumerate(clusters):
+        x = 5 + index * 18
+        color = palette[index % len(palette)]
+        draw.rectangle((x, 20, x + 5, 25), fill=color)
+        colors[str(cluster)] = list(color)
+    image.save(image_path)
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    import umap_image_facts
+    facts = umap_image_facts.generate(image_path, colors, (0, 0, 80, 80), nearest_k=nearest_k, adjacency_px=0)
+    facts_path = work / f"{name}_facts.json"
+    facts_path.write_text(json.dumps(facts, ensure_ascii=False, indent=2), encoding="utf-8")
+    return image_path, facts_path, facts
 
 
 def main():
@@ -22,7 +54,7 @@ def main():
     evidence = {
         "clusters": ["3", "0", "1"], "average_shape": [8, 3], "average_reader": "test",
         "confirmed_metadata": {"species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster", "parent_population": "T_NK"},
-        "source_paths": {"cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx", "umap": "umap.png"},
+        "source_paths": {"cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx"},
         "cluster_profiles": {
             "0": {"top_markers": [{"gene": "CCR7", "mean_expr": 2.4, "pct1": 0.7, "pct2": 0.2, "log2FC": 1.4}]},
             "1": {"top_markers": [{"gene": "FGFBP2", "mean_expr": 4.67, "pct1": 0.702, "pct2": 0.143, "log2FC": 1.74}]},
@@ -30,11 +62,14 @@ def main():
         },
         "qualitative_annotation_evidence": {
             "0": {"stable_id": "Tn", "primary_program": "Tn", "candidate_program_audits": [{"label": "Tn", "program_gate": "通过"}, {"label": "Unbound_sibling", "program_gate": "通过", "identity_program_eligible": False, "required_identity_anchors": 3, "supporting_core": []}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
-            "1": {"stable_id": "NK_cell", "primary_program": "NK_cell", "candidate_program_audits": [{"label": "NK_cell", "program_gate": "通过"}], "state_program": [{"program": "activation", "status": "通过", "marker_count": 3}], "qualitative_gates": {"identity_anchor": "通过", "state_program": "通过"}},
+            "1": {"stable_id": "NK_cell", "primary_program": "NK_cell", "candidate_program_audits": [{"label": "NK_cell", "program_gate": "通过"}], "state_program": [{"program": "activation", "status": "通过", "marker_count": 3}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过", "state_program": "通过"}},
             "3": {"stable_id": "gdT", "primary_program": "gdT", "candidate_program_audits": [{"label": "gdT", "program_gate": "通过"}], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
         },
         "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
+    first_image, first_facts_path, first_facts = _umap_facts(work, "umap", ["0", "1", "3"], nearest_k=0)
+    evidence["source_paths"]["umap"] = str(first_image)
+    _core_provenance(evidence)
     rows = [("3", "γδT细胞", "gdT", "TRDC"), ("0", "初始T细胞", "Tn", "CCR7"), ("1", "NK细胞", "NK_cell", "FGFBP2")]
     records = [{
         "cluster_id": cluster, "celltype_cn": cn, "celltype_en": en, "stable_id": en,
@@ -83,6 +118,7 @@ def main():
     completed = subprocess.run([
         sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
         "--records", str(rp), "--evidence", str(ep), "--umap-audit", str(up), "--output", str(output),
+        "--umap-facts", str(first_facts_path),
         "--workspace-root", str(work.parents[1]), "--force",
     ], text=True, capture_output=True)
     if completed.returncode:
@@ -96,6 +132,8 @@ def main():
     assert workbook["注释结果"].cell(2, result_headers["下位亚类"]).value == "Naive_like_gdT"
     assert workbook["注释结果"].cell(3, result_headers["下位亚类"]).value in (None, "")
     assert workbook["注释结果"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    assert workbook["绘图列表"].cell(3, 2).value == "NK_cell"
+    assert workbook["绘图列表"].cell(3, 2).fill.fgColor.rgb == "FFF8696B"
     evidence_headers = {cell.value: cell.column for cell in workbook["详细证据"][1]}
     marker_text = workbook["详细证据"].cell(3, evidence_headers["支持 Marker 证据"]).value
     assert "FGFBP2(mean=4.67, ratio=70.20%" in marker_text
@@ -116,6 +154,7 @@ def main():
     rejected = subprocess.run([
         sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
         "--records", str(bad_records_path), "--evidence", str(ep), "--umap-audit", str(up),
+        "--umap-facts", str(first_facts_path),
         "--output", str(work / "rejected.xlsx"), "--workspace-root", str(work.parents[1]), "--force",
     ], text=True, capture_output=True)
     assert rejected.returncode != 0
@@ -142,9 +181,7 @@ def main():
             "species": "Human", "tissue": "synthetic immune tissue", "annotation_level": "subcluster",
             "parent_population": "Myeloid",
         },
-        "source_paths": {
-            "cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx", "umap": "umap.png",
-        },
+        "source_paths": {"cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx"},
         "cluster_profiles": {
             "A1": {"top_markers": [
                 {"gene": "CD14", "expr_ratio": 0.88}, {"gene": "FCN1", "expr_ratio": 0.91},
@@ -158,11 +195,14 @@ def main():
             ]},
         },
         "qualitative_annotation_evidence": {
-            "A1": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "Classical_monocyte", "program_gate": "通过"}], "candidate_labels": ["DC3", "Classical_monocyte"]},
-            "B2": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "cDC2", "program_gate": "通过"}], "candidate_labels": ["DC3", "cDC2"]},
+            "A1": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "Classical_monocyte", "program_gate": "通过"}], "candidate_labels": ["DC3", "Classical_monocyte"], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
+            "B2": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "cDC2", "program_gate": "通过"}], "candidate_labels": ["DC3", "cDC2"], "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"}},
         },
         "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
+    myeloid_image, myeloid_facts_path, myeloid_facts = _umap_facts(work, "myeloid_umap", ["A1", "B2"], nearest_k=1)
+    myeloid_evidence["source_paths"]["umap"] = str(myeloid_image)
+    _core_provenance(myeloid_evidence)
     myeloid_records = [
         {
             "cluster_id": "A1", "celltype_cn": "DC3细胞", "celltype_en": "DC3", "stable_id": "DC3",
@@ -247,6 +287,7 @@ def main():
     completed = subprocess.run([
         sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
         "--records", str(myeloid_rp), "--evidence", str(myeloid_ep), "--umap-audit", str(myeloid_up),
+        "--umap-facts", str(myeloid_facts_path),
         "--output", str(myeloid_output), "--workspace-root", str(work.parents[1]), "--force",
     ], text=True, capture_output=True)
     if completed.returncode:
@@ -330,6 +371,7 @@ def main():
     blocked = subprocess.run([
         sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
         "--records", str(myeloid_rp), "--evidence", str(myeloid_ep), "--umap-audit", str(unresolved_path),
+        "--umap-facts", str(myeloid_facts_path),
         "--output", str(work / "blocked.xlsx"), "--workspace-root", str(work.parents[1]), "--force",
     ], text=True, capture_output=True)
     assert blocked.returncode != 0

@@ -26,6 +26,21 @@ def _load_resolution_module():
 _RESOLUTION = _load_resolution_module()
 
 
+def _load_facts_module():
+    local = Path(__file__).resolve().parent
+    for parent in (local, *local.parents):
+        shared = parent / "shared" / "sc-annotation-evidence-core"
+        if (shared / "umap_facts.py").is_file():
+            if str(shared) not in sys.path:
+                sys.path.insert(0, str(shared))
+            import umap_facts as module
+            return module
+    raise RuntimeError("Shared UMAP facts module not found")
+
+
+_FACTS = _load_facts_module()
+
+
 RELATIONS = {"concordant", "conflict", "indeterminate"}
 RESEARCH_STATUSES = {"not_required", "pending", "resolved", "reused"}
 SAME_LABEL_TOPOLOGIES = {"adjacent", "disconnected", "not_applicable"}
@@ -82,7 +97,10 @@ def _record_context(records, entries=None):
     return context
 
 
-def validate_umap_audit(audit, expected_clusters, formal=False, records=None, evidence=None):
+def validate_umap_audit(
+    audit, expected_clusters, formal=False, records=None, evidence=None,
+    facts=None, image_path=None, facts_path=None,
+):
     expected = [str(cluster) for cluster in expected_clusters]
     entries, duplicates = _normalize_cluster_entries(audit)
     record_by_cluster = {str(record.get("cluster_id", "")): record for record in records or []}
@@ -92,6 +110,13 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None, ev
         if item["label"]:
             label_groups.setdefault(item["label"], []).append(cluster)
     errors = []
+    if formal:
+        if facts is None:
+            errors.append("Formal UMAP delivery requires an independent UMAP facts artifact")
+        else:
+            errors.extend(_FACTS.validate_umap_facts(
+                facts, expected, image_path=image_path, facts_path=facts_path
+            ))
     if duplicates:
         errors.append(f"Duplicate UMAP audit clusters: {sorted(set(duplicates))}")
     missing = [cluster for cluster in expected if cluster not in entries]
@@ -170,6 +195,34 @@ def validate_umap_audit(audit, expected_clusters, formal=False, records=None, ev
                 errors.append(f"Cluster {cluster} unique final label requires same_label_topology=not_applicable")
             if expected_peers and same_label_topology == "not_applicable":
                 errors.append(f"Cluster {cluster} repeated final label requires adjacent/disconnected topology review")
+            if facts and isinstance(facts.get("clusters"), dict):
+                geometry = facts["clusters"].get(cluster, {})
+                fact_nearest = {str(value) for value in geometry.get("nearest_clusters", [])}
+                audit_nearest = {str(value) for value in item.get("nearest_clusters", [])}
+                if fact_nearest != audit_nearest:
+                    errors.append(
+                        f"Cluster {cluster} nearest_clusters do not match independent UMAP facts: "
+                        f"expected {sorted(fact_nearest)}, observed {sorted(audit_nearest)}"
+                    )
+                adjacent = {str(value) for value in geometry.get("adjacent_clusters", [])}
+                component = str(geometry.get("component_id", "")).strip()
+                geometrically_adjacent = {
+                    peer for peer in expected_peers
+                    if peer in adjacent or str(facts["clusters"].get(peer, {}).get("component_id", "")).strip() == component
+                }
+                expected_topology = "adjacent" if geometrically_adjacent else (
+                    "disconnected" if expected_peers else "not_applicable"
+                )
+                if same_label_topology != expected_topology:
+                    errors.append(
+                        f"Cluster {cluster} same_label_topology={same_label_topology} disagrees with independent UMAP facts; "
+                        f"expected {expected_topology}"
+                    )
+                if expected_peers and not geometrically_adjacent and relation == "concordant":
+                    errors.append(
+                        f"Cluster {cluster} repeated label is geometrically disconnected from every same-label peer; "
+                        "marker_umap_relation cannot be concordant"
+                    )
             if label_basis in {"validated_external_candidate", "researched_branch_fallback"}:
                 nearest_labels = {
                     record_context.get(str(peer), {}).get("label", "")

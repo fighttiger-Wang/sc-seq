@@ -63,6 +63,19 @@
       ]
     },
     {
+      "id": "umap_image_provenance",
+      "group": "formal_umap_fail_closed",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_umap_provenance.py",
+      "work_subdir": "umap_image_provenance",
+      "expected_assertions": 4,
+      "protects": [
+        "formal UMAP audits require an independently generated geometry artifact",
+        "UMAP facts are bound to the supplied image SHA-256",
+        "same-label topology is checked against image-derived geometry",
+        "an unexplained disconnected repeated label cannot be marked concordant"
+      ]
+    },
+    {
       "id": "open_world_research",
       "group": "research_trigger_and_external_candidate_admission",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_open_world_research.py",

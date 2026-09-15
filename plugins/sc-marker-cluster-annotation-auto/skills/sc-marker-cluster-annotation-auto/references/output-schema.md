@@ -20,6 +20,14 @@ new plotting identity. A provisional or unresolved decision is recorded in
 the expert verdict, state, evidence, and handling fields; it must not be
 hidden by a state-qualified identity string.
 
+`Celltype_EN` remains clean and usable for UMAP even when the review status is
+`conditional`. Red fill in `绘图列表/Celltype_EN` is an optional visual warning
+and is never part of the label value. The same text value must be retained in
+`注释结果` so cluster-to-label joins remain exact. Conditional, off-parent, or
+boundary labels must carry structured handling such as `manual_review_only` or
+`exclude_from_quantitative_analysis`; color alone is not a machine-readable
+decision.
+
 An abbreviation may be used only when `display_name_type=approved_abbreviation`,
 `canonical_name` contains the complete standard identity, and
 `expert_name_review=approved`. The abbreviation must be a recognized,
@@ -121,9 +129,13 @@ rules, limitations, and the no-auto-modification declaration.
   fixed widths. Wrapping, shrink-to-fit, and autofilters are disabled.
 - Freeze first row; freeze first three columns in result/evidence and first
   column in literature.
-- Static red fill applies only to `中文名称` for coherent significant state,
-  `Multi_cell`, suspected doublet, low quality, debris, background interference,
-  or lineage/off-parent boundary.
+- Static red fill may apply to `绘图列表/Celltype_EN` and
+  `注释结果/中文名称` for coherent significant state, `Multi_cell`, suspected
+  doublet, low quality, debris, background interference, or lineage/off-parent
+  boundary. The label values remain unchanged.
+- `passed` is evidence-derived and must be rejected when a mandatory identity
+  gate is failed/unknown or when material boundary, off-parent, background,
+  mixed-population, or unresolved evidence-gap fields are present.
 - Every cluster receives a gate-reviewed plotting label. Subcluster output may
   remain at the parent or unresolved level when the expert plotting standard
   is not reached; evidence incompleteness must not force a fine-grained label.
@@ -133,4 +145,7 @@ rules, limitations, and the no-auto-modification declaration.
   location, and the hash; old four-sheet or QA-unbound workbooks cannot be
   copied as formal output. Final delivery copies only the `.xlsx` workbook to
   the original data directory; QA JSON sidecars stay in the workspace unless
-  the user explicitly asks for them.
+  the user explicitly asks for them. When UMAP is supplied, formal construction
+  also requires an independently generated `--umap-facts` artifact bound to the
+  supplied UMAP image/coordinate source by SHA-256; declared topology fields
+  and `reviewed=true` cannot stand in for image-derived geometry.
