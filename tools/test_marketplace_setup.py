@@ -420,8 +420,8 @@ class MarketplaceSetupTests(unittest.TestCase):
             self.assertIn("Keep this.", text)
             self.assertEqual(text.count(MANAGER.GUIDANCE_BEGIN), 1)
             self.assertEqual(text.count(MANAGER.GUIDANCE_END), 1)
-            self.assertIn("ask once for a single end-to-end authorization", text)
-            self.assertIn("do not ask a second merge or installation question", text)
+            self.assertIn("request one task-scoped authorization for the complete one-step closeout", text)
+            self.assertIn("do not ask separate PR, merge, installation, restart, or cache questions", text)
             self.assertIn("publication only, PR only, no merge, or no install", text)
             self.assertIn("new-task Skill-path pickup", text)
             self.assertIn("persistent clean stable clone", text)
@@ -429,6 +429,9 @@ class MarketplaceSetupTests(unittest.TestCase):
     def test_read_only_publish_plan_declares_one_review_default(self) -> None:
         policy = MANAGER.release_authorization_policy(False)
         self.assertTrue(policy["singleReviewDefault"])
+        self.assertTrue(policy["oneStepRelease"])
+        self.assertEqual(policy["oneStepCommand"], "publish --one-step")
+        self.assertTrue(policy["noAdditionalApprovalAfterAuthorization"])
         self.assertTrue(policy["publicationOnlyRequiresExplicitLimitation"])
         self.assertTrue(policy["mergeRequiresExplicitAuthorization"])
         self.assertFalse(policy["mergeAuthorized"])
@@ -444,9 +447,33 @@ class MarketplaceSetupTests(unittest.TestCase):
             "stable-main-verification",
             "local-cache-refresh",
             "cache-hash-verification",
+            "restart-and-new-task-pickup",
             ],
         )
         self.assertTrue(MANAGER.release_authorization_policy(True)["mergeAuthorized"])
+
+    def test_one_step_authorization_expands_to_complete_publish_controls(self) -> None:
+        args = type("Args", (), {
+            "one_step": True,
+            "mode": "publish",
+            "confirm_publish": False,
+            "confirm_merge": False,
+            "create_pr": False,
+        })()
+        MANAGER.apply_one_step_authorization(args)
+        self.assertTrue(args.confirm_publish)
+        self.assertTrue(args.confirm_merge)
+        self.assertTrue(args.create_pr)
+        args.mode = "audit"
+        with self.assertRaisesRegex(ValueError, "only valid with publish"):
+            MANAGER.apply_one_step_authorization(args)
+
+    def test_commit_identity_reuses_existing_repository_author_without_global_config(self) -> None:
+        with temporary_directory("marketplace-commit-identity-") as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+            subprocess.run(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "--allow-empty", "-m", "seed"], cwd=root, check=True, capture_output=True)
+            self.assertEqual(MANAGER.git_commit_identity("git", root), ("fixture", "fixture@example.com"))
 
     def test_bootstrap_copy_is_moved_to_recoverable_disabled_backup(self) -> None:
         with temporary_directory("marketplace-bootstrap-copy-") as temporary:

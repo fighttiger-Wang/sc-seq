@@ -125,6 +125,21 @@ def git_output(git: str, root: Path, *arguments: str) -> str:
     return run([git, *arguments], cwd=root, capture=True, show_output=False).stdout.strip()
 
 
+def git_commit_identity(git: str, root: Path) -> tuple[str, str]:
+    """Reuse the repository's existing author for an isolated release commit.
+
+    The release flow must not mutate global Git configuration.  A candidate
+    clone can legitimately have no user.name/user.email configured, while its
+    existing history still provides a stable identity for the automated
+    commit.
+    """
+    output = git_output(git, root, "show", "-s", "--format=%an%n%ae", "HEAD")
+    lines = [line.strip() for line in output.splitlines()]
+    if len(lines) < 2 or not lines[0] or not lines[1]:
+        raise RuntimeError("Cannot create release commit: no usable author identity was found in repository history")
+    return lines[0], lines[1]
+
+
 def git_ref_exists(git: str, root: Path, ref: str) -> bool:
     result = subprocess.run(
         [git, "rev-parse", "--verify", "--quiet", ref],
@@ -249,8 +264,8 @@ def managed_guidance_block() -> str:
             "- If preflight reports that plugins were updated or `restartRequired` is true, stop the current workflow and ask the user to restart Codex and open a new task before using the updated Skill.",
             "- If preflight reports `up-to-date`, do not repeat the network check again in the same task.",
             "- Create or update maintained plugins through `$skill-writing`. A new plugin must be present in `skill-pack.json` and both marketplace manifests before publication.",
-            "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills, present the read-only release plan, and ask once for a single end-to-end authorization covering version update, commit, push, PR, CI, SHA-pinned merge, stable verification, and cache refresh. Never commit or push without that explicit confirmation.",
-            "- After the combined authorization, invoke the setup Skill with both `--confirm-publish` and `--confirm-merge`; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use `--confirm-publish --create-pr` and stop at the open PR.",
+            "- Before the final response after changing files inside the configured marketplace source, inspect the changed Skills, present the read-only release plan, and request one task-scoped authorization for the complete one-step closeout: version update, commit, push, PR, CI, SHA-pinned merge, stable verification, cache refresh, restart notice, and new-task pickup. Never commit or push without that explicit confirmation.",
+            "- After that one-step authorization, invoke `publish --one-step` (equivalent to `--confirm-publish --confirm-merge`) and continue automatically through every technical gate; do not ask separate PR, merge, installation, restart, or cache questions. Stop only on a failed gate or an explicit user scope limitation. If the user explicitly requests publication only, PR only, no merge, or no install, use the narrower flags and stop at the requested boundary.",
             "- Treat merge verification, cache directory/manifest/hash verification, restart, and new-task Skill-path pickup as separate execution gates. The last gate is not another human approval.",
             "- Never restore a dirty, divergent, detached, development, or non-Git marketplace source as the runtime registration; preserve it and register a persistent clean stable clone.",
             GUIDANCE_END,
@@ -1409,6 +1424,9 @@ def refresh_from_verified_stable(
 def release_authorization_policy(merge_authorized: bool) -> dict:
     return {
         "singleReviewDefault": True,
+        "oneStepRelease": True,
+        "oneStepCommand": "publish --one-step",
+        "noAdditionalApprovalAfterAuthorization": True,
         "defaultAuthorizationScope": [
             "version-update",
             "commit",
@@ -1419,11 +1437,24 @@ def release_authorization_policy(merge_authorized: bool) -> dict:
             "stable-main-verification",
             "local-cache-refresh",
             "cache-hash-verification",
+            "restart-and-new-task-pickup",
         ],
         "publicationOnlyRequiresExplicitLimitation": True,
         "mergeRequiresExplicitAuthorization": True,
         "mergeAuthorized": bool(merge_authorized),
     }
+
+
+def apply_one_step_authorization(args):
+    """Expand the single user-approved closeout control into execution flags."""
+    if not args.one_step:
+        return args
+    if args.mode != "publish":
+        raise ValueError("--one-step is only valid with publish mode")
+    args.confirm_publish = True
+    args.confirm_merge = True
+    args.create_pr = True
+    return args
 
 
 def publish_changes(args, root: Path, codex_home: Path) -> dict:
@@ -1495,7 +1526,21 @@ def publish_changes(args, root: Path, codex_home: Path) -> dict:
     publish_paths = changed_worktree_paths(git, root) if not args.dry_run else paths
     run([git, "add", "--", *publish_paths], cwd=root, dry_run=args.dry_run)
     message = args.message or f"Update personal skills: {', '.join(affected)}"
-    run([git, "commit", "-m", message], cwd=root, dry_run=args.dry_run)
+    if args.dry_run:
+        commit_command = [git, "commit", "-m", message]
+    else:
+        author_name, author_email = git_commit_identity(git, root)
+        commit_command = [
+            git,
+            "-c",
+            f"user.name={author_name}",
+            "-c",
+            f"user.email={author_email}",
+            "commit",
+            "-m",
+            message,
+        ]
+    run(commit_command, cwd=root, dry_run=args.dry_run)
     run([git, "push", "-u", "origin", branch], cwd=root, dry_run=args.dry_run)
     release_commit = None if args.dry_run else git_output(git, root, "rev-parse", "HEAD")
     pr = None
@@ -1617,6 +1662,7 @@ def main() -> None:
     parser.add_argument("--skip-managed-guidance", action="store_true")
     parser.add_argument("--disable-bootstrap-copy", action="store_true")
     parser.add_argument("--confirm-publish", action="store_true")
+    parser.add_argument("--one-step", action="store_true", help="Run the fully authorized publish, merge, verify, and cache closeout")
     parser.add_argument("--branch")
     parser.add_argument("--message")
     parser.add_argument("--create-pr", action="store_true")
@@ -1627,6 +1673,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
+    args = apply_one_step_authorization(args)
     if args.confirm_merge and not args.confirm_publish:
         raise ValueError("--confirm-merge requires --confirm-publish and an explicit user request to publish and merge")
     if args.confirm_merge:
