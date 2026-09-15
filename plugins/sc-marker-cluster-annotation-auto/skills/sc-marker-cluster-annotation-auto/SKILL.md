@@ -169,6 +169,22 @@ record and reject formal delivery when `passed` contradicts a failed/unknown
 identity gate, a material boundary/off-parent/background flag, an unresolved
 evidence gap, or a marker/UMAP conflict.
 
+Keep four decisions separate: `identity` (the biological label),
+`identity_resolution` (`specific`, `parent_level`, `unresolved`, or
+`provisional`), `boundary_status` (`none`, `off_parent`, `mixed`,
+`contamination_suspected`, or `technical_quality`), and downstream
+`review_status`/`downstream_eligible`. A parent-level label is a fallback only
+when the specific identity gate fails or remains unknown; UMAP adjacency or a
+request for visual uniformity cannot trigger parent fallback. A conditional
+specific label may remain usable for UMAP, but it is not eligible for
+quantitative downstream use by default.
+
+For sibling clusters, consistency constrains resolution and review handling,
+not biological label equality. If similarly placed siblings have no decisive
+case-level discriminator, keep the same resolution and review level. If their
+final identities differ, record `discriminator_evidence_ids`; never copy one
+cluster's label to another solely because their UMAP regions are adjacent.
+
 Use the versioned naming dictionary. Established unambiguous abbreviations such
 as `gdT` and `Tn` are allowed; short common labels such as B cell and T cell
 remain full. One biological identity has one canonical spelling; display

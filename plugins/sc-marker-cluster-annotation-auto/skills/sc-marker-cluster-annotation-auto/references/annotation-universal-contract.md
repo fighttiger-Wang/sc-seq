@@ -79,7 +79,9 @@ The result sheet contains no score or confidence field. The evidence sheet has
 one row per cluster and includes the final identity, parent context, primary and
 competing programs, supporting/conflicting/missing markers, qualitative gates,
 off-parent audit, state/development evidence, UMAP audit, mixed/doublet
-interpretation, rationale, gaps, and handling.
+interpretation, rationale, gaps, handling, identity resolution, boundary/purity
+status, review status, downstream eligibility, sibling consistency status, and
+current-case discriminator evidence IDs.
 
 Marker evidence is rendered as, for example:
 
@@ -117,3 +119,15 @@ is invalid when a mandatory identity gate is failed or unknown, when a material
 off-parent/boundary/background/mixed flag is present, when a material evidence
 gap remains, or when a marker/UMAP conflict is unresolved. The builder must
 reject such contradictions instead of silently downgrading or accepting them.
+
+Keep `identity`, `identity_resolution`, `boundary_status`, `review_status`, and
+`downstream_eligible` as separate decisions. A parent-level fallback is allowed
+only when the specific identity gate fails or is unknown; UMAP adjacency and
+visual uniformity do not justify a fallback. A conditional specific label may
+remain in the plotting map, but it is not downstream-eligible by default.
+
+For same-parent sibling clusters, consistency constrains the resolution and
+review level rather than forcing biological label equality. A different final
+identity for similar neighboring clusters requires current-case discriminator
+evidence; otherwise retain the same conservative resolution/review level and
+make the unresolved comparison explicit.
