@@ -9673,7 +9673,7 @@
       "maximum_absolute_negative_hits": 1
     }
   },
-  "knowledge_base_version": "3.0.2",
+  "knowledge_base_version": "3.0.3",
   "annotation_decision_rules": {
     "version": "3.0.0",
     "principles": [

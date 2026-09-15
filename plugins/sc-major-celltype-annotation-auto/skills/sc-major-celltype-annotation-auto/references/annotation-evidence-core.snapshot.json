@@ -1,7 +1,7 @@
 {
   "core_version": "3.1.2",
   "config_version": "3.1.0",
-  "knowledge_base_version": "3.0.2",
+  "knowledge_base_version": "3.0.3",
   "snapshot_contract": "sha256-v1",
   "canonical_source": "shared/sc-annotation-evidence-core",
   "files": {
@@ -15,9 +15,9 @@
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
     "annotation-evidence-config.v1.json": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
     "evidence-scoring-policy.md": "294988da426da1491270a4a8e6890c5ff2eda9252a0075fd54d7e3cab4eb4b1c",
-    "knowledge-base/cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": "ead73bda5caa2924cf1c236714956e51681dd5953523085c51fc5ba1fde396b1",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
-    "knowledge-base/knowledge-base.manifest.json": "133081a3c8b06fb18975d64849f331c9d37529b842a5b40a6280dfa1a00b9f7b",
+    "knowledge-base/knowledge-base.manifest.json": "5b7487a6ac74ba4e4ceb0dc37aa3e199d4b6f818911de5e93bbff55c30560644",
     "knowledge-base/decision-rules.v3.json": "05fac484036361a69e31d2cf308e67596360192bd39eccad8106eb27b7e5be0e",
     "knowledge-base/naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
     "knowledge-base/calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"

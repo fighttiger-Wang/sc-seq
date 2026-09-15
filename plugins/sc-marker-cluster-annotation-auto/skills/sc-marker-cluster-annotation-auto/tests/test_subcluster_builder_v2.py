@@ -42,6 +42,10 @@ def main():
         "rationale": "Sibling-level qualitative program retained.",
         "review_action": "Validate with complementary markers and UMAP topology.",
         "literature_source": "Curated T/NK atlas reference",
+        "expert_review_status": "passed",
+        "expert_review_basis": "Complete current-case program and concordant sibling comparison.",
+        "identity_review_summary": f"{en}; nearest competing program reviewed at the same level.",
+        "optimization_recommendations": "No additional optimization is currently required.",
     } for cluster, cn, en, marker in rows]
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -100,79 +104,88 @@ def main():
     assert rejected.returncode != 0
 
     myeloid_evidence = {
-        "clusters": ["B2", "A1"],
+        "clusters": ["17", "7"],
         "average_shape": [12, 2],
         "average_reader": "test",
         "confirmed_metadata": {
-            "species": "Human", "tissue": "synthetic immune tissue", "annotation_level": "subcluster",
+            "species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster",
             "parent_population": "Myeloid",
         },
         "source_paths": {
             "cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx", "umap": "umap.png",
         },
         "cluster_profiles": {
-            "A1": {"top_markers": [
-                {"gene": "CD14", "expr_ratio": 0.88}, {"gene": "FCN1", "expr_ratio": 0.91},
-                {"gene": "VCAN", "expr_ratio": 0.86}, {"gene": "S100A8", "expr_ratio": 0.83},
-                {"gene": "S100A9", "expr_ratio": 0.82}, {"gene": "CD1C", "expr_ratio": 0.14},
-                {"gene": "CLEC10A", "expr_ratio": 0.19},
+            "7": {"top_markers": [
+                {"gene": "CD14", "expr_ratio": 0.87}, {"gene": "FCN1", "expr_ratio": 0.98},
+                {"gene": "VCAN", "expr_ratio": 0.96}, {"gene": "S100A8", "expr_ratio": 0.94},
+                {"gene": "S100A9", "expr_ratio": 0.98}, {"gene": "CD1C", "expr_ratio": 0.11},
+                {"gene": "CLEC10A", "expr_ratio": 0.29},
             ]},
-            "B2": {"top_markers": [
-                {"gene": "CD1C", "expr_ratio": 0.58}, {"gene": "CLEC10A", "expr_ratio": 0.52},
-                {"gene": "FCER1A", "expr_ratio": 0.49}, {"gene": "FCN1", "expr_ratio": 0.35},
+            "17": {"top_markers": [
+                {"gene": "CD1C", "expr_ratio": 0.72}, {"gene": "CLEC10A", "expr_ratio": 0.61},
+                {"gene": "FCER1A", "expr_ratio": 0.55}, {"gene": "FCN1", "expr_ratio": 0.48},
             ]},
         },
         "qualitative_annotation_evidence": {
-            "A1": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "Classical_monocyte", "program_gate": "通过"}], "candidate_labels": ["DC3", "Classical_monocyte"]},
-            "B2": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "cDC2", "program_gate": "通过"}], "candidate_labels": ["DC3", "cDC2"]},
+            "7": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "Classical_monocyte", "program_gate": "通过"}], "candidate_labels": ["DC3", "Classical_monocyte"]},
+            "17": {"stable_id": "DC3", "primary_program": "DC3", "candidate_program_audits": [{"label": "DC3", "program_gate": "通过"}, {"label": "cDC2", "program_gate": "通过"}], "candidate_labels": ["DC3", "cDC2"]},
         },
         "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
     myeloid_records = [
         {
-            "cluster_id": "A1", "celltype_cn": "DC3细胞", "celltype_en": "DC3", "stable_id": "DC3",
+            "cluster_id": "7", "celltype_cn": "DC3细胞", "celltype_en": "DC3", "stable_id": "DC3",
             "broad_type": "Myeloid", "supporting_markers": ["CD1C", "CLEC10A", "CD14", "FCN1", "VCAN"],
             "candidate_labels": ["DC3", "Classical_monocyte"],
             "rationale": "Expression-stage provisional DC3 boundary candidate.",
             "review_action": "Integrate the complete UMAP topology.",
-            "literature_source": "Curated myeloid references",
+            "literature_source": "Curated human fetal lung myeloid atlas",
+            "expert_review_status": "conditional",
+            "expert_review_basis": "DC3 and monocyte programs require explicit topology arbitration.",
+            "identity_review_summary": "DC3 retained or reassigned only after same-level marker/topology review.",
+            "optimization_recommendations": "Validate with orthogonal DC3 and monocyte markers plus cell-level coexpression.",
+            "validation_advice": "Review orthogonal DC3/monocyte markers and cell-level coexpression.",
         },
         {
-            "cluster_id": "B2", "celltype_cn": "DC3细胞", "celltype_en": "DC3", "stable_id": "DC3",
+            "cluster_id": "17", "celltype_cn": "DC3细胞", "celltype_en": "DC3", "stable_id": "DC3",
             "broad_type": "Myeloid", "supporting_markers": ["CD1C", "CLEC10A", "FCER1A", "FCN1"],
             "candidate_labels": ["DC3", "cDC2"],
             "rationale": "DC and monocyte-linked programs remain compatible with DC3.",
             "review_action": "Retain after topology review.",
-            "literature_source": "Curated myeloid references",
+            "literature_source": "Curated human fetal lung myeloid atlas",
+            "expert_review_status": "passed",
+            "expert_review_basis": "DC3 program and DC-enriched topology are concordant.",
+            "identity_review_summary": "DC3; cDC2 is the nearest sibling and was reviewed.",
+            "optimization_recommendations": "No additional optimization is currently required.",
         },
     ]
     myeloid_audit = {"clusters": {
-        "A1": {
+        "7": {
             "reviewed": True,
-            "topology_summary": "The boundary cluster lies on a marker-supported monocyte continuum and is separated from the DC island.",
-            "nearest_clusters": ["B2"],
+            "topology_summary": "Cluster 7 lies on the CD14/FCN1 monocyte continuum and is separated from the DC3 island.",
+            "nearest_clusters": ["17"],
             "marker_umap_relation": "conflict",
             "conflict_reason": "The provisional DC3 label conflicts with the monocyte-continuous topology.",
             "research_required": True,
             "research_status": "reused",
             "conflict_resolution_basis": "integrated_marker_umap_reassessment",
-            "evidence_ids": ["synthetic_monocyte_program", "synthetic_umap_topology"],
+            "evidence_ids": ["cluster7_monocyte_program", "cluster7_full_umap_topology"],
             "review_action": "Reject provisional DC3 and reassign to the marker-supported monocyte sibling.",
             "identity_action": "reject_and_reassign",
             "provisional_label": "DC3",
             "resolved_label": "Classical_monocyte",
             "resolved_label_cn": "经典单核细胞",
-            "reassessment_rationale": "UMAP places the boundary population on the monocyte branch, while a complete monocyte program dominates and the DC signal is limited.",
+            "reassessment_rationale": "UMAP places Cluster 7 on the monocyte branch, while CD14/FCN1/VCAN/S100A8/S100A9 broadly dominate and CD1C/CLEC10A are weak.",
             "reassessment_marker_support": ["CD14", "FCN1", "VCAN", "S100A8", "S100A9"],
             "same_label_clusters": [],
             "same_label_topology": "not_applicable",
             "separation_explanation": "none",
             "separation_evidence": "",
         },
-        "B2": {
+        "17": {
             "reviewed": True,
-            "topology_summary": "The comparison population remains in a DC-enriched island and is not continuous with the monocyte branch.",
-            "nearest_clusters": ["A1"],
+            "topology_summary": "Cluster 17 remains in the DC-enriched island and is not continuous with the CD14-high monocyte branch.",
+            "nearest_clusters": ["7"],
             "marker_umap_relation": "concordant",
             "research_required": False,
             "research_status": "not_required",
@@ -207,14 +220,14 @@ def main():
         str(myeloid_book["绘图列表"].cell(row, 1).value): myeloid_book["绘图列表"].cell(row, 2).value
         for row in range(2, myeloid_book["绘图列表"].max_row + 1)
     }
-    assert plot_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
+    assert plot_rows == {"7": "Classical_monocyte", "17": "DC3"}
     result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果"][1]}
     result_rows = {
         str(myeloid_book["注释结果"].cell(row, 1).value): row
         for row in range(2, myeloid_book["注释结果"].max_row + 1)
     }
-    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["中文名称"]).value == "经典单核细胞"
-    assert myeloid_book["注释结果"].cell(result_rows["B2"], result_headers["Celltype_EN"]).value == "DC3"
+    assert myeloid_book["注释结果"].cell(result_rows["7"], result_headers["中文名称"]).value == "经典单核细胞"
+    assert myeloid_book["注释结果"].cell(result_rows["17"], result_headers["Celltype_EN"]).value == "DC3"
 
     interim = work / "myeloid_mapping.tsv"
     completed = subprocess.run([
@@ -224,10 +237,10 @@ def main():
     ], text=True, capture_output=True)
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
-    assert "A1\tClassical_monocyte" in interim.read_text(encoding="utf-8-sig")
+    assert "7\tClassical_monocyte" in interim.read_text(encoding="utf-8-sig")
 
     unresolved = json.loads(json.dumps(myeloid_audit))
-    unresolved["clusters"]["A1"].pop("identity_action")
+    unresolved["clusters"]["7"].pop("identity_action")
     unresolved_path = work / "myeloid_umap_unresolved.json"
     unresolved_path.write_text(json.dumps(unresolved, ensure_ascii=False, indent=2), encoding="utf-8")
     blocked = subprocess.run([

@@ -12,7 +12,6 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from inspect_annotation_inputs import build_evidence
-from subcluster_identity_arbitration import apply_subcluster_identity_arbitration
 
 
 def _load_qualitative_core():
@@ -136,6 +135,8 @@ def template_record(cluster):
         "mixed_evidence": False, "review_in_subcluster": False,
         "rationale": "", "review_action": "", "validation_advice": "",
         "handling_advice": "", "evidence_gaps": "",
+        "expert_review_status": "", "expert_review_basis": "",
+        "identity_review_summary": "", "optimization_recommendations": "",
         "qualitative_gates": {
             "identity_anchor": "未确定", "parent_lineage": "未确定",
             "sibling_competition": "未确定", "exclusion": "未确定",
@@ -153,7 +154,7 @@ def _blind_qualitative_view(decision):
     derived rationale must not be shown before the independent annotation pass.
     """
     hidden = {
-        "stable_id", "suggested_identity", "primary_program", "identity_arbitration",
+        "stable_id", "suggested_identity", "primary_program",
         "primary_major_label", "biological_precedence_trace",
         "recommended_action", "decision_rationale",
     }
@@ -308,7 +309,6 @@ def main():
         sample_context=sample_context,
         user_constraints=annotation_constraints,
     )
-    evidence = apply_subcluster_identity_arbitration(evidence)
     metadata = {
         "species": args.species, "tissue": args.tissue,
         "experimental_system": args.experimental_system,

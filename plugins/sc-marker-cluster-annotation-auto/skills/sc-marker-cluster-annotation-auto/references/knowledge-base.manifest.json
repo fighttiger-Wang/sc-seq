@@ -17,7 +17,7 @@
     "calibration_policy": 1
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
+    "cell-annotation-knowledge-base.v2.json": "ead73bda5caa2924cf1c236714956e51681dd5953523085c51fc5ba1fde396b1",
     "ontology.v2.json": "e73407d20fd919935bf60a12bd441b51c452da3cfc1b14b8315ffae981830399",
     "aliases.v2.json": "e51150be3709c6e7edd49b274963705e42f3c6ad8134c4553b86a1666a3a5232",
     "marker-panels.v2.json": "68f6d47a480a7950ae622c03d5c25f4dbd27a401c751b3327cca137f4dd3dd9b",
@@ -30,5 +30,5 @@
     "naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
     "calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"
   },
-  "knowledge_base_version": "3.0.2"
+  "knowledge_base_version": "3.0.3"
 }

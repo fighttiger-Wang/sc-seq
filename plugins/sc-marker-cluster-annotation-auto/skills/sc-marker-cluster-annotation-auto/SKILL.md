@@ -7,6 +7,8 @@ description: Expert-style subcluster annotation within a declared parent populat
 
 Before making any annotation decision, apply the shared [universal annotation contract](../../../../shared/annotation-universal-contract.md). This skill adds the parent-restricted sibling-level rules below; it does not replace the shared evidence, UMAP, naming, or workbook QA requirements.
 
+Before formal delivery, also apply [expert identity review and case-driven optimization](references/expert-review-and-optimization.md). Structural QA is necessary but is not biological approval: every cluster requires an explicit expert review of identity, sibling alternatives, label level, state separation, topology concordance, and the most useful next validation or optimization action.
+
 Use this skill only when the supplied dataset is already restricted to one
 parent population. The complete table is annotated at one consistent
 subcluster level within that parent. Do not mix a parent label with its
@@ -37,12 +39,6 @@ For every cluster:
    support, and multiple MAIT-associated markers; DNT tolerates non-dominant
    receptor background but not a dominant competing CD4/CD8 or gamma-delta
    program.
-   When multiple sibling programs pass, read the
-   [identity arbitration contract](references/identity-arbitration-contract.md).
-   Eligibility gates never grant automatic final-label priority: compare the
-   complete competing programs and explicitly resolve one-sided dominance, a
-   registered boundary identity, or an unresolved boundary before binding the
-   label.
 3. Jointly interpret `mean_expr`, `expr_ratio`, `log2FC`, `pct.1`, and `pct.2`.
    High expression in a few cells is not a broadly supported program; a modest
    signal across most cells may be meaningful. `norm_expr` must not be counted
@@ -71,6 +67,14 @@ For every cluster:
    retain its identity and explain the secondary signal as background,
    contamination, or state, and record the unresolved evidence explicitly.
 
+8. Perform the expert identity review after marker arbitration and UMAP review.
+   Do not accept a long concatenated plotting label that mixes identity with
+   state, activation, inflammation, tissue context, or a qualified
+   comparison. Bind `Celltype_EN` to one canonical identity level; put state
+   and qualified comparisons in their dedicated fields. Formal construction
+   is blocked unless every cluster has an expert review status, review basis,
+   identity-boundary summary, and a case-specific optimization recommendation.
+
 ## Boundary behavior
 
 Never let a single receptor chain, a single shared marker, or a state marker
@@ -87,13 +91,6 @@ perform targeted research and use a validated external candidate only with two
 independent sources and current-case supporting markers; do not silently choose
 an arbitrary ancestor.
 
-Apply the versioned
-[identity arbitration policy](references/identity-arbitration-policy.v1.json)
-after candidate generation. Absolute, branch, exclusion, and boundary gates
-establish eligibility only. State/development programs are evaluated after
-identity competition, and UMAP is an audit after marker-supported arbitration;
-neither may create or rescue an identity program.
-
 ## Output
 
 Produce a cluster-level `cluster -> celltype_label` mapping usable for UMAP.
@@ -101,6 +98,10 @@ Keep the most likely主体细胞类型 even for impurity, low quality, abnormal,
 debris, or suspected doublet clusters. Put abnormality, components,
 characteristic genes, UMAP judgment, explanation, literature, and handling
 recommendation in separate fields. Do not create confidence or score fields.
+Every formal record must additionally expose `expert_review_status`,
+`expert_review_basis`, `identity_review_summary`, and
+`optimization_recommendations`; the final response must summarize the review
+and its highest-value case-specific recommendations.
 Mark the annotation cell red when
 the cluster should not be interpreted as a normal pure type; do not replace the
 plotting label with `Doublet` or `Debris`.
@@ -138,20 +139,6 @@ review must be read from the supplied image and must not be generated from the
 core decision or from the provisional label. Final workbook construction is
 allowed only after the independent records, UMAP audit, and internal evidence
 binding all pass validation.
-
-## Release handoff
-
-When the user explicitly approves publication, defer the complete release to
-the one-review marketplace workflow: increment the technical package version,
-synchronize display and marketplace metadata, run registered regressions,
-commit and push a `codex/` branch, create the PR, wait for CI, merge the exact
-head SHA, verify stable `main`, establish a clean stable runtime registration,
-and verify the real cache directories, manifests, and file hashes. Do not edit
-an installed cache as source. The combined authorization may cover all of
-these steps; do not insert a second routine merge or installation review.
-After installation, report only `restart-required`. Declare the slash skill
-active only when a restarted/new task is observed loading the expected
-versioned `SKILL.md` cache path.
 
 Never output generic `Cell`, mix ancestors and descendants, infer same-cell
 coexpression from aggregate data, silently discard off-parent clusters, or

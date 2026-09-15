@@ -67,10 +67,35 @@ def hierarchy_depth_conflicts(records):
     return sorted(conflicts, key=lambda item: (item["ancestor"], item["descendant"]))
 
 
+def validate_expert_review(records):
+    """Require an explicit biological review before formal delivery."""
+    errors = []
+    allowed = {"passed", "conditional"}
+    for record in records:
+        cluster = str(record.get("cluster_id", ""))
+        status = str(record.get("expert_review_status", "")).strip().lower()
+        basis = str(record.get("expert_review_basis", "")).strip()
+        summary = str(record.get("identity_review_summary", "")).strip()
+        recommendation = str(record.get("optimization_recommendations", "")).strip()
+        if status not in allowed:
+            errors.append(f"Cluster {cluster} requires expert_review_status=passed/conditional")
+        if not basis:
+            errors.append(f"Cluster {cluster} lacks expert_review_basis")
+        if not summary:
+            errors.append(f"Cluster {cluster} lacks identity_review_summary")
+        if not recommendation:
+            errors.append(f"Cluster {cluster} lacks optimization_recommendations")
+        if status == "conditional" and not str(record.get("validation_advice", "")).strip():
+            errors.append(f"Cluster {cluster} conditional expert review requires validation_advice")
+    if errors:
+        raise ValueError("\n".join(errors))
+
+
 def validate(records, clusters, evidence):
     normalized = _SHARED.normalize_records(records, evidence)
     records[:] = normalized
     result = _SHARED.validate(records, clusters, evidence, annotation_level="subcluster")
+    validate_expert_review(records)
     conflicts = hierarchy_depth_conflicts(records)
     if conflicts:
         raise ValueError(f"Subcluster table mixes ancestor and descendant identities: {conflicts}")
@@ -96,6 +121,7 @@ def main():
 
     records = json.loads(records_path.read_text(encoding="utf-8"))
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    validate_expert_review(records)
     clusters = sorted((str(item) for item in evidence.get("clusters", [])), key=cluster_sort_key)
     umap_source = str(evidence.get("source_paths", {}).get("umap", "")).strip()
     if not umap_source:
