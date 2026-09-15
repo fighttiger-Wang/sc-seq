@@ -15,6 +15,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MINIMUM_PYTHON = (3, 10)
+INACTIVE_SOURCE_TOKENS = (
+    "dirty",
+    "quarantine",
+    "backup",
+    "disabled",
+    "rollback",
+    "legacy",
+    "retired",
+)
 
 
 def load_json(path: Path):
@@ -84,6 +93,46 @@ def normalized_path(value: str | Path) -> str:
     return os.path.normcase(os.path.normpath(text))
 
 
+def unsafe_source_path(root: Path) -> bool:
+    return any(
+        token in part.casefold()
+        for part in root.expanduser().resolve().parts
+        for token in INACTIVE_SOURCE_TOKENS
+    )
+
+
+def git_environment(root: Path) -> dict[str, str]:
+    environment = os.environ.copy()
+    environment["GIT_CONFIG_COUNT"] = "1"
+    environment["GIT_CONFIG_KEY_0"] = "safe.directory"
+    environment["GIT_CONFIG_VALUE_0"] = str(root)
+    return environment
+
+
+def clean_stable_checkout(root: Path, allow_detached: bool = False) -> bool:
+    if not (root / ".git").exists():
+        return False
+    environment = git_environment(root)
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=environment,
+    )
+    branch = subprocess.run(
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=environment,
+    )
+    branch_name = branch.stdout.strip() if branch.returncode == 0 else ""
+    return status.returncode == 0 and not status.stdout.strip() and (
+        branch_name == "main" or (allow_detached and not branch_name and branch.returncode != 0)
+    )
+
+
 def paths_overlap(first: Path, second: Path) -> bool:
     first_value = normalized_path(first.resolve())
     second_value = normalized_path(second.resolve())
@@ -100,6 +149,14 @@ def marketplace_roots(output: str, marketplace: str) -> list[str]:
     for match in pattern.finditer(output):
         roots.append(match.group(1).strip())
     return roots
+
+
+def rollback_safe_source(path: str) -> bool:
+    """Only restore a clean main checkout after a failed replacement."""
+    root = Path(path).expanduser().resolve()
+    if unsafe_source_path(root) or not (root / "skill-pack.json").is_file():
+        return False
+    return clean_stable_checkout(root)
 
 
 def plugin_is_enabled(output: str, plugin_id: str, marketplace: str, version: str) -> bool:
@@ -125,10 +182,15 @@ def location_config_path(codex_home: Path) -> Path:
     return codex_home / "workspace-local.json"
 
 
-def validate_marketplace_root(root: Path, codex_home: Path) -> Path:
+def validate_marketplace_root(root: Path, codex_home: Path, allow_detached_stable: bool = False) -> Path:
     resolved = root.expanduser().resolve()
     if paths_overlap(resolved, codex_home):
         raise RuntimeError(f"Marketplace source and Codex home must not overlap: {resolved} <-> {codex_home}")
+    if unsafe_source_path(resolved):
+        raise RuntimeError(f"Refusing inactive or quarantined marketplace source: {resolved}")
+    if not clean_stable_checkout(resolved, allow_detached_stable):
+        qualifier = "clean detached stable staging checkout" if allow_detached_stable else "clean main stable checkout"
+        raise RuntimeError(f"Marketplace source must be a {qualifier}: {resolved}")
     return resolved
 
 
@@ -182,9 +244,10 @@ def install(
     replace_location_config: bool = False,
     replace_marketplace_registration: bool = False,
     plugin_ids: list[str] | None = None,
+    allow_detached_stable: bool = False,
 ) -> dict:
     resolved_codex_home = (codex_home or Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))).expanduser().resolve()
-    root = validate_marketplace_root(root, resolved_codex_home)
+    root = validate_marketplace_root(root, resolved_codex_home, allow_detached_stable)
     pack = load_json(root / "skill-pack.json")
     all_plugins, selected_plugins = select_plugins(pack, plugin_ids)
     config_path = location_config_path(resolved_codex_home)
@@ -205,35 +268,70 @@ def install(
         workspace.mkdir(parents=True, exist_ok=True)
     os.environ["CODEX_SHARED_MARKETPLACE_ROOT"] = str(root)
     os.environ["CODEX_SHARED_WORKSPACE_ROOT"] = str(workspace)
-    run([codex, "plugin", "marketplace", "add", str(root)], allow_failure=True, dry_run=dry_run)
-    listed = run([codex, "plugin", "marketplace", "list"], capture=True, dry_run=dry_run, show_output=False)
-    if not dry_run:
-        roots = marketplace_roots(listed.stdout or "", str(pack["name"]))
-        matching = [item for item in roots if normalized_path(item) == normalized_path(root)]
-        if (len(matching) != 1 or len(roots) != 1) and replace_marketplace_registration:
-            run([codex, "plugin", "marketplace", "remove", str(pack["name"])])
-            run([codex, "plugin", "marketplace", "add", str(root)])
-            listed = run([codex, "plugin", "marketplace", "list"], capture=True, show_output=False)
+    previous_roots: list[str] = []
+    registration_attempted = False
+    config_before = config_path.read_bytes() if config_path.is_file() else None
+    try:
+        before = run([codex, "plugin", "marketplace", "list"], capture=True, dry_run=dry_run, show_output=False)
+        if not dry_run:
+            previous_roots = marketplace_roots(before.stdout or "", str(pack["name"]))
+        registration_attempted = True
+        run([codex, "plugin", "marketplace", "add", str(root)], allow_failure=True, dry_run=dry_run)
+        listed = run([codex, "plugin", "marketplace", "list"], capture=True, dry_run=dry_run, show_output=False)
+        if not dry_run:
             roots = marketplace_roots(listed.stdout or "", str(pack["name"]))
             matching = [item for item in roots if normalized_path(item) == normalized_path(root)]
-        if len(matching) != 1 or len(roots) != 1:
-            raise RuntimeError(
-                f"Marketplace '{pack['name']}' did not resolve uniquely to {root}. Reported roots: {roots or '[none]'}"
-            )
-    for plugin in selected_plugins:
-        run([codex, "plugin", "add", f"{plugin['id']}@{pack['name']}"], dry_run=dry_run)
-    plugin_list = run([codex, "plugin", "list"], capture=True, dry_run=dry_run, show_output=False)
-    if not dry_run:
-        missing = [
-            item["id"]
-            for item in all_plugins
-            if not plugin_is_enabled(plugin_list.stdout or "", item["id"], pack["name"], item["version"])
-        ]
-        if missing:
-            raise RuntimeError(f"Codex did not report expected enabled plugin versions: {', '.join(missing)}")
-    config = None
-    if not dry_run and not skip_user_config:
-        config = write_location_config(config_path, root, workspace)
+            if (len(matching) != 1 or len(roots) != 1) and replace_marketplace_registration:
+                run([codex, "plugin", "marketplace", "remove", str(pack["name"])])
+                run([codex, "plugin", "marketplace", "add", str(root)])
+                listed = run([codex, "plugin", "marketplace", "list"], capture=True, show_output=False)
+                roots = marketplace_roots(listed.stdout or "", str(pack["name"]))
+                matching = [item for item in roots if normalized_path(item) == normalized_path(root)]
+            elif not previous_roots and len(matching) == 1:
+                pass
+            if len(matching) != 1 or len(roots) != 1:
+                raise RuntimeError(
+                    f"Marketplace '{pack['name']}' did not resolve uniquely to {root}. Reported roots: {roots or '[none]'}"
+                )
+        for plugin in selected_plugins:
+            run([codex, "plugin", "add", f"{plugin['id']}@{pack['name']}"], dry_run=dry_run)
+        plugin_list = run([codex, "plugin", "list"], capture=True, dry_run=dry_run, show_output=False)
+        if not dry_run:
+            missing = [
+                item["id"]
+                for item in all_plugins
+                if not plugin_is_enabled(plugin_list.stdout or "", item["id"], pack["name"], item["version"])
+            ]
+            if missing:
+                raise RuntimeError(f"Codex did not report expected enabled plugin versions: {', '.join(missing)}")
+        if not dry_run and not skip_user_config:
+            config = write_location_config(config_path, root, workspace)
+    except Exception as exc:
+        if not dry_run and registration_attempted:
+            rollback_error = None
+            try:
+                run([codex, "plugin", "marketplace", "remove", str(pack["name"])])
+                if len(previous_roots) == 1 and rollback_safe_source(previous_roots[0]):
+                    run([codex, "plugin", "marketplace", "add", previous_roots[0]])
+                elif previous_roots:
+                    rollback_error = "previous marketplace source was not a clean main checkout"
+            except Exception as rollback_exc:
+                rollback_error = str(rollback_exc)
+            try:
+                if config_before is None:
+                    if config_path.is_file():
+                        config_path.unlink()
+                else:
+                    temporary = config_path.with_suffix(config_path.suffix + ".rollback.tmp")
+                    temporary.write_bytes(config_before)
+                    os.replace(temporary, config_path)
+            except Exception as config_exc:
+                rollback_error = f"{rollback_error}; location config restore failed: {config_exc}" if rollback_error else str(config_exc)
+            if rollback_error:
+                raise RuntimeError(f"Installation failed and safe registration rollback failed: {exc}; {rollback_error}") from exc
+        raise
+    if dry_run or skip_user_config:
+        config = None
     result = {
         "status": "dry-run" if dry_run else "installed",
         "marketplace": pack["name"],
@@ -258,6 +356,7 @@ def main() -> None:
     parser.add_argument("--skip-user-config", action="store_true")
     parser.add_argument("--replace-location-config", action="store_true")
     parser.add_argument("--replace-marketplace-registration", action="store_true")
+    parser.add_argument("--allow-detached-stable", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--plugin-id", action="append", default=[])
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -272,6 +371,7 @@ def main() -> None:
         args.replace_location_config,
         args.replace_marketplace_registration,
         args.plugin_id,
+        args.allow_detached_stable,
     )
 
 

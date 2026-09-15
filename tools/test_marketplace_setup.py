@@ -7,8 +7,10 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -254,6 +256,157 @@ class MarketplaceSetupTests(unittest.TestCase):
             MANAGER.update_yaml_display_version(metadata, "0.1.1")
             self.assertIn('display_name: "13 · 示例 v0.1.1"', metadata.read_text(encoding="utf-8"))
 
+    def test_publish_rejects_mixed_staged_and_unstaged_paths(self) -> None:
+        git = MANAGER.require_git()
+        with temporary_directory("marketplace-mixed-staging-") as temporary:
+            root = Path(temporary)
+            target = root / "tracked.txt"
+            target.write_text("one\n", encoding="utf-8")
+            subprocess.run([git, "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=root, check=True)
+            subprocess.run([git, "add", "tracked.txt"], cwd=root, check=True)
+            subprocess.run([git, "commit", "-m", "initial"], cwd=root, check=True, capture_output=True)
+            target.write_text("two\n", encoding="utf-8")
+            subprocess.run([git, "add", "tracked.txt"], cwd=root, check=True)
+            target.write_text("three\n", encoding="utf-8")
+            self.assertEqual(MANAGER.mixed_staging_paths(git, root), ["tracked.txt"])
+
+    def test_publish_rejects_candidate_version_older_than_remote_stable(self) -> None:
+        git = MANAGER.require_git()
+        with temporary_directory("marketplace-version-gate-") as temporary:
+            root = Path(temporary)
+            remote = root / "remote.git"
+            plugin = root / "plugins" / "example"
+            (plugin / ".codex-plugin").mkdir(parents=True)
+            (plugin / "skills" / "example" / "agents").mkdir(parents=True)
+            manifest = plugin / ".codex-plugin" / "plugin.json"
+            pack = root / "skill-pack.json"
+            yaml = plugin / "skills" / "example" / "agents" / "openai.yaml"
+            manifest.write_text(json.dumps({"name": "example", "version": "0.7.0+codex.stable", "interface": {"displayName": "01 · Example v0.7.0"}}) + "\n", encoding="utf-8")
+            pack.write_text(json.dumps({"plugins": [{"id": "example", "version": "0.7.0+codex.stable"}]}) + "\n", encoding="utf-8")
+            yaml.write_text('interface:\n  display_name: "01 · Example v0.7.0"\n', encoding="utf-8")
+            subprocess.run([git, "init", "--bare", str(remote)], check=True, capture_output=True)
+            subprocess.run([git, "init", "-b", "main", str(root)], check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=root, check=True)
+            subprocess.run([git, "add", "."], cwd=root, check=True)
+            subprocess.run([git, "commit", "-m", "stable"], cwd=root, check=True, capture_output=True)
+            subprocess.run([git, "remote", "add", "origin", str(remote)], cwd=root, check=True)
+            subprocess.run([git, "push", "-u", "origin", "main"], cwd=root, check=True, capture_output=True)
+            manifest.write_text(json.dumps({"name": "example", "version": "0.6.3+codex.legacy", "interface": {"displayName": "01 · Example v0.6.3"}}) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "older than stable"):
+                MANAGER.validate_publish_versions(git, root, "main", ["example"])
+
+    def test_quarantined_source_names_are_not_safe_publish_sources(self) -> None:
+        self.assertTrue(MANAGER.unsafe_source_path(Path("local-marketplace-dirty-quarantine")))
+        self.assertTrue(MANAGER.unsafe_source_path(Path("marketplace-backup")))
+        self.assertTrue(MANAGER.unsafe_source_path(Path("workspace-dirty") / "local-marketplace-candidate"))
+        self.assertFalse(MANAGER.unsafe_source_path(Path("local-marketplace-candidate")))
+
+    def test_active_metadata_rejects_legacy_version(self) -> None:
+        with temporary_directory("marketplace-legacy-metadata-") as temporary:
+            root = Path(temporary)
+            plugin = root / "plugins" / "example"
+            (plugin / ".codex-plugin").mkdir(parents=True)
+            (plugin / "skills" / "example" / "agents").mkdir(parents=True)
+            (plugin / ".codex-plugin" / "plugin.json").write_text(
+                json.dumps({"name": "example", "version": "0.6.3+codex.legacy", "interface": {"displayName": "01 · Example v0.6.3"}}),
+                encoding="utf-8",
+            )
+            (plugin / "skills" / "example" / "agents" / "openai.yaml").write_text(
+                'interface:\n  display_name: "01 · Example v0.6.3"\n', encoding="utf-8"
+            )
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "example", "version": "0.6.3+codex.legacy"}]}), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "legacy v0.6.3"):
+                MANAGER.validate_active_metadata(root, ["example"])
+
+    def test_active_metadata_rejects_legacy_version_in_openai_yaml(self) -> None:
+        with temporary_directory("marketplace-legacy-yaml-") as temporary:
+            root = Path(temporary)
+            plugin = root / "plugins" / "example"
+            (plugin / ".codex-plugin").mkdir(parents=True)
+            (plugin / "skills" / "example" / "agents").mkdir(parents=True)
+            stable = "0.7.0+codex.current"
+            (plugin / ".codex-plugin" / "plugin.json").write_text(
+                json.dumps({"name": "example", "version": stable, "interface": {"displayName": "01 · Example v0.7.0"}}),
+                encoding="utf-8",
+            )
+            (plugin / "skills" / "example" / "agents" / "openai.yaml").write_text(
+                'interface:\n  display_name: "01 · Example v0.6.3"\n', encoding="utf-8"
+            )
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "example", "version": stable}]}), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "legacy v0.6.3"):
+                MANAGER.validate_active_metadata(root, ["example"])
+
+    def test_installer_rolls_back_existing_registration_when_plugin_validation_fails(self) -> None:
+        with temporary_directory("marketplace-install-transaction-") as temporary:
+            base = Path(temporary)
+            root = base / "candidate"
+            old = base / "old-main"
+            codex_home = base / "codex-home"
+            git = MANAGER.require_git()
+            root.mkdir()
+            old.mkdir()
+            (root / "skill-pack.json").write_text(
+                json.dumps({"name": "workspace-local", "plugins": [{"id": "example", "version": "1.0.0+codex.test"}]}),
+                encoding="utf-8",
+            )
+            subprocess.run([git, "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=root, check=True)
+            subprocess.run([git, "add", "skill-pack.json"], cwd=root, check=True)
+            subprocess.run([git, "commit", "-m", "candidate"], cwd=root, check=True, capture_output=True)
+            (old / "skill-pack.json").write_text(json.dumps({"name": "workspace-local", "plugins": []}), encoding="utf-8")
+            subprocess.run([git, "init", "-b", "main"], cwd=old, check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=old, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=old, check=True)
+            subprocess.run([git, "add", "skill-pack.json"], cwd=old, check=True)
+            subprocess.run([git, "commit", "-m", "stable"], cwd=old, check=True, capture_output=True)
+
+            state = {"root": str(old)}
+            calls: list[list[str]] = []
+
+            def fake_run(command, *, allow_failure=False, capture=False, dry_run=False, show_output=True):
+                calls.append(command)
+                tail = command[1:]
+                if tail == ["plugin", "marketplace", "list"]:
+                    output = f"workspace-local {state['root']}\n" if state["root"] else ""
+                    return subprocess.CompletedProcess(command, 0, output, "")
+                if tail[:3] == ["plugin", "marketplace", "add"]:
+                    state["root"] = command[-1]
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if tail == ["plugin", "marketplace", "remove", "workspace-local"]:
+                    state["root"] = ""
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if tail[:2] == ["plugin", "add"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if tail == ["plugin", "list"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                raise AssertionError(f"Unexpected command: {command}")
+
+            with mock.patch.object(INSTALLER, "run", side_effect=fake_run), mock.patch.object(
+                INSTALLER, "rollback_safe_source", return_value=True
+            ):
+                with self.assertRaisesRegex(RuntimeError, "expected enabled plugin versions"):
+                    INSTALLER.install(
+                        root,
+                        sys.executable,
+                        True,
+                        False,
+                        workspace_root=base / "workspace",
+                        codex_home=codex_home,
+                    )
+
+            self.assertEqual(Path(state["root"]).resolve(), old.resolve())
+            self.assertTrue(any(call[1:] == ["plugin", "marketplace", "remove", "workspace-local"] for call in calls))
+            self.assertTrue(any(call[1:] == ["plugin", "marketplace", "add", str(old.resolve())] for call in calls))
+            self.assertFalse((codex_home / "workspace-local.json").exists())
+
     def test_managed_guidance_preserves_existing_content_and_is_idempotent(self) -> None:
         with temporary_directory("marketplace-guidance-") as temporary:
             workspace = Path(temporary)
@@ -267,8 +420,8 @@ class MarketplaceSetupTests(unittest.TestCase):
             self.assertIn("Keep this.", text)
             self.assertEqual(text.count(MANAGER.GUIDANCE_BEGIN), 1)
             self.assertEqual(text.count(MANAGER.GUIDANCE_END), 1)
-            self.assertIn("ask once for a single end-to-end authorization", text)
-            self.assertIn("do not ask a second merge or installation question", text)
+            self.assertIn("request one task-scoped authorization for the complete one-step closeout", text)
+            self.assertIn("do not ask separate PR, merge, installation, restart, or cache questions", text)
             self.assertIn("publication only, PR only, no merge, or no install", text)
             self.assertIn("new-task Skill-path pickup", text)
             self.assertIn("persistent clean stable clone", text)
@@ -276,6 +429,9 @@ class MarketplaceSetupTests(unittest.TestCase):
     def test_read_only_publish_plan_declares_one_review_default(self) -> None:
         policy = MANAGER.release_authorization_policy(False)
         self.assertTrue(policy["singleReviewDefault"])
+        self.assertTrue(policy["oneStepRelease"])
+        self.assertEqual(policy["oneStepCommand"], "publish --one-step")
+        self.assertTrue(policy["noAdditionalApprovalAfterAuthorization"])
         self.assertTrue(policy["publicationOnlyRequiresExplicitLimitation"])
         self.assertTrue(policy["mergeRequiresExplicitAuthorization"])
         self.assertFalse(policy["mergeAuthorized"])
@@ -291,9 +447,33 @@ class MarketplaceSetupTests(unittest.TestCase):
             "stable-main-verification",
             "local-cache-refresh",
             "cache-hash-verification",
+            "restart-and-new-task-pickup",
             ],
         )
         self.assertTrue(MANAGER.release_authorization_policy(True)["mergeAuthorized"])
+
+    def test_one_step_authorization_expands_to_complete_publish_controls(self) -> None:
+        args = type("Args", (), {
+            "one_step": True,
+            "mode": "publish",
+            "confirm_publish": False,
+            "confirm_merge": False,
+            "create_pr": False,
+        })()
+        MANAGER.apply_one_step_authorization(args)
+        self.assertTrue(args.confirm_publish)
+        self.assertTrue(args.confirm_merge)
+        self.assertTrue(args.create_pr)
+        args.mode = "audit"
+        with self.assertRaisesRegex(ValueError, "only valid with publish"):
+            MANAGER.apply_one_step_authorization(args)
+
+    def test_commit_identity_reuses_existing_repository_author_without_global_config(self) -> None:
+        with temporary_directory("marketplace-commit-identity-") as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+            subprocess.run(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "--allow-empty", "-m", "seed"], cwd=root, check=True, capture_output=True)
+            self.assertEqual(MANAGER.git_commit_identity("git", root), ("fixture", "fixture@example.com"))
 
     def test_bootstrap_copy_is_moved_to_recoverable_disabled_backup(self) -> None:
         with temporary_directory("marketplace-bootstrap-copy-") as temporary:
