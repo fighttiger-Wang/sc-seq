@@ -132,6 +132,10 @@ def main():
     assert workbook["注释结果"].cell(2, result_headers["下位亚类"]).value == "Naive_like_gdT"
     assert workbook["注释结果"].cell(3, result_headers["下位亚类"]).value in (None, "")
     assert workbook["注释结果"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    assert workbook["注释结果"].cell(2, result_headers["身份分辨率"]).value == "specific"
+    assert workbook["注释结果"].cell(2, result_headers["评审状态"]).value == "passed"
+    assert workbook["注释结果"].cell(2, result_headers["可用于下游定量"]).value == "是"
+    assert workbook["注释结果"].cell(2, result_headers["同级一致性状态"]).value == "reviewed"
     assert workbook["绘图列表"].cell(3, 2).value == "NK_cell"
     assert workbook["绘图列表"].cell(3, 2).fill.fgColor.rgb == "FFF8696B"
     evidence_headers = {cell.value: cell.column for cell in workbook["详细证据"][1]}
@@ -297,6 +301,10 @@ def main():
         str(myeloid_book["绘图列表"].cell(row, 1).value): myeloid_book["绘图列表"].cell(row, 2).value
         for row in range(2, myeloid_book["绘图列表"].max_row + 1)
     }
+    plot_row_numbers = {
+        str(myeloid_book["绘图列表"].cell(row, 1).value): row
+        for row in range(2, myeloid_book["绘图列表"].max_row + 1)
+    }
     assert plot_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
     result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果"][1]}
     assert result_headers["下位亚类"] == result_headers["Celltype_EN"] + 1
@@ -306,6 +314,9 @@ def main():
     }
     assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["中文名称"]).value == "经典单核细胞"
     assert myeloid_book["注释结果"].cell(result_rows["B2"], result_headers["Celltype_EN"]).value == "DC3"
+    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["评审状态"]).value == "conditional"
+    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["可用于下游定量"]).value == "否"
+    assert myeloid_book["绘图列表"].cell(plot_row_numbers["A1"], 2).fill.fgColor.rgb == "FFF8696B"
 
     # Mixed-depth ontology labels preserve the evidence-supported leaf instead
     # of hiding it under a co-occurring registered parent.

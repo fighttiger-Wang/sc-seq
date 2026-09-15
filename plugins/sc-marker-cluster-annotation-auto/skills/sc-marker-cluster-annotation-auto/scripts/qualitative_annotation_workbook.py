@@ -33,12 +33,15 @@ RESULT_FIELDS = [
     "developmental_stage", "state", "disease_role", "key_markers",
     "candidate_labels", "umap_summary", "boundary_flags",
     "possible_components", "rationale", "validation_advice", "handling_advice",
+    "identity_resolution", "boundary_status", "review_status", "downstream_eligible",
+    "sibling_consistency_status",
 ]
 RESULT_HEADERS = [
     "Cluster", "中文名称", "Celltype_EN", "下位亚类", "细胞谱系", "发育/成熟阶段",
     "细胞状态", "组织/疾病相关角色", "关键 Marker", "主要竞争候选",
     "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定摘要", "验证建议",
-    "下游处理建议",
+    "下游处理建议", "身份分辨率", "边界/纯度状态", "评审状态", "可用于下游定量",
+    "同级一致性状态",
 ]
 
 EVIDENCE_FIELDS = [
@@ -52,6 +55,8 @@ EVIDENCE_FIELDS = [
     "rationale", "evidence_gaps", "validation_advice", "handling_advice",
     "expert_plot_verdict", "approved_plot_label", "canonical_name",
     "display_name_type", "expert_name_review",
+    "identity_resolution", "boundary_status", "review_status", "downstream_eligible",
+    "sibling_consistency_status", "discriminator_evidence_ids",
 ]
 EVIDENCE_HEADERS = [
     "Cluster", "中文名称", "Celltype_EN", "父群/谱系背景", "主要身份程序",
@@ -60,7 +65,8 @@ EVIDENCE_HEADERS = [
     "离群/跨谱系门控", "离群/跨谱系审计", "发育/成熟程序", "状态程序",
     "状态门控", "UMAP 门控", "UMAP 判断摘要", "跨岛一致性审计",
     "混合/双细胞门控", "混合/双细胞解释", "判定依据", "证据缺口",
-    "验证建议", "下游处理建议", "专家绘图结论", "批准绘图标签",
+    "验证建议", "下游处理建议", "身份分辨率", "边界/纯度状态", "评审状态",
+    "可用于下游定量", "同级一致性状态", "区分性证据 ID", "专家绘图结论", "批准绘图标签",
     "标准身份名称", "显示名称类型", "专家命名审核",
 ]
 
@@ -369,6 +375,73 @@ def _qualitative_gates(record, decision, umap):
     return identity, parent, siblings, exclusions, off_parent, state, umap_gate, mixed
 
 
+def _flagged(value):
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"true", "1", "yes", "y", "是", "通过"}
+
+
+def _derive_identity_resolution(record, decision):
+    explicit = str(_first(record, decision, "identity_resolution")).strip()
+    allowed = {"specific", "parent_level", "unresolved", "provisional"}
+    if explicit in allowed:
+        return explicit
+    verdict = str(_first(record, decision, "expert_plot_verdict")).strip()
+    return {
+        "allow_specific_label": "specific",
+        "allow_parent_label_only": "parent_level",
+        "allow_unresolved_label": "unresolved",
+        "allow_provisional_label": "provisional",
+    }.get(verdict, "unresolved")
+
+
+def _derive_boundary_status(record, decision):
+    explicit = str(_first(record, decision, "boundary_status")).strip()
+    if explicit in {"none", "off_parent", "mixed", "contamination_suspected", "technical_quality"}:
+        return explicit
+    if any(_flagged(_first(record, decision, key)) for key in ("mixed_population", "mixed_evidence", "suspected_doublet")):
+        return "mixed"
+    if any(_flagged(_first(record, decision, key)) for key in ("off_parent_detected", "off_parent_reassignment", "lineage_boundary")):
+        return "off_parent"
+    if any(_flagged(_first(record, decision, key)) for key in ("background_interference",)):
+        return "contamination_suspected"
+    if any(_flagged(_first(record, decision, key)) for key in ("low_quality", "debris")):
+        return "technical_quality"
+    return "none"
+
+
+def _derive_review_status(record, decision):
+    explicit = str(_first(record, decision, "review_status", "expert_review_status")).strip().lower()
+    if explicit in {"passed", "conditional"}:
+        return explicit
+    return "passed" if _derive_identity_resolution(record, decision) == "specific" else "conditional"
+
+
+def _derive_sibling_consistency_status(record, decision, umap, sibling_gate):
+    explicit = str(_first(record, decision, "sibling_consistency_status")).strip()
+    allowed = {"not_assessed", "reviewed", "requires_same_resolution", "resolved_with_discriminator", "conflict"}
+    if explicit in allowed:
+        return explicit
+    relation = normalize_relation(umap.get("marker_umap_relation", ""))
+    if relation == "conflict":
+        return "conflict"
+    if sibling_gate == "未确定":
+        return "requires_same_resolution"
+    if sibling_gate == "通过":
+        return "reviewed"
+    return "not_assessed"
+
+
+def _derive_downstream_eligible(review_status, identity_resolution, boundary_status, umap_gate, evidence_gaps):
+    return (
+        review_status == "passed"
+        and identity_resolution == "specific"
+        and boundary_status == "none"
+        and umap_gate in {"通过", "不适用"}
+        and not str(evidence_gaps or "").strip()
+    )
+
+
 def normalize_records(records, evidence, umap_audit=None):
     normalized = []
     for raw in records:
@@ -429,6 +502,19 @@ def normalize_records(records, evidence, umap_audit=None):
             gates,
         ):
             record[field] = value
+        record["identity_resolution"] = _derive_identity_resolution(record, decision)
+        record["boundary_status"] = _derive_boundary_status(record, decision)
+        record["review_status"] = _derive_review_status(record, decision)
+        record["sibling_consistency_status"] = _derive_sibling_consistency_status(
+            record, decision, umap, record["sibling_competition_gate"]
+        )
+        record["discriminator_evidence_ids"] = human_value(
+            _first(record, decision, "discriminator_evidence_ids")
+        )
+        record["downstream_eligible"] = _derive_downstream_eligible(
+            record["review_status"], record["identity_resolution"], record["boundary_status"],
+            record["umap_gate"], record["evidence_gaps"]
+        )
         record["_decision"] = decision
         record["_umap"] = umap
         normalized.append(record)
@@ -587,6 +673,11 @@ def _warning(record):
     decision = record.get("_decision", {})
     if record.get("stable_id") == "Multi_cell" or record.get("celltype_en") == "Multi_cell":
         return True
+    # Conditional/manual-review records must remain visually discoverable in
+    # the plotting list. Downstream eligibility is machine-readable; the red
+    # fill is only a human-facing warning channel.
+    if record.get("review_status") == "conditional" or record.get("downstream_eligible") is False:
+        return True
     for key in (
         "suspected_doublet", "low_quality", "debris", "background_interference",
         "off_parent_detected", "off_parent_reassignment", "mixed_population",
@@ -701,6 +792,8 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["绘图标签规则", "Celltype_EN 保留当前病例支持的下位身份；弱语义中性身份追加 _provisional；重复身份存在不同状态时使用 identity_state_state"],
         ["红色填充规则", "绘图列表/Celltype_EN 与注释结果/中文名称可标红；仅表示需要复核，不改变 Celltype_EN 文本。用于显著状态程序、Multi_cell、疑似双细胞、低质量/碎片/背景干扰及谱系边界"],
         ["证据解释", "不使用评分或置信度；原始数值仅作为单个 Marker 的证据，身份由生物学门控和专家推理决定"],
+        ["身份分辨率/下游规则", "身份、分辨率、边界/纯度、评审状态和下游资格分开记录；conditional 或边界记录默认不可用于下游定量，父级回退仅在特异身份门失败/未知时使用"],
+        ["同级一致性规则", "同级一致性约束复核级别，不强制相邻 cluster 使用同一生物学标签；标签不同必须有病例内区分性证据 ID"],
         ["局限性", "Cluster 汇总证据不能证明同一细胞共表达，也不能确认 doublet；UMAP 仅作一致性审计"],
         ["数据处理声明", "注释过程未自动删除、过滤、合并或修改细胞及原始数据"],
         ["Cluster 数量", len(records)],
@@ -761,8 +854,8 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         source.append(row)
 
     _style_sheet(plot, [12, 26], "A2", 22)
-    _style_sheet(result, [10, 22, 22, 28, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
-    _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
+    _style_sheet(result, [10, 22, 22, 28, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44, 18, 22, 16, 18, 22], "D2", 24)
+    _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48, 18, 22, 16, 18, 22, 24, 18, 18, 20, 24, 18], "D2", 24)
     _style_sheet(literature, [24, 72, 44, 44], "B2", 24)
     _style_sheet(source, [24, 88], "A2", 24)
     for worksheet, columns in ((plot, range(1, plot.max_column + 1)), (result, range(1, 4)), (detail, range(1, 4)), (literature, range(1, 2))):

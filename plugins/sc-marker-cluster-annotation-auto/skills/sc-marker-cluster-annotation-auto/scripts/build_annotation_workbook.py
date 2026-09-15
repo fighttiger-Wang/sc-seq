@@ -114,6 +114,43 @@ def validate_expert_review(records):
         if status == "conditional" and not str(record.get("handling_advice", "")).strip():
             errors.append(f"Cluster {cluster} conditional expert review requires handling_advice")
 
+        contract_fields = {
+            "identity_resolution", "boundary_status", "review_status",
+            "downstream_eligible", "sibling_consistency_status",
+        }
+        # Direct callers from older integrations may validate the prose review
+        # object before normalization. Formal workbook construction always
+        # normalizes first, so the structural contract is enforced there while
+        # preserving this helper's backwards-compatible direct API.
+        if contract_fields.intersection(record):
+            resolution = str(record.get("identity_resolution", "")).strip()
+            boundary = str(record.get("boundary_status", "")).strip()
+            downstream = record.get("downstream_eligible")
+            sibling_status = str(record.get("sibling_consistency_status", "")).strip()
+            discriminator_ids = str(record.get("discriminator_evidence_ids", "")).strip()
+            if resolution not in {"specific", "parent_level", "unresolved", "provisional"}:
+                errors.append(f"Cluster {cluster} requires a valid identity_resolution")
+            if boundary not in {"none", "off_parent", "mixed", "contamination_suspected", "technical_quality"}:
+                errors.append(f"Cluster {cluster} requires a valid boundary_status")
+            if sibling_status not in {"not_assessed", "reviewed", "requires_same_resolution", "resolved_with_discriminator", "conflict"}:
+                errors.append(f"Cluster {cluster} requires a valid sibling_consistency_status")
+            if downstream is not None and not isinstance(downstream, bool):
+                errors.append(f"Cluster {cluster} downstream_eligible must be boolean")
+            if status == "passed" and downstream is not True:
+                errors.append(f"Cluster {cluster} passed review must have downstream_eligible=true")
+            if status == "conditional" and downstream is True:
+                errors.append(f"Cluster {cluster} conditional review must have downstream_eligible=false")
+            if status == "passed" and boundary != "none":
+                errors.append(f"Cluster {cluster} passed review cannot have boundary_status={boundary}")
+            if status == "passed" and sibling_status in {"requires_same_resolution", "conflict"}:
+                errors.append(f"Cluster {cluster} passed review has unresolved sibling consistency: {sibling_status}")
+            if sibling_status == "resolved_with_discriminator" and not discriminator_ids:
+                errors.append(f"Cluster {cluster} resolved sibling divergence requires discriminator_evidence_ids")
+            if resolution == "parent_level" and gate(record, "identity_anchor") not in bad_gates:
+                errors.append(
+                    f"Cluster {cluster} parent-level fallback requires identity_anchor_gate=不通过/未确定"
+                )
+
         # `passed` is a biological claim, not merely a completed prose review.
         # It must be impossible to bypass material evidence gaps by supplying a
         # generic review sentence or by placing the cluster outside a manual

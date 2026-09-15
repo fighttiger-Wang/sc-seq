@@ -28,6 +28,19 @@ boundary labels must carry structured handling such as `manual_review_only` or
 `exclude_from_quantitative_analysis`; color alone is not a machine-readable
 decision.
 
+The result and evidence sheets must separately preserve `identity_resolution`,
+`boundary_status`, `review_status`, `downstream_eligible`, and
+`sibling_consistency_status`. `downstream_eligible=true` is permitted only for
+a specific, passed identity with no unresolved boundary, evidence gap, or UMAP
+conflict. Parent-level fallback is permitted only when a specific identity gate
+fails or is unknown; UMAP adjacency is not a parent-fallback rule.
+
+Sibling consistency constrains the resolution and review level, not equality of
+biological labels. Similar neighboring clusters may retain different identities
+only when current-case discriminator evidence is recorded in
+`discriminator_evidence_ids`; otherwise the formal output must retain the same
+conservative resolution/review level.
+
 An abbreviation may be used only when `display_name_type=approved_abbreviation`,
 `canonical_name` contains the complete standard identity, and
 `expert_name_review=approved`. The abbreviation must be a recognized,
@@ -54,6 +67,11 @@ Columns:
 14. 判定摘要
 15. 验证建议
 16. 下游处理建议
+17. 身份分辨率
+18. 边界/纯度状态
+19. 评审状态
+20. 可用于下游定量
+21. 同级一致性状态
 
 `下位亚类` is an optional evidence-description field. It may contain a
 case-supported lower-level subtype when the current evidence justifies one;
@@ -85,7 +103,9 @@ One row per cluster. Include final identity, parent context, primary and
 competing programs, supporting/conflicting/missing Marker evidence, eight
 qualitative gates, off-parent audit, development/state programs, UMAP and
 cross-island audit, mixed/doublet explanation, rationale, evidence gaps,
-validation, and handling.
+validation, handling, identity resolution, boundary/purity status, review
+status, downstream eligibility, sibling consistency status, and discriminator
+evidence IDs.
 
 The bound evidence record also retains `identity_arbitration` for every
 applicable high-risk boundary: rule id, left/right program completeness,

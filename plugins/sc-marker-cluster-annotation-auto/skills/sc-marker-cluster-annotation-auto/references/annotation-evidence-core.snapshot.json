@@ -11,7 +11,7 @@
     "qualitative_evidence_core.py": "8bf3c93f0da80eae0f892758ac30e68ab52c972ef7bf0d2e69b8f764a12c1d4c",
     "qualitative_gate_helpers.py": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
     "qualitative_override_policy.py": "b6038ab57c68f12219339c574348cd45118d1b322a74b54b592f9b0601bcf75c",
-    "qualitative_annotation_workbook.py": "b83d67fe909b1d4666f70ddf787784b35d2778101d881d6301a3ced22a34e44d",
+    "qualitative_annotation_workbook.py": "7eb4832acfc7a570f0d5678ea9d1f705e9381e446c29263ff4caeeb8f46a41ea",
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
     "annotation-evidence-config.v1.json": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
     "evidence-scoring-policy.md": "294988da426da1491270a4a8e6890c5ff2eda9252a0075fd54d7e3cab4eb4b1c",
@@ -30,7 +30,7 @@
     },
     "qualitative_annotation_workbook.py": {
       "base_sha256": "c5e003659d7f1966fb8f0368b4a4fa728df36b681a1c7feb1cd7a86db14cb3cb",
-      "sha256": "b83d67fe909b1d4666f70ddf787784b35d2778101d881d6301a3ced22a34e44d",
+      "sha256": "7eb4832acfc7a570f0d5678ea9d1f705e9381e446c29263ff4caeeb8f46a41ea",
       "reason": "Preserve the plugin's independent identity-display and expert-review behavior while enforcing core provenance and preventing implicit identity-gate promotion."
     }
   }

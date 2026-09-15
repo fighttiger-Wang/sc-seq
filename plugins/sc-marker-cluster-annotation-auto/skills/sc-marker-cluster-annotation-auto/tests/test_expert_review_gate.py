@@ -39,6 +39,41 @@ class ExpertReviewGateTests(unittest.TestCase):
                 "evidence_gaps": "smooth-muscle boundary unresolved",
             }])
 
+    def test_passed_boundary_or_unresolved_siblings_is_blocked(self):
+        with self.assertRaises(ValueError):
+            validate_expert_review([{
+                "cluster_id": "7",
+                "expert_review_status": "passed",
+                "expert_review_basis": "Review completed.",
+                "identity_review_summary": "Identity retained.",
+                "optimization_recommendations": "No additional optimization required.",
+                "expert_plot_verdict": "allow_specific_label",
+                "identity_resolution": "specific",
+                "boundary_status": "off_parent",
+                "review_status": "passed",
+                "downstream_eligible": False,
+                "sibling_consistency_status": "requires_same_resolution",
+            }])
+
+    def test_parent_fallback_with_passed_identity_gate_is_blocked(self):
+        with self.assertRaises(ValueError):
+            validate_expert_review([{
+                "cluster_id": "13",
+                "expert_review_status": "conditional",
+                "expert_review_basis": "Parent fallback proposed because the UMAP region is adjacent to a sibling.",
+                "identity_review_summary": "Specific identity was not independently assessed.",
+                "optimization_recommendations": "Review the sibling boundary.",
+                "validation_advice": "Validate with complementary markers.",
+                "handling_advice": "Keep the UMAP label but exclude from quantitative analysis.",
+                "expert_plot_verdict": "allow_parent_label_only",
+                "identity_resolution": "parent_level",
+                "boundary_status": "none",
+                "review_status": "conditional",
+                "downstream_eligible": False,
+                "sibling_consistency_status": "reviewed",
+                "identity_anchor_gate": "通过",
+            }])
+
 
 if __name__ == "__main__":
     unittest.main()
