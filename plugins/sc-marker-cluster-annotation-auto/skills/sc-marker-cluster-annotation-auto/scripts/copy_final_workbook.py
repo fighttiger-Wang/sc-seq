@@ -1,5 +1,6 @@
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
@@ -15,7 +16,18 @@ def load_contract_module():
     if (local / "qualitative_annotation_workbook.py").is_file():
         if str(local) not in sys.path:
             sys.path.insert(0, str(local))
-        import qualitative_annotation_workbook as module
+        # Do not reuse a same-named module imported from a different plugin or
+        # shared checkout; the copier must validate with this skill's bundled
+        # contract.
+        sys.modules.pop("qualitative_annotation_workbook", None)
+        spec = importlib.util.spec_from_file_location(
+            "qualitative_annotation_workbook", local / "qualitative_annotation_workbook.py"
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Cannot load bundled qualitative workbook contract")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["qualitative_annotation_workbook"] = module
+        spec.loader.exec_module(module)
         return module
     for parent in Path(__file__).resolve().parents:
         shared = parent / "shared" / "sc-annotation-evidence-core"
@@ -124,8 +136,15 @@ def validate_formal_workbook(source: Path) -> dict:
                 if cell.alignment.wrap_text or cell.alignment.shrink_to_fit:
                     raise ValueError(f"{name}!{cell.coordinate} enables wrapping or shrink-to-fit")
                 rgb = str(cell.fill.fgColor.rgb or "").upper()
-                if rgb in red_rgb and not (name == "注释结果" and cell.column == 2 and cell.row > 1):
-                    raise ValueError(f"red warning fill is outside 注释结果/中文名称: {name}!{cell.coordinate}")
+                allowed_red = (
+                    (name == "绘图列表" and cell.column == 2 and cell.row > 1)
+                    or (name == "注释结果" and cell.column == 2 and cell.row > 1)
+                )
+                if rgb in red_rgb and not allowed_red:
+                    raise ValueError(
+                        f"red warning fill is outside 绘图列表/Celltype_EN or 注释结果/中文名称: "
+                        f"{name}!{cell.coordinate}"
+                    )
     return qa
 
 

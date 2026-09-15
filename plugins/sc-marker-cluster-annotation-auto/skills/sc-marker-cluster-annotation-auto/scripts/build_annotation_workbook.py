@@ -2,6 +2,7 @@
 """Build the standardized qualitative subcluster annotation workbook."""
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -11,7 +12,6 @@ from research_workflow import (
     plugin_version,
     validate_formal_research_binding,
 )
-from umap_audit import load_umap_audit, validate_umap_audit
 
 
 SKILL_NAME = "sc-marker-cluster-annotation-auto"
@@ -23,7 +23,18 @@ def _load_shared():
     if (local / "qualitative_annotation_workbook.py").is_file():
         if str(local) not in sys.path:
             sys.path.insert(0, str(local))
-        import qualitative_annotation_workbook as module  # noqa: WPS433
+        # A marketplace/shared checkout may already have loaded a module with
+        # this generic name.  Reusing it silently bypasses the bundled source
+        # and can make builder behavior differ from the skill version.
+        sys.modules.pop("qualitative_annotation_workbook", None)
+        spec = importlib.util.spec_from_file_location(
+            "qualitative_annotation_workbook", local / "qualitative_annotation_workbook.py"
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Cannot load bundled qualitative workbook contract")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["qualitative_annotation_workbook"] = module
+        spec.loader.exec_module(module)
         return module
     for parent in Path(__file__).resolve().parents:
         shared = parent / "shared" / "sc-annotation-evidence-core"
@@ -36,6 +47,7 @@ def _load_shared():
 
 
 _SHARED = _load_shared()
+from umap_audit import load_umap_audit, validate_umap_audit  # noqa: E402,WPS433
 cluster_sort_key = _SHARED.cluster_sort_key
 normalize_final_label = _SHARED.normalize_final_label
 resolved_e = _SHARED.resolved_e
@@ -60,12 +72,35 @@ def validate_expert_review(records):
     """Require an explicit biological review before formal delivery."""
     errors = []
     allowed = {"passed", "conditional"}
+    material_flags = (
+        "off_parent_detected", "off_parent_reassignment", "lineage_boundary",
+        "background_interference", "mixed_population", "mixed_evidence",
+        "suspected_doublet", "low_quality", "debris",
+    )
+    bad_gates = {"不通过", "未确定", "fail", "failed", "unknown", "uncertain"}
+
+    def gate(record, name):
+        direct = record.get(f"{name}_gate")
+        if direct not in (None, ""):
+            return str(direct).strip()
+        nested = record.get("qualitative_gates") or {}
+        return str(nested.get(name, "")).strip()
+
+    def truthy(value):
+        if isinstance(value, bool):
+            return value
+        return str(value or "").strip().lower() in {"true", "1", "yes", "y", "是", "通过"}
+
+    def material_text(value):
+        return str(value or "").strip().lower() not in {"", "无", "none", "n/a", "na"}
+
     for record in records:
         cluster = str(record.get("cluster_id", ""))
         status = str(record.get("expert_review_status", "")).strip().lower()
         basis = str(record.get("expert_review_basis", "")).strip()
         summary = str(record.get("identity_review_summary", "")).strip()
         recommendation = str(record.get("optimization_recommendations", "")).strip()
+        verdict = str(record.get("expert_plot_verdict", "")).strip()
         if status not in allowed:
             errors.append(f"Cluster {cluster} requires expert_review_status=passed/conditional")
         if not basis:
@@ -76,6 +111,34 @@ def validate_expert_review(records):
             errors.append(f"Cluster {cluster} lacks optimization_recommendations")
         if status == "conditional" and not str(record.get("validation_advice", "")).strip():
             errors.append(f"Cluster {cluster} conditional expert review requires validation_advice")
+        if status == "conditional" and not str(record.get("handling_advice", "")).strip():
+            errors.append(f"Cluster {cluster} conditional expert review requires handling_advice")
+
+        # `passed` is a biological claim, not merely a completed prose review.
+        # It must be impossible to bypass material evidence gaps by supplying a
+        # generic review sentence or by placing the cluster outside a manual
+        # warning list.  Provisional/parent-only labels remain usable for UMAP,
+        # but they cannot be reported as passed.
+        if status == "passed":
+            identity_gate = gate(record, "identity_anchor")
+            sibling_gate = gate(record, "sibling_competition")
+            exclusion_gate = gate(record, "exclusion")
+            umap_gate = gate(record, "umap")
+            if identity_gate in bad_gates or identity_gate == "":
+                errors.append(f"Cluster {cluster} passed review requires identity_anchor_gate=通过")
+            if sibling_gate in bad_gates:
+                errors.append(f"Cluster {cluster} passed review has unresolved sibling_competition_gate={sibling_gate}")
+            if exclusion_gate in bad_gates:
+                errors.append(f"Cluster {cluster} passed review has unresolved exclusion_gate={exclusion_gate}")
+            if umap_gate in {"不通过", "fail", "failed"}:
+                errors.append(f"Cluster {cluster} passed review has marker/UMAP conflict")
+            flagged = [key for key in material_flags if truthy(record.get(key))]
+            if flagged:
+                errors.append(f"Cluster {cluster} passed review has material flags: {', '.join(flagged)}")
+            if material_text(record.get("evidence_gaps") or record.get("missing_markers")):
+                errors.append(f"Cluster {cluster} passed review has unresolved evidence_gaps")
+            if verdict in {"allow_parent_label_only", "allow_unresolved_label", "allow_provisional_label"}:
+                errors.append(f"Cluster {cluster} {verdict} cannot be reported as passed")
     if errors:
         raise ValueError("\n".join(errors))
 
@@ -163,6 +226,7 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--workspace-root", required=True)
     parser.add_argument("--umap-audit")
+    parser.add_argument("--umap-facts", help="Independent image/coordinate-derived UMAP geometry facts JSON")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
@@ -175,7 +239,6 @@ def main():
 
     records = json.loads(records_path.read_text(encoding="utf-8"))
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-    validate_expert_review(records)
     clusters = sorted((str(item) for item in evidence.get("clusters", [])), key=cluster_sort_key)
     validate_candidate_semantics(evidence)
     validate_formal_research_binding(records, evidence)
@@ -184,9 +247,16 @@ def main():
         raise ValueError("Formal subcluster delivery requires a supplied UMAP source")
     if not args.umap_audit:
         raise ValueError("Formal subcluster delivery requires --umap-audit")
+    if not args.umap_facts:
+        raise ValueError("Formal subcluster delivery requires --umap-facts")
     audit_path = _SHARED.within(_SHARED.resolved_e(args.umap_audit, "UMAP audit"), workspace, "UMAP audit")
+    facts_path = _SHARED.within(_SHARED.resolved_e(args.umap_facts, "UMAP facts"), workspace, "UMAP facts")
     audit = load_umap_audit(audit_path)
-    validated = validate_umap_audit(audit, clusters, formal=True, records=records, evidence=evidence)
+    facts = json.loads(facts_path.read_text(encoding="utf-8"))
+    validated = validate_umap_audit(
+        audit, clusters, formal=True, records=records, evidence=evidence,
+        facts=facts, image_path=umap_source, facts_path=facts_path,
+    )
     normalized_audit = {**audit, "clusters": validated["entries"]}
     qa = _SHARED.build_workbook(
         records, evidence, output, "subcluster", SKILL_NAME, SKILL_VERSION, normalized_audit

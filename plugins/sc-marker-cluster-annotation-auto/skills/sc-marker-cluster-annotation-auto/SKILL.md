@@ -71,10 +71,14 @@ For every cluster:
    UMAP alone cannot create or overwrite an identity.
    Formal delivery must bind the records to the output of
    `qualitative_evidence_core`: do not hand-author `evidence.json`,
-   `records.json`, and `umap_audit.json` by copying a proposed label into all
-   three files. A UMAP reassignment is valid only for a documented
-   marker/UMAP conflict and only to a candidate present in the core's
-   candidate-program audits.
+    `records.json`, and `umap_audit.json` by copying a proposed label into all
+    three files. A UMAP reassignment is valid only for a documented
+    marker/UMAP conflict and only to a candidate present in the core's
+    candidate-program audits.
+    Formal UMAP delivery additionally requires an independently generated
+    image/coordinate geometry artifact bound to the supplied UMAP SHA-256.
+    `reviewed=true` and prose topology fields are declarations, not geometry
+    evidence.
 6. Resolve primary identity, then separately assign any
    `low_quality`, `background_interference`, `abnormal_state`, `debris`,
    `suspected_doublet`, or `mixed_population` flags. Flags may coexist.
@@ -139,13 +143,31 @@ state, program, disease role, and UMAP topology in dedicated evidence fields.
 Never manufacture a state-qualified or Marker-derived plotting name. Use a
 shortened professional name only when the naming dictionary and expert review
 explicitly approve the abbreviation.
+The UMAP mapping must remain machine-readable even when the biological call is
+conditional: keep `Celltype_EN` as a clean canonical plotting label and put
+`passed/conditional`, boundary, off-parent, background, and validation handling
+in separate fields. A red fill in `绘图列表/Celltype_EN` is a visual warning only;
+it must never change the cell value or be required by a plotting script. The
+same clean `Celltype_EN` value must be present in `注释结果` for exact cluster
+joins. A conditional label may therefore be usable for UMAP while being marked
+manual-review-only for quantitative downstream analysis.
 The `注释结果` sheet may additionally contain an optional `下位亚类` field
 before `细胞谱系`: populate it only when a lower-level subtype is supported in
 the current case, leave it blank otherwise, and never use it to alter the
 existing identity, UMAP, state, or red-fill logic.
+When a UMAP image is supplied, generate the independent geometry artifact with
+`scripts/umap_image_facts.py` before formal construction and pass it to the
+builder as `--umap-facts`. If the artifact is absent, stale, or bound to a
+different image, formal workbook construction must stop.
 Mark the annotation cell red when
 the cluster should not be interpreted as a normal pure type; do not replace the
 plotting label with `Doublet` or `Debris`.
+
+Do not derive expert status, red warnings, or off-parent handling from cluster
+IDs or a manually maintained cluster list. Derive them from the bound evidence
+record and reject formal delivery when `passed` contradicts a failed/unknown
+identity gate, a material boundary/off-parent/background flag, an unresolved
+evidence gap, or a marker/UMAP conflict.
 
 Use the versioned naming dictionary. Established unambiguous abbreviations such
 as `gdT` and `Tn` are allowed; short common labels such as B cell and T cell
@@ -186,8 +208,10 @@ identity conflict, rerun preparation with `--force-research` and a concrete
 `--research-reason`; do not reuse an earlier request hash.
 
 Record versions, hashes, counter, source paths, cluster order, parent context,
-and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook
-and a hash-matching passing QA sidecar in the workspace build location; legacy
+and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook,
+an independently generated `--umap-facts` artifact whose image hash matches the
+supplied UMAP, and a hash-matching passing QA sidecar in the workspace build
+location; legacy
 four-sheet output is invalid. Deliver only the timestamped Excel workbook to
 the supplied E-drive input directory and keep QA JSON sidecars in the workspace
 unless the user explicitly asks for them. Do not automatically edit or filter
