@@ -7,6 +7,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ANNOTATION_PLUGINS = ("sc-major-celltype-annotation-auto", "sc-marker-cluster-annotation-auto")
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 
 def run(arguments: list[str], *, cwd: Path = ROOT, env: dict | None = None) -> None:
@@ -32,6 +34,64 @@ def atomic_json(path: Path, value) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, path)
+
+
+def git_output(root: Path, *arguments: str) -> str:
+    result = subprocess.run(["git", *arguments], cwd=root, text=True, capture_output=True, encoding="utf-8", errors="replace")
+    if result.returncode:
+        raise RuntimeError(f"Git command failed: git {' '.join(arguments)}: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def git_is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
+    return subprocess.run(
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+        cwd=root,
+        capture_output=True,
+    ).returncode == 0
+
+
+def semantic_version(value: str) -> tuple[int, int, int]:
+    match = SEMVER.fullmatch(value.split("+", 1)[0])
+    if not match:
+        raise RuntimeError(f"Invalid semantic version: {value}")
+    return tuple(int(item) for item in match.groups())
+
+
+def validate_release_source(root: Path) -> dict:
+    """Reject dirty, stale, divergent, or historically mixed release sources."""
+    if not (root / ".git").exists():
+        raise RuntimeError("Release requires a Git checkout; non-Git sources are forbidden")
+    dirty = git_output(root, "status", "--porcelain")
+    if dirty:
+        raise RuntimeError("Release source is dirty; use a clean clone and apply the approved change there")
+    git_output(root, "fetch", "origin", "main")
+    remote = git_output(root, "rev-parse", "origin/main")
+    head = git_output(root, "rev-parse", "HEAD")
+    if not git_is_ancestor(root, remote, head):
+        raise RuntimeError("Release source does not contain the latest origin/main")
+    versions = {}
+    for plugin_id in ANNOTATION_PLUGINS:
+        relative = f"plugins/{plugin_id}/.codex-plugin/plugin.json"
+        local = load_json(root / relative)
+        remote_json = json.loads(git_output(root, "show", f"origin/main:{relative}"))
+        local_version = str(local.get("version") or "")
+        remote_version = str(remote_json.get("version") or "")
+        if semantic_version(local_version) < semantic_version(remote_version):
+            raise RuntimeError(f"{plugin_id} version {local_version} is older than origin/main {remote_version}")
+        versions[plugin_id] = {"local": local_version, "remote": remote_version}
+    metadata_paths = [
+        root / "skill-pack.json",
+        *[root / "plugins" / plugin_id / ".codex-plugin" / "plugin.json" for plugin_id in ANNOTATION_PLUGINS],
+    ]
+    stale = []
+    for path in metadata_paths:
+        text = path.read_text(encoding="utf-8")
+        if re.search(r"(?<!\d)0\.6\.3(?:\+codex\.[0-9]+)?(?!\d)", text):
+            stale.append(str(path))
+    if stale:
+        raise RuntimeError("Legacy v0.6.3 metadata is not publishable: " + ", ".join(stale))
+    return {"head": head, "originMain": remote, "versions": versions}
 
 
 def workspace_root(root: Path, explicit: Path | None) -> Path:
@@ -123,6 +183,9 @@ def publish(args) -> dict:
     root = args.marketplace_root.expanduser().resolve()
     workspace = workspace_root(root, args.workspace_root)
     source = (args.source or default_source(root, workspace)).expanduser().resolve()
+    source_facts = validate_release_source(root)
+    if "dirty-backup" in str(source).lower() or "local-marketplace-dirty" in str(source).lower():
+        raise RuntimeError("A dirty-worktree backup cannot be used as a release source")
     env = dict(os.environ)
     env.update({
         "CODEX_SHARED_MARKETPLACE_ROOT": str(root),
@@ -137,7 +200,7 @@ def publish(args) -> dict:
         run([sys.executable, str(release_tool), "--check"], cwd=root, env=env)
         run([sys.executable, str(pack_tool), "--check"], cwd=root, env=env)
         run([sys.executable, str(doctor), "--marketplace-root", str(root)], cwd=root, env=env)
-        return {"status": "verified", "marketplace": str(root)}
+        return {"status": "verified", "marketplace": str(root), "sourceFacts": source_facts}
 
     run([sys.executable, str(release_tool), "--source", str(source)], cwd=root, env=env)
     cachebuster = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -167,7 +230,7 @@ def publish(args) -> dict:
         if args.codex_cli:
             command.extend(["--codex-cli", args.codex_cli])
         run(command, cwd=root, env=env)
-    result = {"status": "published", "source": str(source), "marketplace": str(root), "versions": version_changes}
+    result = {"status": "published", "source": str(source), "marketplace": str(root), "sourceFacts": source_facts, "versions": version_changes}
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return result
 

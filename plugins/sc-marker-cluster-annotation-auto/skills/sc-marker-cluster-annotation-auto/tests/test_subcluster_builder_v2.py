@@ -44,6 +44,13 @@ def main():
         "literature_details": [{"doi": "10.1000/test.subcluster", "pmid": "12345678", "title": "Curated T/NK atlas reference"}],
         "lower_level_subtype": "Naive_like_gdT" if cluster == "0" else "",
     } for cluster, cn, en, marker in rows]
+    for record in records:
+        record.update({
+            "expert_review_status": "passed",
+            "expert_review_basis": "Complete identity program reviewed against sibling alternatives.",
+            "identity_review_summary": "Primary identity retained after reviewing the nearest sibling boundary.",
+            "optimization_recommendations": "No additional optimization is currently required.",
+        })
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     rp.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -197,6 +204,14 @@ def main():
             "separation_evidence": "",
         },
     }}
+    for record in myeloid_records:
+        record.update({
+            "expert_review_status": "conditional",
+            "expert_review_basis": "DC3/monocyte programs and topology were independently reviewed.",
+            "identity_review_summary": "The final sibling assignment follows the dominant program and topology boundary.",
+            "optimization_recommendations": "Validate the boundary with orthogonal markers and cell-level coexpression.",
+            "validation_advice": "Obtain orthogonal markers and cell-level validation.",
+        })
     myeloid_ep = work / "myeloid_evidence.json"
     myeloid_rp = work / "myeloid_records.json"
     myeloid_up = work / "myeloid_umap_audit.json"

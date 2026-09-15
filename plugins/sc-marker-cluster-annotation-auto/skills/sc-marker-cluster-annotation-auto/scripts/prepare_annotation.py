@@ -149,6 +149,8 @@ def template_record(cluster):
         "cross_species_inference": False, "panel_species": "", "marker_panel_evidence_ids": [],
         "label_basis": "", "canonical_subtype": "", "top_marker_gene": "",
         "lower_level_subtype": "", "research_claim_level": "",
+        "expert_review_status": "", "expert_review_basis": "",
+        "identity_review_summary": "", "optimization_recommendations": "",
         "literature_source": "", "naming_grammar": "",
         "contextually_excluded_naming_markers": [],
         "user_constraint_audit": {},
