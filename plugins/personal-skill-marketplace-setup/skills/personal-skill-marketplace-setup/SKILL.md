@@ -14,9 +14,31 @@ The remote Git repository's stable `main` ref is the cross-computer release auth
 Every maintained Skill has two independent identities:
 
 - a fixed workflow id such as `03` or `04`, used for lookup and ordering;
-- an independent user-facing release version such as `v3.03`, used only after the user explicitly approves publication.
+- an independent user-facing semantic release version such as `v0.7.0`, used only after the user explicitly approves publication.
 
 The immutable release identity is the tuple `skill id + release version + Git commit + content SHA-256`. A version string without the commit and hash is insufficient evidence of equality.
+
+## Old-version handling and transactional installation
+
+Classify every source and artifact as `stable`, `candidate`, `rollback`, or
+`quarantine`. Only a clean, remote-verified `stable` checkout may be registered
+or callable. `rollback` copies remain recoverable but inactive. Dirty, stale,
+divergent, mixed-history, or superseded candidates must be moved to a clearly
+named quarantine location and excluded from source discovery.
+
+For every affected plugin, the publish plan must fetch `origin/main`, compare
+the candidate semantic version with the remote stable manifest, and reject a
+candidate that is lower than or equal to stable. A cachebuster is not a version
+upgrade. Active `skill-pack.json`, plugin manifests, and UI metadata must agree
+and must not contain a retired legacy version.
+
+Installation and relocation are transactional: preserve the current
+registration as a rollback point, stage the new marketplace and cache, verify
+enabled versions and source-to-cache hashes, then switch the location config.
+If registration or installation fails, restore the previous registration only
+when it is a clean stable checkout; never restore a dirty or quarantined source.
+Retain the current and last-known-good stable versions until the new version
+has passed all verification gates.
 
 Unpublished edits are session-local or isolated-worktree candidates. They must not update the stable checkout, any marketplace registry, any Codex cache, any database record marked published, or the `/` callable entry. A test result is not publication consent.
 
@@ -40,6 +62,7 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 
 - `bootstrap`: first deployment after a temporary copy of this Skill exists. Require exact user-approved clone and workspace paths; clone, validate, install all plugins, register `workspace-local`, and add the managed synchronization block to the selected workspace `AGENTS.md` without replacing existing content.
 - `preflight`: run once per task before first using or editing another `workspace-local` Skill. Fetch the stable ref and compare commits. Do nothing when current; fast-forward and reinstall affected plugins when behind; stop on dirty, detached, unexpected, ahead, or divergent state. If plugins changed, require a Codex restart and new task.
+- `publish`: reject mixed staged/unstaged paths, stale or quarantined source roots, active legacy metadata, and any candidate semantic version that does not advance the remote stable manifest.
 - `publish`: first run without `--confirm-publish` to report changed paths, affected plugins, proposed semantic patch versions, unregistered new-plugin directories, tests, and the default one-review authorization scope. A new plugin must first be registered by `skill-writing` in `skill-pack.json` and both marketplace manifests. By default, ask once for explicit authorization covering the complete publish, merge, verification, and installation sequence; do not split this into publication and merge reviews. Never push directly to `main`.
 - `publish --confirm-publish --confirm-merge`: use after that single combined authorization. After pushing, wait until every observed GitHub check/status succeeds, require the PR to be open, non-draft, and cleanly mergeable, merge with the exact head SHA, fetch and verify stable `main`, then refresh the complete local callable cache from verified stable content. A clean stable registered source may be fast-forwarded and retained. A dirty, divergent, detached, development, or non-Git registered source must never be restored as the runtime registration; preserve it as a work copy and register a persistent clean stable clone instead. Use `--confirm-publish --create-pr` only when the user explicitly requests the narrower PR-only outcome.
 - `audit`: read-only source/config/install diagnosis; no fetch, pull, registration, or writes.
@@ -96,6 +119,7 @@ The bootstrap cannot log the user into GitHub, install Git/Python with an OS pac
 8. Never batch-update or infer a coupled release for `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto`. They are independent Skills; update and publish only the explicitly named Skill(s). Do not invoke annotation knowledge-base publication as a side effect unless the user explicitly includes that scope.
 9. Every maintained plugin's `plugin.json.interface.displayName` and `agents/openai.yaml.interface.display_name` must end with the same technical package version, rendered as `vX.Y.Z` before any `+codex...` cachebuster suffix. Audit must report a mismatch as a release failure; do not silently repair it from a cache.
 10. The full release closeout order is fixed: semantic version increment, metadata synchronization, local tests, branch/commit/push, PR creation or reuse, CI success, clean mergeability, SHA-pinned merge, stable-main verification, stable preflight/doctor, safe final registration, real cache directory/manifest/hash verification, restart notice, and new-task Skill-path verification. Stop at the first failed gate and never report later stages as complete. Safe final registration means retaining a clean stable source or switching to a persistent clean stable clone; it never means restoring an unsafe old source.
+11. Retired versions may remain only as explicitly labeled rollback copies or verified cache history. They must never remain in active registries, active source discovery, or enabled plugin entries. Delete or quarantine old candidates only after the new stable release and its rollback point have been verified.
 
 ## Managed synchronization guidance
 

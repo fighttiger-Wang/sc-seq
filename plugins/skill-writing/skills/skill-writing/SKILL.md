@@ -15,7 +15,17 @@ Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode on
 
 Keep the stable marketplace checkout and its `main`-derived working tree clean while a Skill is being drafted. Perform unapproved edits in a session-local isolated worktree or staging copy. A candidate may be tested through an explicit file/path handoff in the current task, but it must not be registered, installed, or exposed through `/`.
 
-Each Skill owns its own release sequence. Keep the fixed workflow number (`03`, `04`, etc.) separate from the visible release version (`v3.03`, `v3.04`, etc.). The visible name may be `03 · Name v3.03`; the plugin package's cache-busting version remains a separate technical field. Every release record must also contain the Git commit and content SHA-256.
+Each Skill owns its own release sequence. Keep the fixed workflow number (`03`, `04`, etc.) separate from the visible semantic release version (`vX.Y.Z`). The visible name may be `03 · Name v0.7.0`; the plugin package's cache-busting suffix remains a separate technical field. Every release record must also contain the Git commit and content SHA-256.
+
+### Version and source lifecycle
+
+Treat each source or artifact as exactly one of these states: `stable`,
+`candidate`, `rollback`, or `quarantine`. Only `stable` may be registered,
+installed, or exposed through `/`. A `rollback` copy is recoverable but never
+active; a `quarantine` copy is an invalid, dirty, stale, or mixed candidate
+and must be rejected by source discovery. Never convert an old version into a
+new cachebuster without proving that its semantic version advances the remote
+stable version.
 
 After the user has finished testing, summarize the candidate and ask once for a single end-to-end release authorization covering version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, and local cache refresh. Without consent, do not copy or merge the candidate into the stable source, update registries, change cachebusters, write a published audit record, or install it. One affirmative reply authorizes the complete sequence; do not ask separate publication, merge, or installation questions. If the user explicitly requests publication only, PR only, no merge, or no install, honor that narrower scope and stop at the open PR. A partial promotion is a failure: keep the previous callable release and report the failed gate.
 
@@ -30,8 +40,6 @@ Every maintained skill display name must use exactly this format:
 ```text
 NN · Name
 ```
-
-`Name` must end with the current technical package version in the form `vX.Y.Z`, derived from that plugin's `.codex-plugin/plugin.json` version before any `+codex...` cachebuster suffix. For example: `03 · 单细胞大类注释（主要谱系） v0.3.3`. The same complete display name must be used in both metadata files; do not infer or manually type a different version.
 
 `Name` must end with the current technical package version in the form `vX.Y.Z`, derived from that plugin's `.codex-plugin/plugin.json` version before any `+codex...` cachebuster suffix. For example: `03 · 单细胞大类注释（主要谱系） v0.3.3`. The same complete display name must be used in both metadata files; do not infer or manually type a different version.
 
@@ -58,14 +66,17 @@ NN · Name
 13. `personal-skill-marketplace-setup`
 14. `bioinformatics-results-report-classic`
 
-Assign later maintained skills the next unused two-digit number, currently `15`. Do not renumber existing skills unless the user explicitly changes the workflow.
+15. `celltype-function-heatmap`
+16. `scientific-diagram-016`
+
+Assign later maintained skills the next unused two-digit number, currently `17`. Do not renumber existing skills unless the user explicitly changes the workflow.
 
 ## Direct Workflow
 
 1. Read the current `skill-creator` and `plugin-creator` instructions if available.
 2. Pick one normalized internal id for both plugin and skill.
 3. Check the shared marketplace source and existing `workspace-local` plugin before writing.
-4. Update an existing shared plugin in place. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched as a recovery copy.
+4. Update an existing shared plugin in an isolated main-derived candidate worktree. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched only as an explicitly marked rollback copy.
 5. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
    - `skill-pack.json`, including its manifest version and the incremented `expectedPluginCount`;
    - `.agents/plugins/marketplace.json`;
@@ -81,6 +92,10 @@ Assign later maintained skills the next unused two-digit number, currently `15`.
 10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^\d{2} · .+$`; reject `路` or a missing/wrong separator.
 11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
 12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan containing changed paths, affected Skills, proposed semantic patch versions, tests, branch impact, and installation impact; for an unregistered new plugin, finish the three registries before proceeding.
+   The plan must also prove that the candidate contains the latest `origin/main`,
+   has no mixed staged/unstaged paths, and advances every affected plugin's
+   semantic version beyond the stable manifest. Any legacy version in active
+   metadata or any source path marked backup/quarantine is a hard failure.
 13. Ask once for a single end-to-end release authorization. The default question must explicitly include publish, PR, CI-gated merge, stable verification, and local installation. After one affirmative reply, invoke the setup Skill with `--confirm-publish --confirm-merge` and do not ask again. Use `--confirm-publish --create-pr` only when the user explicitly narrows the request to publication only, PR only, no merge, or no install.
 14. Delegate the complete release mechanics to `personal-skill-marketplace-setup`: version increment, display-name and manifest synchronization, tests, `codex/*` branch, commit, push, PR creation/reuse, CI waiting, SHA-pinned merge, stable-main verification, and local stable-cache refresh. Do not reproduce these GitHub steps separately in each domain Skill.
 15. Treat the setup Skill's verified remote and cache results as separate release gates. Never report a merge from a push or open PR alone, and never infer cache correctness from CLI text alone. After a changed cache refresh, report `installed-and-verified`, require a Codex restart and new task, then compare the selected Skill's actual path with the expected versioned cache path before reporting `loaded-path-verified`.

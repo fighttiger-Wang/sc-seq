@@ -36,6 +36,15 @@ UNSAFE_REGISTRATION_STATUSES = {
     "detached-source-retained",
     "non-git-source-retained",
 }
+QUARANTINE_NAME_TOKENS = (
+    "dirty",
+    "quarantine",
+    "backup",
+    "disabled",
+    "rollback",
+    "legacy",
+    "retired",
+)
 
 
 def load_json(path: Path):
@@ -152,6 +161,25 @@ def changed_worktree_paths(git: str, root: Path) -> list[str]:
             for line in f"{tracked}\n{untracked}".splitlines()
             if line.strip()
         }
+    )
+
+
+def mixed_staging_paths(git: str, root: Path) -> list[str]:
+    """Return paths modified in both the index and the worktree."""
+    output = git_output(git, root, "status", "--porcelain=v1")
+    paths = []
+    for line in output.splitlines():
+        if len(line) >= 3 and line[0] not in {" ", "?"} and line[1] not in {" ", "?"}:
+            paths.append(line[3:].strip())
+    return sorted(paths)
+
+
+def unsafe_source_path(root: Path) -> bool:
+    """Return true for any path explicitly classified as inactive or unsafe."""
+    return any(
+        token in part.casefold()
+        for part in root.expanduser().resolve().parts
+        for token in QUARANTINE_NAME_TOKENS
     )
 
 
@@ -292,6 +320,8 @@ def locate_marketplace(explicit: Path | None, codex_home: Path, allow_explicit_c
         resolved_explicit = explicit.expanduser().resolve()
         if not is_marketplace(resolved_explicit):
             raise FileNotFoundError(f"The explicit marketplace root is invalid: {resolved_explicit}")
+        if unsafe_source_path(resolved_explicit):
+            raise RuntimeError(f"Refusing quarantined or backup marketplace source: {resolved_explicit}")
         return resolved_explicit
     configured = os.environ.get("CODEX_SHARED_MARKETPLACE_ROOT")
     if configured:
@@ -305,6 +335,8 @@ def locate_marketplace(explicit: Path | None, codex_home: Path, allow_explicit_c
     valid = []
     for candidate in candidates:
         resolved = candidate.resolve()
+        if unsafe_source_path(resolved):
+            continue
         if is_marketplace(resolved) and all(normalized_path(resolved) != normalized_path(item) for item in valid):
             valid.append(resolved)
     if len(valid) > 1:
@@ -636,6 +668,92 @@ def committed_plugin_version(git: str, root: Path, plugin_id: str) -> str | None
     if completed.returncode:
         return None
     return str(json.loads(completed.stdout).get("version") or "")
+
+
+def plugin_version_at_ref(git: str, root: Path, ref: str, plugin_id: str) -> str:
+    relative = f"plugins/{plugin_id}/.codex-plugin/plugin.json"
+    raw = git_output(git, root, "show", f"{ref}:{relative}")
+    version = str(json.loads(raw).get("version") or "")
+    semantic_version(version)
+    return version
+
+
+def active_metadata_files(root: Path) -> list[Path]:
+    files = [
+        root / "skill-pack.json",
+        root / ".agents" / "plugins" / "marketplace.json",
+        root / ".codex-plugin" / "marketplace.json",
+    ]
+    for plugin_root in sorted(path for path in (root / "plugins").glob("*") if path.is_dir()):
+        manifest = plugin_root / ".codex-plugin" / "plugin.json"
+        if manifest.is_file():
+            files.append(manifest)
+        files.extend(
+            sorted(
+                path
+                for path in plugin_root.glob("skills/*/agents/openai.yaml")
+                if path.is_file()
+            )
+        )
+    return files
+
+
+def yaml_display_name(path: Path) -> str:
+    """Read the simple scalar used by the marketplace's openai.yaml files."""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^\s*display_name:\s*(.*?)\s*$", line)
+        if not match:
+            continue
+        value = match.group(1).strip()
+        if len(value) >= 2 and value[0] in {'\"', "'"} and value[-1] == value[0]:
+            value = value[1:-1]
+        return value
+    return ""
+
+
+def validate_active_metadata(root: Path, plugin_ids: list[str]) -> None:
+    """Reject legacy versions and manifest/cache drift in active metadata."""
+    pack = load_json(root / "skill-pack.json")
+    pack_versions = {str(item["id"]): str(item.get("version") or "") for item in pack.get("plugins", [])}
+    errors = []
+    active_text = "\n".join(
+        f"{path}:\n{path.read_text(encoding='utf-8')}"
+        for path in active_metadata_files(root)
+        if path.is_file()
+    )
+    if re.search(r"(?<!\d)0\.6\.3(?!\d)", active_text):
+        errors.append("active metadata contains forbidden legacy v0.6.3")
+    for plugin_id in plugin_ids:
+        manifest_path = root / "plugins" / plugin_id / ".codex-plugin" / "plugin.json"
+        manifest = load_json(manifest_path)
+        manifest_version = str(manifest.get("version") or "")
+        semantic_version(manifest_version)
+        if pack_versions.get(plugin_id) != manifest_version:
+            errors.append(f"{plugin_id}: skill-pack version {pack_versions.get(plugin_id)} != plugin manifest {manifest_version}")
+        skill_path = root / "plugins" / plugin_id / "skills" / plugin_id
+        yaml_path = skill_path / "agents" / "openai.yaml"
+        display = str((manifest.get("interface") or {}).get("displayName") or "")
+        yaml_display = yaml_display_name(yaml_path) if yaml_path.is_file() else ""
+        if display != yaml_display:
+            errors.append(f"{plugin_id}: plugin.json and openai.yaml display names differ")
+    if errors:
+        raise RuntimeError("Active metadata gate failed: " + "; ".join(errors))
+
+
+def validate_publish_versions(git: str, root: Path, stable_ref: str, plugin_ids: list[str]) -> dict[str, dict[str, str]]:
+    """Require every affected candidate to move forward from stable main."""
+    result = {}
+    for plugin_id in plugin_ids:
+        local_path = root / "plugins" / plugin_id / ".codex-plugin" / "plugin.json"
+        local_version = str(load_json(local_path).get("version") or "")
+        stable_version = plugin_version_at_ref(git, root, f"origin/{stable_ref}", plugin_id)
+        proposed = proposed_plugin_versions(root, [plugin_id], git)[plugin_id]
+        if semantic_version(local_version) < semantic_version(stable_version):
+            raise RuntimeError(f"{plugin_id} candidate version {local_version} is older than stable {stable_version}")
+        if semantic_version(proposed) <= semantic_version(stable_version):
+            raise RuntimeError(f"{plugin_id} proposed version {proposed} does not advance stable {stable_version}")
+        result[plugin_id] = {"candidate": local_version, "stable": stable_version, "proposed": proposed}
+    return result
 
 
 def proposed_plugin_versions(root: Path, plugin_ids: list[str], git: str | None = None) -> dict[str, str]:
@@ -1246,6 +1364,8 @@ def refresh_from_verified_stable(
             "--skip-doctor",
             "--replace-marketplace-registration",
         ]
+        if not retain_stable_root:
+            command.append("--allow-detached-stable")
         if retain_stable_root:
             command.append("--replace-location-config")
         else:
@@ -1307,6 +1427,8 @@ def release_authorization_policy(merge_authorized: bool) -> dict:
 
 
 def publish_changes(args, root: Path, codex_home: Path) -> dict:
+    if unsafe_source_path(root):
+        raise RuntimeError(f"Publish cannot use a quarantined or backup source: {root}")
     facts = git_facts(root, args.repo_url)
     if not facts["git"] or not facts["branch"]:
         raise RuntimeError("Publish requires a normal Git branch in the authoritative source checkout")
@@ -1319,9 +1441,26 @@ def publish_changes(args, root: Path, codex_home: Path) -> dict:
     paths = changed_worktree_paths(git, root)
     if not paths:
         raise RuntimeError("No uncommitted marketplace changes were found")
+    mixed = mixed_staging_paths(git, root)
+    if mixed:
+        raise RuntimeError("Publish stopped because paths are modified in both index and worktree: " + ", ".join(mixed))
     unregistered = unregistered_changed_plugins(root, paths)
     affected = publication_plugins(root, paths)
-    proposed_versions = proposed_plugin_versions(root, affected, git) if affected else {}
+    if not args.dry_run:
+        run([git, "fetch", "origin", stable_ref], cwd=root)
+        if not git_ref_exists(git, root, remote_ref):
+            raise RuntimeError(f"Remote stable ref does not exist: {remote_ref}")
+        head = git_output(git, root, "rev-parse", "HEAD")
+        remote = git_output(git, root, "rev-parse", remote_ref)
+        if facts["branch"] == stable_ref and head != remote:
+            raise RuntimeError("Stable branch is not identical to origin; run preflight or resolve Git history before publishing")
+        if facts["branch"].startswith("codex/") and not git_is_ancestor(git, root, remote, head):
+            raise RuntimeError("Development branch does not contain the latest origin/main; merge stable changes manually before publishing")
+        validate_active_metadata(root, affected)
+        version_gate = validate_publish_versions(git, root, stable_ref, affected) if affected else {}
+    else:
+        version_gate = {}
+    proposed_versions = {plugin_id: item["proposed"] for plugin_id, item in version_gate.items()} if version_gate else (proposed_plugin_versions(root, affected, git) if affected else {})
     plan = {
         "status": "registration-required" if unregistered else "confirmation-required" if not args.confirm_publish else "publishing",
         "stableRef": stable_ref,
@@ -1346,17 +1485,6 @@ def publish_changes(args, root: Path, codex_home: Path) -> dict:
         )
     if not affected:
         raise RuntimeError("No plugin-affecting changes were found; publish manually if this is an intentional documentation-only change")
-
-    run([git, "fetch", "origin", stable_ref], cwd=root, dry_run=args.dry_run)
-    if not args.dry_run and not git_ref_exists(git, root, remote_ref):
-        raise RuntimeError(f"Remote stable ref does not exist: {remote_ref}")
-    if not args.dry_run:
-        head = git_output(git, root, "rev-parse", "HEAD")
-        remote = git_output(git, root, "rev-parse", remote_ref)
-        if facts["branch"] == stable_ref and head != remote:
-            raise RuntimeError("Stable branch is not identical to origin; run preflight or resolve Git history before publishing")
-        if facts["branch"].startswith("codex/") and not git_is_ancestor(git, root, remote, head):
-            raise RuntimeError("Development branch does not contain the latest origin/main; merge stable changes manually before publishing")
 
     branch = facts["branch"]
     if branch == stable_ref:

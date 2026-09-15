@@ -4,7 +4,13 @@ Use this workflow for every maintained `workspace-local` Skill on Windows or mac
 
 ## Release identity
 
-The remote repository's stable `main` ref is the only cross-computer release authority. Keep the workflow number (for example `03`) fixed for lookup, and maintain an independent per-Skill visible release version (for example `v3.03`). Record both with the exact Git commit and a content SHA-256. Plugin cachebuster versions are technical installation metadata and must not replace the user-facing release version.
+The remote repository's stable `main` ref is the only cross-computer release authority. Keep the workflow number (for example `03`) fixed for lookup, and maintain an independent per-Skill visible semantic release version (for example `v0.7.0`). Record both with the exact Git commit and a content SHA-256. Plugin cachebuster versions are technical installation metadata and must not replace the user-facing release version.
+
+Use four artifact states: `stable`, `candidate`, `rollback`, and `quarantine`.
+Only `stable` may be registered, installed, or callable. Rollback artifacts
+must be explicitly marked and recoverable; quarantine artifacts must be
+excluded from source discovery. A cachebuster never upgrades an older semantic
+version and never makes a stale or dirty source publishable.
 
 Draft edits belong to the current task's isolated worktree or staging copy. They are testable only through an explicit current-task path and are not registered, installed, published, or callable through `/`. After the test report, ask once for a single explicit authorization covering publication, CI-gated merge, stable verification, and installation. Promotion must be all-or-nothing across the selected Skill's source, manifests, release record, and installation; on a failed gate, retain the previous callable release. Use a PR-only outcome only when the user explicitly limits the request to publication only, PR only, no merge, or no install.
 
@@ -45,6 +51,10 @@ Both marketplace entries must use `INSTALLED_BY_DEFAULT`, `ON_INSTALL`, `./plugi
 3. Present changed paths, affected plugins, tests, target branch, and whether GitHub authentication is available.
 4. Ask once for the full end-to-end release authorization. The question must explicitly cover version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, and local cache refresh. One affirmative reply authorizes the complete sequence; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use the narrower PR-only route.
 5. After the combined confirmation, let the setup Skill automatically increment unchanged semantic patch versions, synchronize display names/cachebusters/manifests, test, commit, and push a `codex/*` branch. Never push directly to `main`.
+   Before incrementing, it must fetch the stable ref and reject any affected
+   candidate whose semantic version is lower than or equal to the stable
+   manifest, whose active metadata contains a legacy version, or whose status
+   contains mixed staged/unstaged paths.
 6. Create or reuse a PR through authenticated GitHub CLI/API access. Without authentication, return a compare URL; a merge-authorized run must stop because it cannot verify or merge the PR.
 7. Under the single combined authorization, the setup Skill waits for all observed checks and commit statuses to succeed, requires a clean non-draft PR, merges with the exact head SHA, verifies that both release and merge commits are in remote `main`, and refreshes the local cache from verified stable content. It restores an original registration only when that source is clean, on the stable branch, and synchronized. Otherwise it preserves the old source as a work copy and retains/registers a persistent clean stable clone.
 
