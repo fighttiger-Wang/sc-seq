@@ -154,6 +154,16 @@ qualifiers such as `_provisional` are standardized evidence-level disclosures,
 and `_state_` labels are standardized identity-plus-state displays; neither is
 a new ontology identity.
 
+## Expert review and case-driven optimization
+
+Formal annotation is not complete when executable gates pass. Apply
+[expert-review-and-optimization.md](references/expert-review-and-optimization.md)
+to every cluster before formal workbook construction. Record the independent
+review status, evidence basis, identity boundary, and a concrete case-specific
+optimization recommendation. A missing review record blocks delivery. The
+final response must summarize the expert review outcome and the highest-value
+recommendations, including when no additional optimization is currently needed.
+
 ## Retrieval and reproducibility
 
 This skill has an independent calibration counter. Its first five uses after
