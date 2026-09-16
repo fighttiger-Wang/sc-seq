@@ -29,9 +29,9 @@ _SHARED_RUNTIME_KB = (
 )
 _ENV_KB = Path(os.environ["SC_ANNOTATION_KB_PATH"]).resolve() if os.environ.get("SC_ANNOTATION_KB_PATH") else None
 DEFAULT_KNOWLEDGE_BASE = (
-    _ENV_KB if _ENV_KB and _ENV_KB.is_file()
-    else (_LOCAL_KB if _LOCAL_KB.is_file()
-          else (_SHARED_RUNTIME_KB if _SHARED_RUNTIME_KB.is_file() else _VENDORED_KB))
+    _LOCAL_KB if _LOCAL_KB.is_file()
+    else (_VENDORED_KB if _VENDORED_KB.is_file()
+          else (_ENV_KB if _ENV_KB and _ENV_KB.is_file() else _SHARED_RUNTIME_KB))
 )
 
 _NON_GENE_TOKENS = {

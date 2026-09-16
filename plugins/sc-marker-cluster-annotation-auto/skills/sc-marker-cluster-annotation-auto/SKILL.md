@@ -82,6 +82,11 @@ For every cluster:
 6. Resolve primary identity, then separately assign any
    `low_quality`, `background_interference`, `abnormal_state`, `debris`,
    `suspected_doublet`, or `mixed_population` flags. Flags may coexist.
+   A registered specialization panel may add a conditional `下位亚类` only
+   after its base identity program passes. For example, a coherent endothelial
+   tip/angiogenic program may be retained as `Tip_endothelial` beneath a
+   capillary identity. It is not forbidden, but it must not replace the base
+   lineage, be inferred from UMAP alone, or be promoted from a state marker.
 7. If competing programs are complete and near-balanced, use `Multi_cell` with
    concrete components and red warning formatting. If one program dominates,
    retain its identity and explain the secondary signal as background,
@@ -111,6 +116,10 @@ The ontology result may remain visible only as an explicitly unbound fallback.
 Do not bind it formally until the exact `research_requests.json` is resolved.
 Use a validated external candidate only with two independent sources and
 current-case supporting markers; do not silently choose an arbitrary ancestor.
+When research would replace the pre-research identity, require a current-case
+competitor comparison with the prior identity, multi-gene support for the new
+candidate, and explicit competing-program exclusion evidence; literature
+plausibility alone cannot authorize a replacement.
 External research is also bounded by the source's semantic claim. Classify each
 source as `identity`, `identity_like`, `state`, `program`, or
 `lineage_identity`, preserve its verbatim qualifying wording, and bind no label

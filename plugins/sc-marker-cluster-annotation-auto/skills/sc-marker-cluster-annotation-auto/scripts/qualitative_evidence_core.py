@@ -251,6 +251,52 @@ def _evaluate_states(config, cluster, values, clusters, thresholds, full_ratio, 
     return programs, states
 
 
+def _evaluate_specialized_subtypes(config, primary, cluster, values, clusters, thresholds, full_ratio, blocked):
+    """Evaluate opt-in specialization programs without changing primary identity.
+
+    A specialization is a biological refinement of an already supported base
+    identity. It is intentionally kept out of identity arbitration: a state
+    or developmental program must not replace its base lineage merely because
+    it is enriched in one cluster.
+    """
+    specializations = []
+    for label, specification in config.get("specialization_panels", {}).items():
+        allowed = {str(value) for value in specification.get("allowed_primary_labels", [])}
+        if primary.get("label") not in allowed or primary.get("program_gate") != "通过":
+            continue
+        metrics = [
+            metric for gene in specification.get("markers", [])
+            if gene.upper() not in blocked
+            if (metric := gene_metric(gene, cluster, values, clusters, thresholds, full_ratio)) is not None
+        ]
+        supporting = [item for item in metrics if item["review"]]
+        strong = [item for item in supporting if item["strong"]]
+        supporting_genes = {item["gene"] for item in supporting}
+        required_any = {str(gene).upper() for gene in specification.get("required_any", [])}
+        minimum = int(specification.get("minimum_markers", 2))
+        minimum_strong = int(specification.get("minimum_strong_markers", 1))
+        passed = (
+            len(supporting) >= minimum
+            and len(strong) >= minimum_strong
+            and (not required_any or bool(supporting_genes & required_any))
+        )
+        if not passed:
+            continue
+        specializations.append({
+            "label": label,
+            "base_identity": primary["label"],
+            "specialization_gate": "通过",
+            "identity_binding": "conditional_lower_level_subtype_only",
+            "supporting_markers": supporting,
+            "missing_markers": [
+                gene for gene in specification.get("markers", [])
+                if gene.upper() not in {item["gene"] for item in metrics}
+            ],
+            "evidence_ids": list(specification.get("evidence_ids", [])),
+        })
+    return specializations
+
+
 def _incompatible_complete_programs(primary, candidates):
     if primary is None:
         return []
@@ -404,6 +450,10 @@ def enrich_evidence(
             config, cluster, values, clusters, thresholds, full_ratio,
             set(cluster_rules["conflict_markers"]),
         )
+        specialized_subtypes = _evaluate_specialized_subtypes(
+            config, primary, cluster, values, clusters, thresholds, full_ratio,
+            set(cluster_rules["conflict_markers"]),
+        )
         parent_gate = primary["parent_lineage_gate"]
         off_parent_candidates = [
             item for item in candidates
@@ -458,6 +508,9 @@ def enrich_evidence(
             "state_program": state_programs,
             "state_list": state_list,
             "primary_state": state_list[0] if state_list else "",
+            "specialized_subtype_candidates": specialized_subtypes,
+            "lower_level_subtype": specialized_subtypes[0]["label"] if len(specialized_subtypes) == 1 else "",
+            "specialization_review_status": "conditional" if specialized_subtypes else "not_applicable",
             "mixed_population": mixed_population,
             "mixed_evidence": mixed_evidence,
             "suspected_doublet": suspected_doublet,

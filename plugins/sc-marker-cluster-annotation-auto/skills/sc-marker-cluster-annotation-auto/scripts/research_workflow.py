@@ -187,6 +187,60 @@ def _candidate_summary(decision):
     return rows
 
 
+def _validate_current_case_override(decision, cluster, candidate, resolution, verified_markers):
+    """Require a qualitative current-case comparison before research changes identity."""
+    prior = str(decision.get("stable_id", "")).strip()
+    if not prior or candidate == prior:
+        return {"identity_changed": False, "prior_identity": prior, "candidate_label": candidate}
+    comparison = resolution.get("current_case_competitor_comparison")
+    if not isinstance(comparison, dict):
+        raise ValueError(
+            f"Cluster {cluster} research identity replacement requires current_case_competitor_comparison"
+        )
+    if str(comparison.get("candidate_label", "")).strip() != candidate:
+        raise ValueError(
+            f"Cluster {cluster} current-case comparison candidate_label must match research candidate {candidate}"
+        )
+    competitors = {str(value).strip() for value in comparison.get("competing_labels", []) if str(value).strip()}
+    if prior not in competitors:
+        raise ValueError(
+            f"Cluster {cluster} current-case comparison must include prior identity {prior} as a competitor"
+        )
+    if str(comparison.get("resolution", "")).strip() != "candidate_program_dominant":
+        raise ValueError(
+            f"Cluster {cluster} research identity replacement requires resolution=candidate_program_dominant"
+        )
+    candidate_markers = set(_genes(comparison.get("candidate_support_markers", [])))
+    if len(candidate_markers & set(verified_markers)) < 2:
+        raise ValueError(
+            f"Cluster {cluster} current-case comparison requires two verified candidate_support_markers"
+        )
+    exclusions = [str(value).strip() for value in comparison.get("competitor_exclusion_evidence", []) if str(value).strip()]
+    if not exclusions:
+        raise ValueError(
+            f"Cluster {cluster} current-case comparison requires competitor_exclusion_evidence"
+        )
+    audits = {
+        str(item.get("label", "")): item
+        for item in decision.get("candidate_program_audits", []) or []
+    }
+    selected_audit = audits.get(candidate)
+    if selected_audit and str(selected_audit.get("program_gate", "")) not in PASS_STATES:
+        raise ValueError(
+            f"Cluster {cluster} researched registered candidate {candidate} lacks a passing current-case identity program"
+        )
+    return {
+        "identity_changed": True,
+        "prior_identity": prior,
+        "candidate_label": candidate,
+        "competing_labels": sorted(competitors),
+        "resolution": "candidate_program_dominant",
+        "candidate_support_markers": sorted(candidate_markers & set(verified_markers)),
+        "competitor_exclusion_evidence": exclusions,
+        "registered_candidate_program_gate": str(selected_audit.get("program_gate", "")) if selected_audit else "external_candidate",
+    }
+
+
 def _trigger_reasons(decision, calibration, force_research=False, expert_reasons=None):
     reasons = []
     candidates = decision.get("candidate_program_audits", []) or []
@@ -491,6 +545,13 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
                 f"Cluster {cluster} candidate {candidate} requires label_basis={expected_basis}, observed {label_basis}"
             )
         claim = _validate_claim_semantics(evidence, cluster, resolution, source_claims)
+        override_audit = _validate_current_case_override(
+            evidence["qualitative_annotation_evidence"][cluster],
+            cluster,
+            candidate,
+            resolution,
+            verified_markers,
+        )
         normalized_resolution = {
             **resolution,
             "status": status,
@@ -500,6 +561,7 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "ratio_verified_support_markers": sorted(ratio_supported),
             "source_evidence_ids": identifiers,
             "source_claim_levels": [item["claim_level"] for item in source_claims],
+            "current_case_override_audit": override_audit,
             **claim,
         }
         normalized[cluster] = normalized_resolution
@@ -543,6 +605,7 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "research_native_or_disease_induced": resolution["native_or_disease_induced"],
             "research_artifact_sha256": artifact_sha,
             "research_evidence_ids": resolution["source_evidence_ids"],
+            "research_current_case_override_audit": resolution["current_case_override_audit"],
             "formal_identity_binding_allowed": True,
         })
         if resolution.get("qualified_label"):

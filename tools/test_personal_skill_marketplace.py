@@ -210,11 +210,19 @@ class Doctor:
                 self.add(f"annotation snapshot metadata {plugin_id}", metadata_ok, json.dumps(snapshot, ensure_ascii=False))
                 errors = []
                 snapshot_newline_errors = []
+                overrides = snapshot.get("plugin_overrides", {})
                 for source_name, (folder, destination_name) in mappings.items():
                     source = evidence / source_name
                     destination = skill / folder / destination_name
                     source_hash = sha256(source) if source.is_file() else ""
-                    if not destination.is_file() or sha256(destination) != source_hash or (snapshot.get("files") or {}).get(source_name) != source_hash:
+                    expected_hash = source_hash
+                    override = overrides.get(source_name)
+                    if override:
+                        if not override.get("reason") or override.get("base_sha256") != source_hash:
+                            errors.append(source_name)
+                            continue
+                        expected_hash = str(override.get("sha256", ""))
+                    if not destination.is_file() or sha256(destination) != expected_hash or (snapshot.get("files") or {}).get(source_name) != expected_hash:
                         errors.append(source_name)
                     elif source.suffix.lower() in {".json", ".md", ".py"} and (b"\r\n" in source.read_bytes() or b"\r\n" in destination.read_bytes()):
                         snapshot_newline_errors.append(source_name)
