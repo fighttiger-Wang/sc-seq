@@ -8,14 +8,14 @@
     "annotation_evidence_core.py": "b91699d55918c8ff3aabf3d9ca3307d84b69862a9fcfa4e0a6baceb94aaf7931",
     "annotation_override_policy.py": "db3d688b295727f94a899ea62be6d8509984f375882c14c61eb477b3c1a7c25a",
     "knowledge_base.py": "e8ec3f6de7016ed650b62973b3b91b6a4aae590162f195a278996d06f8b4fedb",
-    "qualitative_evidence_core.py": "060f9464c341dd360d3aa09a3a91a604b891753e92b099d9d34093b29911dcf1",
-    "qualitative_gate_helpers.py": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
+    "qualitative_evidence_core.py": "5e0e0b82094341e5862c022584975fc0573cbb4845c68cd17cb47449e1910249",
+    "qualitative_gate_helpers.py": "52973f9be30b2b22fb2253195f15efcbb5a5f6ffea14a64a787c655e150114ac",
     "qualitative_override_policy.py": "b6038ab57c68f12219339c574348cd45118d1b322a74b54b592f9b0601bcf75c",
-    "qualitative_annotation_workbook.py": "8b7c8c13415cafaba87bc5d6eb65d22417956a34ab9c411fa13688d6b145ec09",
+    "qualitative_annotation_workbook.py": "90cb65861a91e74bf5bad094f0427006fcfcd92c4ecfd346d5eca837f24d1327",
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
-    "annotation-evidence-config.v1.json": "32ff8394b6878d7790ef3199dc95065322caf9013cef05141e9ceb386e0fcd07",
+    "annotation-evidence-config.v1.json": "34f95efd69a71d4c4086deadc302d6dbd3182371d7a76127e8c7dd086d378eca",
     "evidence-scoring-policy.md": "294988da426da1491270a4a8e6890c5ff2eda9252a0075fd54d7e3cab4eb4b1c",
-    "knowledge-base/cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": "c17d454a16b26fa0f0a4d59a48e05c770136aef185c479547398fcdb9ce381eb",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
     "knowledge-base/knowledge-base.manifest.json": "133081a3c8b06fb18975d64849f331c9d37529b842a5b40a6280dfa1a00b9f7b",
     "knowledge-base/decision-rules.v3.json": "92b6acff37e8ab27ce563343a6cb863368b6a92be2dbd1ea4b2987a30dcfea6f",
@@ -25,8 +25,8 @@
   "plugin_overrides": {
     "qualitative_evidence_core.py": {
       "base_sha256": "70bd3fe97c89cfbb3594781ae9838f716df6a85378dca0671be7947b73d4213e",
-      "sha256": "060f9464c341dd360d3aa09a3a91a604b891753e92b099d9d34093b29911dcf1",
-      "reason": "Keep the independently released applicable-identity safeguard and conditional specialization candidates isolated to this subcluster skill."
+      "sha256": "5e0e0b82094341e5862c022584975fc0573cbb4845c68cd17cb47449e1910249",
+      "reason": "Prefer qualified leaf subtype over generic parent macrophage and keep applicable-identity safeguard."
     },
     "knowledge_base.py": {
       "base_sha256": "7ab61a83f1de82128135937dd049dc4f8ed856a3725224586441da60d34e3063",
@@ -35,18 +35,28 @@
     },
     "annotation-evidence-config.v1.json": {
       "base_sha256": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
-      "sha256": "32ff8394b6878d7790ef3199dc95065322caf9013cef05141e9ceb386e0fcd07",
-      "reason": "Add the conditional endothelial tip specialization panel without changing the shared core or another annotation skill."
+      "sha256": "34f95efd69a71d4c4086deadc302d6dbd3182371d7a76127e8c7dd086d378eca",
+      "reason": "Require coherent B-cell receptor and plasma secretory programs for B/plasma branch candidates."
     },
     "qualitative_annotation_workbook.py": {
       "base_sha256": "c5e003659d7f1966fb8f0368b4a4fa728df36b681a1c7feb1cd7a86db14cb3cb",
-      "sha256": "8b7c8c13415cafaba87bc5d6eb65d22417956a34ab9c411fa13688d6b145ec09",
-      "reason": "Preserve independent identity-display and expert-review behavior, enforce core provenance, prevent implicit identity-gate promotion, and block formal subcluster delivery with ontology ancestor-descendant label overlap."
+      "sha256": "90cb65861a91e74bf5bad094f0427006fcfcd92c4ecfd346d5eca837f24d1327",
+      "reason": "Hard-intercept pseudo _like labels and prevent ancestor-descendant overlap in subcluster deliverables."
     },
     "knowledge-base/decision-rules.v3.json": {
       "base_sha256": "05fac484036361a69e31d2cf308e67596360192bd39eccad8106eb27b7e5be0e",
       "sha256": "92b6acff37e8ab27ce563343a6cb863368b6a92be2dbd1ea4b2987a30dcfea6f",
       "reason": "Declare the generic formal-delivery action for any registered ontology ancestor-descendant conflict in subcluster mappings."
+    },
+    "qualitative_gate_helpers.py": {
+      "base_sha256": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
+      "sha256": "52973f9be30b2b22fb2253195f15efcbb5a5f6ffea14a64a787c655e150114ac",
+      "reason": "Harden qualitative gate thresholds against adaptive primary floor overflow and include strong markers in supported core."
+    },
+    "knowledge-base/cell-annotation-knowledge-base.v2.json": {
+      "base_sha256": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
+      "sha256": "c17d454a16b26fa0f0a4d59a48e05c770136aef185c479547398fcdb9ce381eb",
+      "reason": "Register Monocyte_derived_macrophage as sibling leaf alongside Tissue_resident_macrophage with multi_tissue scope."
     }
   },
   "plugin_additions": {

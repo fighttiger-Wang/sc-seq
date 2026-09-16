@@ -10,7 +10,9 @@
     "minimum_core_markers": 3,
     "minimum_core_fraction": 0.5,
     "rival_core_markers_for_review": 3,
-    "rival_core_strong_for_review": 2
+    "rival_core_strong_for_review": 2,
+    "majority_detection_floor": 0.5,
+    "absolute_review_floor": 0.35
   },
   "major_label_map": {
     "B_cell": "B_cell",
@@ -32,7 +34,9 @@
     "stromal": "Stromal_cell",
     "neural": "Neural_cell",
     "erythroid": "Erythroid",
-    "megakaryocyte_platelet": "Megakaryocyte"
+    "megakaryocyte_platelet": "Megakaryocyte",
+    "Monocyte_derived_macrophage": "Myeloid_cell",
+    "Tissue_resident_macrophage": "Myeloid_cell"
   },
   "broad_groups": {
     "B_cell": "lymphoid",
@@ -375,6 +379,32 @@
       ],
       "forbidden_detection_ceiling": 0.1,
       "maximum_forbidden_anchors": 1
+    },
+    {
+      "rule_id": "REQUIRE_COHERENT_BCR_PROGRAM",
+      "ancestors": [
+        "Mature_B"
+      ],
+      "required_anchors": [
+        "CD79A",
+        "CD79B",
+        "MS4A1",
+        "CD19"
+      ],
+      "minimum_required_anchors": 1,
+      "anchor_detection_floor": 0.1
+    },
+    {
+      "rule_id": "REQUIRE_COHERENT_PLASMA_SECRETORY_PROGRAM",
+      "ancestors": [
+        "Antibody_secreting_B"
+      ],
+      "required_anchors": [
+        "MZB1",
+        "JCHAIN"
+      ],
+      "minimum_required_anchors": 1,
+      "anchor_detection_floor": 0.1
     }
   ],
   "descendant_projection_rules": [
@@ -845,7 +875,9 @@
       "neutrophil_program_alternatives": [
         {
           "program_id": "mature_neutrophil",
-          "required_markers": {},
+          "required_markers": {
+            "CXCR2": 0.1
+          },
           "markers": {
             "FCGR3B": 0.3,
             "CXCR2": 0.1,
@@ -900,7 +932,9 @@
         "markers": {
           "CD1C": 0.1,
           "CLEC10A": 0.1,
-          "FCER1A": 0.1
+          "FCER1A": 0.1,
+          "CD209A": 0.1,
+          "MGL2": 0.1
         },
         "minimum_markers": 2
       },
@@ -988,12 +1022,52 @@
       "priority": 40,
       "required": true,
       "required_programs": [
-        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1},
-        {"program": "NK_specific", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1},
-        {"program": "cytotoxic", "anchors": ["GNLY", "GZMB", "PRF1", "FGFBP2"], "minimum_anchors": 1, "detection_floor": 0.1}
+        {
+          "program": "TCR",
+          "anchors": [
+            "CD3D",
+            "CD3E",
+            "CD3G",
+            "TRAC"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
+        {
+          "program": "NK_specific",
+          "anchors": [
+            "KLRD1",
+            "NCR1",
+            "KLRF1",
+            "FCGR3A"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
+        {
+          "program": "cytotoxic",
+          "anchors": [
+            "GNLY",
+            "GZMB",
+            "PRF1",
+            "FGFBP2"
+          ],
+          "minimum_anchors": 1,
+          "detection_floor": 0.1
+        }
       ],
       "forbidden_programs": [
-        {"program": "gamma_delta_TCR", "anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1, "minimum_dataset_fraction": 0.5}
+        {
+          "program": "gamma_delta_TCR",
+          "anchors": [
+            "TRDC",
+            "TRGC1",
+            "TRGC2"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1,
+          "minimum_dataset_fraction": 0.5
+        }
       ]
     },
     "MAIT": {
@@ -1001,17 +1075,63 @@
       "priority": 30,
       "required": true,
       "required_programs": [
-        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1},
-        {"program": "MAIT_noncanonical", "anchors": ["KLRB1", "ZBTB16", "NCR3", "TRAV1-2"], "minimum_anchors": 3, "detection_floor": 0.1}
+        {
+          "program": "TCR",
+          "anchors": [
+            "CD3D",
+            "CD3E",
+            "CD3G",
+            "TRAC"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
+        {
+          "program": "MAIT_noncanonical",
+          "anchors": [
+            "KLRB1",
+            "ZBTB16",
+            "NCR3",
+            "TRAV1-2"
+          ],
+          "minimum_anchors": 3,
+          "detection_floor": 0.1
+        }
       ],
       "competing_branch": {
-        "own_program": {"anchors": ["TRAC", "TRBC1", "TRBC2"], "minimum_anchors": 2, "detection_floor": 0.1},
-        "rival_program": {"anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "own_program": {
+          "anchors": [
+            "TRAC",
+            "TRBC1",
+            "TRBC2"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
+        "rival_program": {
+          "anchors": [
+            "TRDC",
+            "TRGC1",
+            "TRGC2"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
         "minimum_dominance_ratio": 1.25,
         "minimum_absolute_margin": 0.1
       },
       "forbidden_programs": [
-        {"program": "coherent_NK_identity", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1}
+        {
+          "program": "coherent_NK_identity",
+          "anchors": [
+            "KLRD1",
+            "NCR1",
+            "KLRF1",
+            "FCGR3A"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        }
       ]
     },
     "DNT": {
@@ -1019,19 +1139,66 @@
       "priority": 20,
       "required": true,
       "required_programs": [
-        {"program": "TCR", "anchors": ["CD3D", "CD3E", "CD3G", "TRAC"], "minimum_anchors": 2, "detection_floor": 0.1}
+        {
+          "program": "TCR",
+          "anchors": [
+            "CD3D",
+            "CD3E",
+            "CD3G",
+            "TRAC"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        }
       ],
       "absence_programs": [
-        {"program": "CD4_or_CD8", "anchors": ["CD4", "CD40LG", "CD8A", "CD8B", "CD8B1"], "minimum_anchors": 2, "detection_floor": 0.2}
+        {
+          "program": "CD4_or_CD8",
+          "anchors": [
+            "CD4",
+            "CD40LG",
+            "CD8A",
+            "CD8B",
+            "CD8B1"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.2
+        }
       ],
       "competing_branch": {
-        "own_program": {"anchors": ["TRAC", "TRBC1", "TRBC2"], "minimum_anchors": 2, "detection_floor": 0.1},
-        "rival_program": {"anchors": ["TRDC", "TRGC1", "TRGC2"], "minimum_anchors": 2, "detection_floor": 0.1},
+        "own_program": {
+          "anchors": [
+            "TRAC",
+            "TRBC1",
+            "TRBC2"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
+        "rival_program": {
+          "anchors": [
+            "TRDC",
+            "TRGC1",
+            "TRGC2"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        },
         "minimum_dominance_ratio": 1.25,
         "minimum_absolute_margin": 0.1
       },
       "forbidden_programs": [
-        {"program": "coherent_NK_identity", "anchors": ["KLRD1", "NCR1", "KLRF1", "FCGR3A"], "minimum_anchors": 2, "detection_floor": 0.1}
+        {
+          "program": "coherent_NK_identity",
+          "anchors": [
+            "KLRD1",
+            "NCR1",
+            "KLRF1",
+            "FCGR3A"
+          ],
+          "minimum_anchors": 2,
+          "detection_floor": 0.1
+        }
       ]
     }
   },

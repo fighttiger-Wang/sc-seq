@@ -211,10 +211,19 @@ def validate_taxonomy_depth_consistency(records):
     observed = []
     for record in records:
         cluster = str(record.get("cluster_id", "")).strip()
-        stable = normalize_final_label(record.get("stable_id", ""))
-        path = _ontology_path(stable)
-        if cluster and stable and path:
-            observed.append((cluster, stable, path))
+        stable = normalize_final_label(record.get("stable_id") or record.get("celltype_en", ""))
+        if cluster and stable:
+            path = _ontology_path(stable)
+            if not path:
+                if stable.endswith("_like") or "_like_" in stable or "like" in stable.lower().split("_"):
+                    errors.append(
+                        f"Cluster {cluster} uses unregistered pseudo-identity '{stable}'. "
+                        "Pseudo-labels with '_like' are forbidden in formal delivery; "
+                        "use an approved canonical ontology node or validated external candidate."
+                    )
+                observed.append((cluster, stable, [stable]))
+            else:
+                observed.append((cluster, stable, path))
     for index, (left_cluster, left_label, left_path) in enumerate(observed):
         for right_cluster, right_label, right_path in observed[index + 1:]:
             if left_label == right_label:

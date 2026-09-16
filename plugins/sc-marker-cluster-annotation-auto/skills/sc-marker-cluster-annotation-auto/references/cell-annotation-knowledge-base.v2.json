@@ -928,7 +928,7 @@
       "parent_id": "Macrophage",
       "branch": "myeloid",
       "node_kind": "identity",
-      "tissue_scope": "tissue_specific",
+      "tissue_scope": "multi_tissue",
       "major_output_allowed": "No",
       "subcluster_output_allowed": "Yes",
       "external_ontology_id": "CL:0000864",
@@ -938,6 +938,24 @@
       "evidence_gate": "Meets",
       "proposed_status": "Approve",
       "review_note": "具体名称由组织模块定义，如 Kupffer_cell、Alveolar_macrophage"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "name_en": "Monocyte_derived_macrophage",
+      "name_cn": "单核源性巨噬细胞",
+      "parent_id": "Macrophage",
+      "branch": "myeloid",
+      "node_kind": "identity",
+      "tissue_scope": "multi_tissue",
+      "major_output_allowed": "No",
+      "subcluster_output_allowed": "Yes",
+      "external_ontology_id": "CL:0000576",
+      "ontology_lookup_name": "monocyte-derived macrophage",
+      "aliases": "monocyte-derived macrophage; mo-Mac; MDM; infiltrating macrophage; recruited macrophage",
+      "evidence_ids": "SRC_CL;SRC_MYELOID_PAN",
+      "evidence_gate": "Meets",
+      "proposed_status": "Approve",
+      "review_note": "Approved sibling leaf of Tissue_resident_macrophage under Macrophage"
     },
     {
       "cell_id": "cDC1",
@@ -5349,6 +5367,41 @@
       "alias": "corpus luteum cell",
       "alias_type": "synonym",
       "maps_to": "Luteal_cell"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "language": "en",
+      "alias": "Monocyte_derived_macrophage",
+      "alias_type": "standard_id",
+      "maps_to": "Monocyte_derived_macrophage"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "language": "cn",
+      "alias": "单核源性巨噬细胞",
+      "alias_type": "standard_cn",
+      "maps_to": "Monocyte_derived_macrophage"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "language": "en",
+      "alias": "MDM",
+      "alias_type": "abbreviation",
+      "maps_to": "Monocyte_derived_macrophage"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "language": "en",
+      "alias": "mo-Mac",
+      "alias_type": "abbreviation",
+      "maps_to": "Monocyte_derived_macrophage"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "language": "en",
+      "alias": "infiltrating macrophage",
+      "alias_type": "synonym",
+      "maps_to": "Monocyte_derived_macrophage"
     }
   ],
   "marker_panels": [
@@ -6463,8 +6516,8 @@
       "target_species": "Mouse",
       "panel_species": "Human",
       "cross_species_inference": "Yes",
-      "core_markers": "CD14;S100A8;S100A9;VCAN",
-      "supportive_markers": "FCN1;CCR2;CTSS",
+      "core_markers": "CD14;VCAN;CCR2;LY6C2",
+      "supportive_markers": "PLAC8;CHIL3;S100A8;S100A9;FCN1;CTSS",
       "exclusion_markers": "C1QC;MERTK;FCGR3A-only",
       "confounders": "acute inflammation",
       "decision_rule": "Monocyte identity plus CD14/FCN1/S100 program; 暂沿用 Human panel，正式标签保留 cross_species_inference",
@@ -6547,12 +6600,40 @@
       "target_species": "Mouse",
       "panel_species": "Human",
       "cross_species_inference": "Yes",
-      "core_markers": "C1QC;MERTK;FOLR2",
-      "supportive_markers": "TIMD4;LYVE1;MARCO",
+      "core_markers": "C1QC;FOLR2;LYVE1;TIMD4;ALOX15",
+      "supportive_markers": "MERTK;MARCO;PRG4;CD163;PF4",
       "exclusion_markers": "FCN1;CCR2 dominant",
       "confounders": "tissue-specific programs",
       "decision_rule": "Macrophage identity plus tissue-resident program and tissue module; 暂沿用 Human panel，正式标签保留 cross_species_inference",
       "evidence_ids": "SRC_MYELOID_PAN;SRC_LIVER_MAC;SRC_CL",
+      "evidence_gate": "Cross_species_review",
+      "approval_status": "Approve"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "target_species": "Human",
+      "panel_species": "Human",
+      "cross_species_inference": "No",
+      "core_markers": "C1QA;C1QB;C1QC;APOE;MERTK",
+      "supportive_markers": "CCR2;LYZ;CD68;ITGAM;CSF1R;PLTP;LGMN;TREM2;GPNMB",
+      "exclusion_markers": "LYVE1;TIMD4;ALOX15 dominant;CD3D",
+      "confounders": "monocyte background",
+      "decision_rule": "Require coherent macrophage maturation program without tissue-resident Timd4/Lyve1/Alox15 signature",
+      "evidence_ids": "SRC_MYELOID_PAN;SRC_CL",
+      "evidence_gate": "Meets",
+      "approval_status": "Approve"
+    },
+    {
+      "cell_id": "Monocyte_derived_macrophage",
+      "target_species": "Mouse",
+      "panel_species": "Human",
+      "cross_species_inference": "Yes",
+      "core_markers": "C1QA;C1QB;C1QC;APOE;MERTK",
+      "supportive_markers": "CCR2;LYZ2;CD68;ITGAM;CSF1R;PLTP;LGMN;TREM2;GPNMB",
+      "exclusion_markers": "LYVE1;TIMD4;ALOX15 dominant;CD3D",
+      "confounders": "monocyte background",
+      "decision_rule": "Require coherent macrophage maturation program without tissue-resident Timd4/Lyve1/Alox15 signature; cross_species_inference",
+      "evidence_ids": "SRC_MYELOID_PAN;SRC_CL",
       "evidence_gate": "Cross_species_review",
       "approval_status": "Approve"
     },
@@ -6617,8 +6698,8 @@
       "target_species": "Mouse",
       "panel_species": "Human",
       "cross_species_inference": "Yes",
-      "core_markers": "CD1C;CLEC10A;FCER1A",
-      "supportive_markers": "SIRPA;CD1E;CST3",
+      "core_markers": "CD209A;CLEC10A;MGL2;FCER1A",
+      "supportive_markers": "SIRPA;CD1E;CST3;CCL17;RETNLA",
       "exclusion_markers": "FCN1/S100A8 coherent monocyte program",
       "confounders": "HLA-DRA is nonspecific",
       "decision_rule": "Require cDC2 program and exclude monocyte-derived DC; 暂沿用 Human panel，正式标签保留 cross_species_inference",
