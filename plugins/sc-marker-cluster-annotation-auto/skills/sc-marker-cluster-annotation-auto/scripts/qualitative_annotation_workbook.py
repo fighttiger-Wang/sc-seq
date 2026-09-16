@@ -199,6 +199,43 @@ def _apply_expert_display_labels(records):
     return records
 
 
+def validate_taxonomy_depth_consistency(records):
+    """Reject a final mapping that co-displays an ontology ancestor and child.
+
+    Different independent branches may be resolved at different depths.  This
+    gate only applies when one final stable identity is an ancestor of another
+    final stable identity, which creates overlapping plotting categories rather
+    than sibling-level subclusters.
+    """
+    errors = []
+    observed = []
+    for record in records:
+        cluster = str(record.get("cluster_id", "")).strip()
+        stable = normalize_final_label(record.get("stable_id", ""))
+        path = _ontology_path(stable)
+        if cluster and stable and path:
+            observed.append((cluster, stable, path))
+    for index, (left_cluster, left_label, left_path) in enumerate(observed):
+        for right_cluster, right_label, right_path in observed[index + 1:]:
+            if left_label == right_label:
+                continue
+            if left_label in right_path[:-1]:
+                ancestor_cluster, ancestor_label = left_cluster, left_label
+                descendant_cluster, descendant_label = right_cluster, right_label
+            elif right_label in left_path[:-1]:
+                ancestor_cluster, ancestor_label = right_cluster, right_label
+                descendant_cluster, descendant_label = left_cluster, left_label
+            else:
+                continue
+            errors.append(
+                "Final subcluster mapping co-displays ontology ancestor/descendant labels: "
+                f"cluster {ancestor_cluster}={ancestor_label} and cluster "
+                f"{descendant_cluster}={descendant_label}. Resolve to same-level "
+                "identities, use an approved residual leaf, or block/recluster before delivery."
+            )
+    return errors
+
+
 def cluster_sort_key(value):
     text = str(value).strip()
     try:
@@ -531,6 +568,8 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
         errors.append(f"Cluster order/membership mismatch: expected={expected}, records={observed}")
     if len(set(observed)) != len(observed):
         errors.append("Duplicate cluster IDs are not allowed")
+    if annotation_level == "subcluster":
+        errors.extend(validate_taxonomy_depth_consistency(records))
     # Formal subcluster delivery must be bound to the output of the biological
     # gate core. A hand-authored trio of records/evidence/UMAP files can
     # otherwise make an incorrect label look internally consistent.

@@ -83,6 +83,7 @@
     "states_separate": true,
     "controlled_abbreviation": true,
     "ad_hoc_marker_prefix": false,
-    "ancestor_descendant_mixing": false
+    "ancestor_descendant_mixing": false,
+    "ancestor_descendant_conflict_action": "block_formal_delivery_until_same_level_resolution"
   }
 }

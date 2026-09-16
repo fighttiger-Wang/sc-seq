@@ -68,12 +68,14 @@ The final Excel workbook contains exactly these sheets in this order:
 and share numeric ascending order followed by natural alphanumeric order.
 Repeated labels are allowed. `Celltype_EN` must match `[A-Za-z0-9_]+` and must
 not be decorated with cluster IDs or marker prefixes. In subcluster work it
-must preserve a supported leaf even if the corresponding parent label occurs
-elsewhere; do not flatten biological resolution for legend uniformity. Neutral
-context, state, program, disease-role, and topology qualifiers remain in
-dedicated fields and must not be concatenated into `Celltype_EN`. A shortened
-professional name is permitted only when it is a recognized naming-dictionary
-abbreviation and receives explicit expert naming approval.
+must preserve a supported leaf, but a final mapping must not co-display that
+leaf with any ontology ancestor. Different independent branches may remain at
+different depths; an ancestor-descendant conflict must be resolved with
+same-level evidence, an approved residual leaf, or a blocked/recluster outcome.
+Neutral context, state, program, disease-role, and topology qualifiers remain
+in dedicated fields and must not be concatenated into `Celltype_EN`. A
+shortened professional name is permitted only when it is a recognized
+naming-dictionary abbreviation and receives explicit expert naming approval.
 
 The result sheet contains no score or confidence field. The evidence sheet has
 one row per cluster and includes the final identity, parent context, primary and

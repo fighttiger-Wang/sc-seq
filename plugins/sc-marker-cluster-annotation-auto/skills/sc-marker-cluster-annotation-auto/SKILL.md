@@ -17,12 +17,12 @@ the evidence cannot support a defensible subtype.
 When the current evidence resolves some clusters to a registered leaf while
 other clusters remain at that leaf's parent, preserve the supported leaf only
 when its expert plotting verdict is `allow_specific_label`. Otherwise retain a
-conservative parent or unresolved label and record the evidence gap. Mixed
-parent/descendant labels are acceptable when they truthfully represent
-different evidence resolution. Keep `下位亚类` for qualified comparisons or
-additional refinements, not as a place to hide a supported identity from the
-UMAP. States, programs, and disease roles remain separate fields and must not
-be concatenated into `Celltype_EN`.
+conservative parent or unresolved label and record the evidence gap. Different
+ontology branches may stop at different depths, but a final subcluster mapping
+must not co-display an ancestor and its descendant. Resolve that depth conflict
+with same-level evidence, an approved residual leaf, or a blocked/recluster
+outcome; never hide it in `下位亚类`. States, programs, and disease roles remain
+separate fields and must not be concatenated into `Celltype_EN`.
 
 ## Inputs
 

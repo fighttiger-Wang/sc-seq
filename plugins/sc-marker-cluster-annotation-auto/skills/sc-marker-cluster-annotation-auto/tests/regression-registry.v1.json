@@ -28,7 +28,7 @@
         "score/confidence columns are absent",
         "per-Marker numeric evidence formatting",
         "static red fill is restricted to the Chinese annotation cell",
-        "supported descendant identities remain visible when their registered parent is also present",
+        "formal subcluster mappings reject co-displayed registered ontology ancestor-descendant identities",
         "weak research-derived contextual identities carry an explicit provisional plotting qualifier",
         "repeated stable identities with distinct states receive identity-plus-state plotting labels without changing stable identity",
         "UMAP conflict can reject a provisional boundary identity and reassign it to an already-supported sibling while a concordant boundary identity is retained",
@@ -91,6 +91,18 @@
         "mixed source claim levels are reduced to their conservative common evidence level",
         "lineage identities require current-case lineage evidence rather than aggregate expression alone",
         "formal records and UMAP audits bind to the validated research artifact"
+      ]
+    },
+    {
+      "id": "taxonomy_depth_gate",
+      "group": "global_ontology_depth_consistency",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_taxonomy_depth_gate.py",
+      "work_subdir": "taxonomy_depth_gate",
+      "expected_assertions": 6,
+      "protects": [
+        "a registered parent and child cannot co-appear in a formal subcluster mapping",
+        "independent ontology branches may retain different annotation depths",
+        "the regression uses synthetic labels and contains no dataset-specific cluster, tissue, marker, or sample rule"
       ]
     },
     {
