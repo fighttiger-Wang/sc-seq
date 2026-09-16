@@ -329,32 +329,54 @@ def _apply_myeloid_boundary_precedence(primary, candidates, boundary_audit):
 
     macrophage_candidates = [
         item for item in candidates
-        if item["label"] in {"Macrophage", "Tissue_resident_macrophage"}
+        if item["label"] in {"Tissue_resident_macrophage", "Monocyte_derived_macrophage", "Macrophage"}
         and item["program_gate"] == "通过"
     ]
     if dc3.get("macrophage_competing") and macrophage_candidates:
-        selected, _ = _select_primary(macrophage_candidates)
+        leaves = [m for m in macrophage_candidates if m["label"] in {"Tissue_resident_macrophage", "Monocyte_derived_macrophage"}]
+        pool = leaves if leaves else macrophage_candidates
+        selected, _ = _select_primary(pool)
         return selected, "registered_macrophage_exclusion_gate"
 
-    if dc_programs.get("cDC1", {}).get("passed") and _candidate(candidates, "cDC1"):
-        return _candidate(candidates, "cDC1"), "registered_cdc1_program_gate"
-    if dc_programs.get("Migratory_DC", {}).get("passed") and _candidate(candidates, "Migratory_DC"):
-        return _candidate(candidates, "Migratory_DC"), "registered_migratory_dc_program_gate"
+    if dc_programs.get("cDC1", {}).get("passed"):
+        cand_cdc1 = _candidate(candidates, "cDC1")
+        if cand_cdc1 and cand_cdc1["program_gate"] == "通过":
+            return cand_cdc1, "registered_cdc1_program_gate"
+    if dc_programs.get("Migratory_DC", {}).get("passed"):
+        cand_mdc = _candidate(candidates, "Migratory_DC")
+        if cand_mdc and cand_mdc["program_gate"] == "通过":
+            return cand_mdc, "registered_migratory_dc_program_gate"
 
-    if dc3.get("dc3_boundary_candidate") and _candidate(candidates, "DC3"):
-        return _candidate(candidates, "DC3"), "registered_dc3_boundary_gate"
-    if dc_programs.get("cDC2", {}).get("passed") and _candidate(candidates, "cDC2"):
-        return _candidate(candidates, "cDC2"), "registered_cdc2_program_gate"
-    if neutrophil.get("neutrophil_program_passed") and _candidate(candidates, "Neutrophil"):
-        return _candidate(candidates, "Neutrophil"), "registered_neutrophil_program_gate"
+    if dc3.get("dc3_boundary_candidate"):
+        cand_dc3 = _candidate(candidates, "DC3")
+        if cand_dc3 and cand_dc3["program_gate"] == "通过":
+            return cand_dc3, "registered_dc3_boundary_gate"
+    if dc_programs.get("cDC2", {}).get("passed"):
+        cand_cdc2 = _candidate(candidates, "cDC2")
+        if cand_cdc2 and cand_cdc2["program_gate"] == "通过":
+            return cand_cdc2, "registered_cdc2_program_gate"
+
+    if neutrophil.get("neutrophil_program_passed"):
+        cand_neutro = _candidate(candidates, "Neutrophil")
+        if cand_neutro and cand_neutro["program_gate"] == "通过" and not cand_neutro.get("conflicting_markers"):
+            if not any(m["program_gate"] == "通过" and len(m["strong_core"]) >= len(cand_neutro["strong_core"]) for m in macrophage_candidates):
+                return cand_neutro, "registered_neutrophil_program_gate"
+
     if neutrophil.get("monocyte_program_passed"):
         monocytes = [
             item for item in candidates
             if item["label"] in {"Classical_monocyte", "Nonclassical_monocyte"}
+            and item["program_gate"] == "通过"
         ]
         if monocytes:
-            selected, _ = _select_primary(monocytes)
-            return selected, "registered_monocyte_program_gate"
+            if not any(m["program_gate"] == "通过" and len(m["strong_core"]) > 1 for m in macrophage_candidates):
+                selected, _ = _select_primary(monocytes)
+                return selected, "registered_monocyte_program_gate"
+    if primary and primary["label"] == "Macrophage":
+        leaves = [m for m in macrophage_candidates if m["label"] in {"Tissue_resident_macrophage", "Monocyte_derived_macrophage"}]
+        if leaves:
+            selected, _ = _select_primary(leaves)
+            return selected, "preferred_macrophage_leaf_over_general"
     return primary, ""
 
 

@@ -145,7 +145,16 @@ def gene_metric(gene, cluster, values, clusters, thresholds, full_ratio):
     delta = p_in - background
     adaptive_primary = background + thresholds['primary_robust_z'] * max(spread, 0.02) if full_ratio else thresholds['primary_detection_floor']
     primary_threshold = max(thresholds['primary_detection_floor'], adaptive_primary)
-    return {'gene': gene, 'p_in': round(p_in, 4), 'p_background': round(background, 4), 'delta': round(delta, 4), 'robust_z': round(robust_z, 3), 'detected': p_in >= thresholds['minimum_detection_floor'], 'strong': p_in >= primary_threshold and (delta >= thresholds['minimum_detection_delta'] or robust_z >= thresholds['primary_robust_z']), 'review': p_in >= thresholds['rival_review_floor'] and (delta >= thresholds['minimum_detection_delta'] / 2 or robust_z >= thresholds['rival_robust_z']), 'log2FC': current.get('log2FC')}
+    majority_floor = float(thresholds.get('majority_detection_floor', 0.50))
+    absolute_review = float(thresholds.get('absolute_review_floor', 0.40))
+    unconditional_review = float(thresholds.get('unconditional_review_floor', 0.60))
+    primary_strong = p_in >= primary_threshold and (delta >= thresholds['minimum_detection_delta'] or robust_z >= thresholds['primary_robust_z'])
+    majority_strong = p_in >= majority_floor
+    strong = bool(primary_strong or majority_strong)
+    primary_review = p_in >= thresholds['rival_review_floor'] and (delta >= thresholds['minimum_detection_delta'] / 2 or robust_z >= thresholds['rival_robust_z'])
+    absolute_review_hit = (p_in >= absolute_review and delta >= 0.0) or (p_in >= unconditional_review)
+    review = bool(primary_review or absolute_review_hit or strong)
+    return {'gene': gene, 'p_in': round(p_in, 4), 'p_background': round(background, 4), 'delta': round(delta, 4), 'robust_z': round(robust_z, 3), 'detected': p_in >= thresholds['minimum_detection_floor'], 'strong': strong, 'review': review, 'log2FC': current.get('log2FC')}
 
 
 def load_cell_evidence(path):
