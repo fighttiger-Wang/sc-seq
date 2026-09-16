@@ -13,8 +13,8 @@ The final workbook contains exactly these sheets in order:
 Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
 Repeated labels are allowed and are not decorated with cluster IDs or Marker
 prefixes. `Celltype_EN` is the expert-facing subcluster label. Preserve a
-case-supported leaf even when its registered parent is also present elsewhere.
-`Celltype_EN` is a stable identity display label. Do not append state,
+case-supported leaf, but do not co-display it with any registered ontology
+ancestor in the final mapping. `Celltype_EN` is a stable identity display label. Do not append state,
 functional program, disease role, marker names, or cluster IDs to create a
 new plotting identity. A provisional or unresolved decision is recorded in
 the expert verdict, state, evidence, and handling fields; it must not be
@@ -80,9 +80,9 @@ identity arbitration or UMAP resolution, and cannot be used to hide a supported
 identity from the plotting mapping.
 
 If a result contains both a registered parent and one of its registered
-descendants, keep each cluster's evidence-bound identity in `Celltype_EN`.
-Mixed depths are valid when they reflect real differences in evidence
-resolution. Do not force a descendant back to the parent for visual uniformity.
+descendants, formal delivery must stop. Resolve the conflict with same-level
+evidence, an approved residual leaf, or an explicit blocked/recluster outcome;
+do not force a descendant back to the parent merely for visual uniformity.
 If the final identity is a neutral bridge admitted from weak literature
 semantics, use `<stable_id>_provisional` in `Celltype_EN`, retain the unsuffixed
 identity internally, and preserve the qualified comparison and state in

@@ -5,7 +5,7 @@ Use the approved stable IDs and parent relationships in `cell-annotation-knowled
 - Species share one ontology and use exact-species Marker panels where available. If no exact panel exists, use documented cross-species transfer with ortholog/program conservation, an explicit evidence-gap statement, and manual validation advice.
 - Select the finest reliable node for `stable_id`; major mode displays the nearest enabled major ancestor, while subcluster mode displays the finest reliable within-parent node.
 - Enable `core_multi_tissue` and tissue modules matching the confirmed tissue.
-- Allow different branches to stop at different depths. Require consistency only among siblings under the same parent.
+- Allow different independent branches to stop at different depths. Never co-display an ontology ancestor with its descendant in one final subcluster mapping; require same-level evidence, an approved residual leaf, or a blocked/recluster outcome.
 - Allow repeated standard IDs. Never add top-marker prefixes solely for uniqueness.
 - Store identity, state, disease role, developmental stage, and tissue specialization separately.
 - B lineage hierarchy is fixed as `Developing_B > Pro_B/Pre_B/Immature_B/Transitional_B`, `Mature_B > Naive_B/Memory_B/GC_B`, and `Antibody_secreting_B > Plasmablast/Plasma_cell`, all below `B_cell`.
