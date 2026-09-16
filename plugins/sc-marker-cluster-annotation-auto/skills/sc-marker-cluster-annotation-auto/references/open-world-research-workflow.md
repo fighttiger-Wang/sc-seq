@@ -115,6 +115,17 @@ identity. External candidates still require at least two current-case markers
 present in the evidence, two independent sources, and explicit sibling
 exclusions. Literature or UMAP alone cannot create the label.
 
+When research proposes an identity different from the current case's
+pre-research identity, the resolution must additionally contain
+`current_case_competitor_comparison`. It records `candidate_label`, the prior
+identity in `competing_labels`, at least two verified
+`candidate_support_markers`, concrete `competitor_exclusion_evidence`, and
+`resolution=candidate_program_dominant`. This is a qualitative program
+comparison, not a score. A registered research candidate must itself have a
+passing current-case candidate-program gate. The rule permits a genuinely
+better external candidate, but rejects a source-only relabeling of an already
+supported current-case program.
+
 ## Claim-to-source semantic alignment
 
 Every source and resolution must record `claim_level`, `source_wording`,

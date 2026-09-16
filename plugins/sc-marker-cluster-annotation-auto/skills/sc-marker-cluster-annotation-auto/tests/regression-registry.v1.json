@@ -40,7 +40,7 @@
       "group": "blind_test_integrity",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_blind_test_contract.py",
       "work_subdir": "blind_test_contract",
-      "expected_assertions": 11,
+      "expected_assertions": 14,
       "protects": [
         "blind manifest excludes project priors and cluster-specific constraints",
         "model-facing digest does not leak deterministic core or arbitration final choices",
@@ -80,7 +80,7 @@
       "group": "research_trigger_and_external_candidate_admission",
       "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_open_world_research.py",
       "work_subdir": "open_world_research",
-      "expected_assertions": 36,
+      "expected_assertions": 38,
       "protects": [
         "calibration and knowledge-gap triggers block silent fallback binding",
         "research requests have stable hashes across reruns",
@@ -91,6 +91,18 @@
         "mixed source claim levels are reduced to their conservative common evidence level",
         "lineage identities require current-case lineage evidence rather than aggregate expression alone",
         "formal records and UMAP audits bind to the validated research artifact"
+      ]
+    },
+    {
+      "id": "specialized_subtype_candidates",
+      "group": "conditional_specialization_without_identity_promotion",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_specialized_subtype_candidates.py",
+      "work_subdir": "specialized_subtype_candidates",
+      "expected_assertions": 6,
+      "protects": [
+        "a complete base identity is required before specialization review",
+        "a specialization remains a conditional lower-level subtype rather than replacing identity",
+        "the regression uses abstract synthetic programs and contains no dataset-specific cluster rule"
       ]
     },
     {

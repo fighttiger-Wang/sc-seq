@@ -27,6 +27,9 @@ def main():
         "recommended_action": "retain candidate_a",
         "decision_rationale": "candidate_a was selected",
         "identity_arbitration": [{"resolution": "left_dominant", "selected_candidate": "candidate_a"}],
+        "lower_level_subtype": "candidate_a_specialization",
+        "specialized_subtype_candidates": [{"label": "candidate_a_specialization"}],
+        "specialization_review_status": "conditional",
         "candidate_program_audits": [
             {"label": "candidate_a", "program_gate": "pass"},
             {"label": "candidate_b", "program_gate": "fail"},
@@ -71,14 +74,15 @@ def main():
     assert digest["blind_test"] is True
     for cluster, item in digest["cluster_profiles"].items():
         qualitative = item["qualitative_evidence"]
-        for key in ("stable_id", "suggested_identity", "primary_program", "primary_major_label", "decision_rationale", "recommended_action"):
+        for key in ("stable_id", "suggested_identity", "primary_program", "primary_major_label", "decision_rationale", "recommended_action", "lower_level_subtype", "specialization_review_status"):
             assert qualitative.get(key, "") == "", f"blind digest leaked {key} for cluster {cluster}"
         assert qualitative.get("identity_arbitration", "") == "", f"blind digest leaked identity arbitration for cluster {cluster}"
+        assert qualitative.get("specialized_subtype_candidates", "") == "", f"blind digest leaked specialization for cluster {cluster}"
         assert qualitative["candidate_program_audits"], f"candidate alternatives missing for cluster {cluster}"
         assert qualitative["supporting_markers"] == decision["supporting_markers"]
 
     assert evidence["qualitative_annotation_evidence"]["0"]["stable_id"] == "candidate_a"
-    print(json.dumps({"status": "pass", "checks": 11}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 14}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

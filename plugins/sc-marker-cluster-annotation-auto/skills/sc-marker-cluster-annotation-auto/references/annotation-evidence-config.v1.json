@@ -1600,5 +1600,31 @@
         "BIRC5"
       ]
     }
+  },
+  "specialization_panels": {
+    "Tip_endothelial": {
+      "allowed_primary_labels": [
+        "Capillary_endothelial"
+      ],
+      "markers": [
+        "ESM1",
+        "ANGPT2",
+        "PGF",
+        "APLNR",
+        "KDR",
+        "PLVAP"
+      ],
+      "required_any": [
+        "ESM1",
+        "ANGPT2",
+        "PGF",
+        "APLNR"
+      ],
+      "minimum_markers": 2,
+      "minimum_strong_markers": 1,
+      "evidence_ids": [
+        "SRC_ENDO"
+      ]
+    }
   }
 }

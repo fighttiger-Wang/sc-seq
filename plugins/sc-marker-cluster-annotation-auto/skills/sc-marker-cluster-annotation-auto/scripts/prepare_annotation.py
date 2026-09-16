@@ -184,6 +184,7 @@ def _blind_qualitative_view(decision):
         "stable_id", "suggested_identity", "primary_program", "identity_arbitration",
         "primary_major_label", "biological_precedence_trace",
         "recommended_action", "decision_rationale",
+        "lower_level_subtype", "specialized_subtype_candidates", "specialization_review_status",
     }
     return {
         key: ([] if key == "biological_precedence_trace" else "")

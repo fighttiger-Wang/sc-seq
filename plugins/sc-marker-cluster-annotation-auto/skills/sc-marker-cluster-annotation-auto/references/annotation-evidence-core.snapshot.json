@@ -7,13 +7,13 @@
   "files": {
     "annotation_evidence_core.py": "b91699d55918c8ff3aabf3d9ca3307d84b69862a9fcfa4e0a6baceb94aaf7931",
     "annotation_override_policy.py": "db3d688b295727f94a899ea62be6d8509984f375882c14c61eb477b3c1a7c25a",
-    "knowledge_base.py": "7ab61a83f1de82128135937dd049dc4f8ed856a3725224586441da60d34e3063",
-    "qualitative_evidence_core.py": "8bf3c93f0da80eae0f892758ac30e68ab52c972ef7bf0d2e69b8f764a12c1d4c",
+    "knowledge_base.py": "e8ec3f6de7016ed650b62973b3b91b6a4aae590162f195a278996d06f8b4fedb",
+    "qualitative_evidence_core.py": "060f9464c341dd360d3aa09a3a91a604b891753e92b099d9d34093b29911dcf1",
     "qualitative_gate_helpers.py": "2a3b8715a4f7b59e22c3c448cefd0fc0b0cdfb79bfcbe634b2e536f7f2481bde",
     "qualitative_override_policy.py": "b6038ab57c68f12219339c574348cd45118d1b322a74b54b592f9b0601bcf75c",
     "qualitative_annotation_workbook.py": "8b7c8c13415cafaba87bc5d6eb65d22417956a34ab9c411fa13688d6b145ec09",
     "qualitative_umap_resolution.py": "f564b1bb6707be930d1c5eebc3de5b2baf4e0d7e00a48cb25f1112037ff902ae",
-    "annotation-evidence-config.v1.json": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
+    "annotation-evidence-config.v1.json": "32ff8394b6878d7790ef3199dc95065322caf9013cef05141e9ceb386e0fcd07",
     "evidence-scoring-policy.md": "294988da426da1491270a4a8e6890c5ff2eda9252a0075fd54d7e3cab4eb4b1c",
     "knowledge-base/cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
     "knowledge-base/legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
@@ -25,8 +25,18 @@
   "plugin_overrides": {
     "qualitative_evidence_core.py": {
       "base_sha256": "70bd3fe97c89cfbb3594781ae9838f716df6a85378dca0671be7947b73d4213e",
-      "sha256": "8bf3c93f0da80eae0f892758ac30e68ab52c972ef7bf0d2e69b8f764a12c1d4c",
-      "reason": "Require an applicable assessed identity program before overriding panel gates; independent subcluster fix."
+      "sha256": "060f9464c341dd360d3aa09a3a91a604b891753e92b099d9d34093b29911dcf1",
+      "reason": "Keep the independently released applicable-identity safeguard and conditional specialization candidates isolated to this subcluster skill."
+    },
+    "knowledge_base.py": {
+      "base_sha256": "7ab61a83f1de82128135937dd049dc4f8ed856a3725224586441da60d34e3063",
+      "sha256": "e8ec3f6de7016ed650b62973b3b91b6a4aae590162f195a278996d06f8b4fedb",
+      "reason": "Prefer the package-bound knowledge base to prevent environment-path version mixing in this independent skill."
+    },
+    "annotation-evidence-config.v1.json": {
+      "base_sha256": "ab81aad21b4cf764dfb976c96230b4a5f93f79532cc5ac7501bf3047f48fd291",
+      "sha256": "32ff8394b6878d7790ef3199dc95065322caf9013cef05141e9ceb386e0fcd07",
+      "reason": "Add the conditional endothelial tip specialization panel without changing the shared core or another annotation skill."
     },
     "qualitative_annotation_workbook.py": {
       "base_sha256": "c5e003659d7f1966fb8f0368b4a4fa728df36b681a1c7feb1cd7a86db14cb3cb",

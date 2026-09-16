@@ -16,6 +16,13 @@ REGISTRY = Path(__file__).with_name("regression-registry.v1.json")
 
 def run_suite(suite, work_root):
     script = MARKETPLACE / suite["script"]
+    if not script.is_file():
+        # The registry is source-root relative. Installed plugin caches omit
+        # that `plugins/<id>` path, so resolve a suite that belongs to this
+        # skill against the local package without borrowing another checkout.
+        local_script = SKILL / "tests" / Path(suite["script"]).name
+        if local_script.is_file():
+            script = local_script
     work_dir = work_root / suite["work_subdir"]
     work_dir.mkdir(parents=True, exist_ok=True)
     completed = subprocess.run(

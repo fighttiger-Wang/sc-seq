@@ -128,6 +128,13 @@ def main():
         "identity_derivation": "source_exact_identity",
         "lineage_requirement": "not_required", "native_or_disease_induced": "context_dependent",
         "current_case_support_markers": ["COL1A1", "ACTA2"],
+        "current_case_competitor_comparison": {
+            "candidate_label": "Myofibroblast",
+            "competing_labels": ["Fibroblast"],
+            "candidate_support_markers": ["COL1A1", "ACTA2"],
+            "competitor_exclusion_evidence": ["Fibroblast-only program is not complete in the current case"],
+            "resolution": "candidate_program_dominant",
+        },
         "exclusions": ["mature SMC and pericyte programs reviewed"],
         "adoption_or_rejection_rationale": "Current case retains fibroblast and contractile programs.",
         "sources": [source_a, source_b],
@@ -173,6 +180,17 @@ def main():
     expect_failure(
         lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", wrong_basis_path),
         "validated_external_candidate",
+    )
+
+    source_only = copy.deepcopy(resolution)
+    source_only.pop("current_case_competitor_comparison")
+    source_only_path = work / "source-only-override.json"
+    source_only_path.write_text(json.dumps({
+        "request_sha256": requests["request_sha256"], "resolutions": {"0": source_only}
+    }), encoding="utf-8")
+    expect_failure(
+        lambda: apply_research_stage(copy.deepcopy(evidence), policy, state, "0.6.10-test", source_only_path),
+        "current_case_competitor_comparison",
     )
 
     legacy = copy.deepcopy(resolution)
@@ -253,6 +271,10 @@ def main():
         "native_or_disease_induced": "disease_induced",
         "sources": [like_a, state_source],
     }
+    mixed_claim["current_case_competitor_comparison"] = {
+        **mixed_claim["current_case_competitor_comparison"],
+        "candidate_label": "Osteochondrogenic_stromal_cell",
+    }
     mixed_claim_path = work / "mixed-claim.json"
     mixed_claim_path.write_text(json.dumps({
         "request_sha256": requests["request_sha256"], "resolutions": {"0": mixed_claim}
@@ -323,6 +345,7 @@ def main():
     decision = resolved["qualitative_annotation_evidence"]["0"]
     assert normalized["research_artifact_sha256"] == decision["research_artifact_sha256"]
     assert decision["research_selected_identity"] == "Myofibroblast"
+    assert decision["research_current_case_override_audit"]["prior_identity"] == "Fibroblast"
     assert decision["formal_identity_binding_allowed"] is True
     assert external[0]["candidate_label"] == "Myofibroblast"
     records = [{
@@ -342,7 +365,7 @@ def main():
     assert json.loads(state.read_text(encoding="utf-8"))["completed_uses"]
     assert complete_calibration_use(resolved)["updated"] is False
 
-    print(json.dumps({"status": "pass", "checks": 36}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 38}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -129,7 +129,7 @@ def main():
     manifest = isolated / "references" / "annotation-evidence-core.snapshot.json"
     original_manifest = manifest.read_bytes()
     data = json.loads(original_manifest)
-    data["plugin_overrides"]["qualitative_evidence_core.py"]["base_sha256"] = "0" * 64
+    data["plugin_overrides"]["qualitative_annotation_workbook.py"]["base_sha256"] = "0" * 64
     manifest.write_text(json.dumps(data), encoding="utf-8")
     try:
         sync.synchronize(check=True, skill_ids=[SKILL.name])
