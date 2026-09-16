@@ -70,6 +70,7 @@ python scripts/setup.py publish --one-step --workspace-root <approved-workspace>
 python scripts/setup.py publish --confirm-publish --create-pr  # only for an explicitly limited PR-only request
 python scripts/setup.py audit
 python scripts/setup.py repair
+python scripts/setup.py sync-antigravity
 ```
 
 Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `python` is unavailable. On macOS, prefer `python3`. Pass `--codex-cli <full-path>` when `codex` is not in `PATH`.
@@ -80,12 +81,13 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 - `preflight`: run once per task before first using or editing another `workspace-local` Skill. Fetch the stable ref and compare commits. Do nothing when current; fast-forward and reinstall affected plugins when behind; stop on dirty, detached, unexpected, ahead, or divergent state. If plugins changed, require a Codex restart and new task.
 - `publish`: reject mixed staged/unstaged paths, stale or quarantined source roots, active legacy metadata, and any candidate semantic version that does not advance the remote stable manifest.
 - `publish`: first run without confirmation to report changed paths, affected plugins, proposed semantic patch versions, unregistered new-plugin directories, tests, and the default one-review authorization scope. A new plugin must first be registered by `skill-writing` in `skill-pack.json` and both marketplace manifests. By default, ask once for explicit authorization covering the complete one-step publish, merge, verification, installation, restart, and new-task sequence; do not split this into separate questions. Never push directly to `main`.
-- `publish --one-step`: use after that single combined authorization. It sets the complete publish/merge controls, creates or reuses the PR, waits for every observed GitHub check/status to succeed, requires the PR to be open, non-draft, and cleanly mergeable, merges with the exact head SHA, verifies stable `main`, refreshes the complete local callable cache from verified stable content, and reports the required restart/new-task gate without asking again. A clean stable registered source may be fast-forwarded and retained. A dirty, divergent, detached, development, or non-Git registered source must never be restored as the runtime registration; preserve it as a work copy and register a persistent clean stable clone instead. Use the narrower flags only when the user explicitly limits the requested scope.
+- `publish --one-step`: use after that single combined authorization. It sets the complete publish/merge controls, creates or reuses the PR, waits for every observed GitHub check/status to succeed, requires the PR to be open, non-draft, and cleanly mergeable, merges with the exact head SHA, verifies stable `main`, refreshes the complete local callable cache from verified stable content, automatically synchronizes Antigravity active skill directory (~/.gemini/config/skills) and Desktop portable packages, and reports the required restart/new-task gate without asking again. A clean stable registered source may be fast-forwarded and retained. A dirty, divergent, detached, development, or non-Git registered source must never be restored as the runtime registration; preserve it as a work copy and register a persistent clean stable clone instead. Use the narrower flags only when the user explicitly limits the requested scope.
 - `audit`: read-only source/config/install diagnosis; no fetch, pull, registration, or writes.
 - `audit`: also report the release version, Git commit, content hash, source/cache classification, and whether the installed callable entry exactly matches the remote stable release. Never repair by choosing the newest-looking local copy.
 - `install`: install an existing verified checkout, or clone to an exact approved destination. It does not add managed workspace guidance.
 - `update`: legacy explicit full update; require a clean worktree, use `git pull --ff-only`, then validate and reinstall all plugins. Prefer `preflight` for routine use.
 - `repair`: do not fetch or pull. Validate and reinstall the exact local versions.
+- `sync-antigravity`: synchronize all marketplace skills into Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`) and Desktop portable packages with Chinese workflow names and dual-platform frontmatter metadata.
 - relocation is an explicit install/update option, not an automatic recovery path.
 
 ## GitHub transport and merge closeout

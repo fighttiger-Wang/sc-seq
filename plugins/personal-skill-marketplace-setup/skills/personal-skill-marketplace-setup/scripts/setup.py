@@ -19,6 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import zipfile
 from pathlib import Path
 
 
@@ -1327,6 +1328,189 @@ def prepare_persistent_stable_root(
     return {"status": "created", "path": str(destination), "stableCommit": local}
 
 
+ANTIGRAVITY_SKILLS_MAP: dict[str, tuple[int, str]] = {
+    "single-cell-qc-extract": (1, "01-单细胞质控提取"),
+    "single-cell-qc-image-display": (2, "02-图片展示单细胞质控数据"),
+    "sc-major-celltype-annotation-auto": (3, "03-单细胞大类注释-主要谱系"),
+    "sc-marker-cluster-annotation-auto": (4, "04-单细胞亚群注释-精细分型"),
+    "feature-gene-heatmap-violin": (5, "05-特征基因热图及选定基因小提琴图"),
+    "kegg-flow-bubble-plot": (6, "06-KEGG流泡图"),
+    "workflow-script-structure": (7, "07-流程脚本结构"),
+    "workbench": (8, "08-工作台"),
+    "task-handoff": (9, "09-任务交接"),
+    "skill-writing": (10, "10-skill写作"),
+    "bioinformatics-results-report": (11, "11-生信结果智能解读报告"),
+    "annotation-knowledge-release": (12, "12-注释知识库发布"),
+    "personal-skill-marketplace-setup": (13, "13-共享Skill下载安装"),
+    "bioinformatics-results-report-classic": (14, "14-生信结果智能解读报告-经典文档版"),
+    "celltype-function-heatmap": (15, "15-细胞类型功能基因热图"),
+    "scientific-diagram-016": (16, "16-科研流程图与概念图"),
+}
+
+
+def zip_directory(folder_path: Path, output_zip: Path, exclude_patterns: tuple[str, ...] = ("__pycache__", ".git")) -> None:
+    if output_zip.is_file():
+        output_zip.unlink()
+    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
+        for root_dir, _, files in os.walk(folder_path):
+            if any(pat in root_dir for pat in exclude_patterns):
+                continue
+            for file in files:
+                if file.endswith(".pyc"):
+                    continue
+                file_path = Path(root_dir) / file
+                arcname = file_path.relative_to(folder_path)
+                zipf.write(file_path, arcname)
+
+
+def synchronize_antigravity_environment(
+    marketplace_root: Path,
+    workspace_root: Path | None = None,
+    dry_run: bool = False,
+) -> dict:
+    antigravity_home = Path(
+        os.environ.get("ANTIGRAVITY_HOME")
+        or os.environ.get("GEMINI_HOME")
+        or (Path.home() / ".gemini")
+    )
+    target_skills_dir = antigravity_home / "config" / "skills"
+    target_plugins_skills_dir = antigravity_home / "config" / "plugins" / "personal-bio-skills" / "skills"
+    shared_target_dir = antigravity_home / "config" / "shared"
+
+    synced_skills: list[str] = []
+    if target_skills_dir.is_dir() or antigravity_home.is_dir():
+        if not dry_run:
+            target_skills_dir.mkdir(parents=True, exist_ok=True)
+            shared_source = marketplace_root / "shared"
+            if shared_source.is_dir():
+                if shared_target_dir.exists():
+                    shutil.rmtree(shared_target_dir)
+                shutil.copytree(shared_source, shared_target_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+
+        for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
+            src_plugin_dir = marketplace_root / "plugins" / plugin_id
+            src_skill_dir = src_plugin_dir / "skills" / plugin_id
+            if not src_skill_dir.is_dir():
+                continue
+            dest_skill_dir = target_skills_dir / chinese_cmd_name
+            if not dry_run:
+                if dest_skill_dir.exists():
+                    shutil.rmtree(dest_skill_dir)
+                shutil.copytree(src_skill_dir, dest_skill_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+
+                pj_file = src_plugin_dir / ".codex-plugin" / "plugin.json"
+                display_name = f"{order:02d} · {chinese_cmd_name[3:]}"
+                short_desc = ""
+                if pj_file.is_file():
+                    try:
+                        pj_data = load_json(pj_file)
+                        display_name = pj_data.get("interface", {}).get("displayName", display_name)
+                        short_desc = pj_data.get("interface", {}).get("shortDescription", "")
+                    except Exception:
+                        pass
+
+                skill_md_file = dest_skill_dir / "SKILL.md"
+                if skill_md_file.is_file():
+                    content = skill_md_file.read_text(encoding="utf-8")
+                    desc_start = content.find("description:")
+                    if desc_start != -1:
+                        end_frontmatter = content.find("---", desc_start)
+                        existing_desc = content[desc_start + len("description:"):end_frontmatter].strip()
+                        if existing_desc.startswith(">-") or existing_desc.startswith("|"):
+                            existing_desc = existing_desc[2:].strip()
+                        if existing_desc.startswith('"') and existing_desc.endswith('"'):
+                            existing_desc = existing_desc[1:-1]
+                    else:
+                        existing_desc = ""
+
+                    combined_desc = f"{display_name}：{short_desc} {existing_desc}".strip() if short_desc else f"{display_name}。{existing_desc}".strip()
+                    body_start = content.find("---", 3)
+                    body = content[body_start + 3:].strip() if body_start != -1 else content
+                    if body.startswith("# "):
+                        first_line_end = body.find("\n")
+                        body = f"# {display_name}\n" + (body[first_line_end + 1:] if first_line_end != -1 else "")
+                    else:
+                        body = f"# {display_name}\n\n" + body
+
+                    if "annotation-universal-contract.md" in body:
+                        ref_dir = dest_skill_dir / "references"
+                        ref_dir.mkdir(parents=True, exist_ok=True)
+                        contract_file = shared_target_dir / "annotation-universal-contract.md"
+                        if contract_file.exists():
+                            shutil.copy2(contract_file, ref_dir / "annotation-universal-contract.md")
+                        body = body.replace("../../../../shared/annotation-universal-contract.md", "references/annotation-universal-contract.md")
+
+                    new_content = f"---\nname: {chinese_cmd_name}\ndisplayName: {display_name}\ndescription: {combined_desc}\n---\n\n{body}\n"
+                    skill_md_file.write_text(new_content, encoding="utf-8")
+
+            synced_skills.append(chinese_cmd_name)
+
+        if not dry_run and target_skills_dir.is_dir():
+            if target_plugins_skills_dir.exists():
+                shutil.rmtree(target_plugins_skills_dir)
+            target_plugins_skills_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(target_skills_dir, target_plugins_skills_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+
+            skills_json_file = antigravity_home / "config" / "skills.json"
+            skills_json_data = {"entries": [{"path": target_skills_dir.as_posix()}]}
+            skills_json_file.write_text(json.dumps(skills_json_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    desktop_sync = None
+    desktop_dir = Path("E:/Desktop/检索调用文件/skill")
+    if desktop_dir.is_dir():
+        desktop_sync = {"status": "synchronized", "path": str(desktop_dir)}
+        if not dry_run:
+            for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
+                src_plugin = marketplace_root / "plugins" / plugin_id
+                if not src_plugin.is_dir():
+                    continue
+                standalone_dir = desktop_dir / f"{order:02d}-{plugin_id}"
+                if standalone_dir.is_dir():
+                    shutil.rmtree(standalone_dir)
+                    shutil.copytree(src_plugin, standalone_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+                    zip_directory(standalone_dir, desktop_dir / f"{order:02d}-{plugin_id}.zip")
+
+            mp_dir = desktop_dir / "personal-codex-skills-marketplace-16"
+            if mp_dir.is_dir():
+                for plugin_id in ANTIGRAVITY_SKILLS_MAP.keys():
+                    src_plugin = marketplace_root / "plugins" / plugin_id
+                    dst_plugin = mp_dir / "plugins" / plugin_id
+                    if src_plugin.is_dir() and dst_plugin.is_dir():
+                        shutil.rmtree(dst_plugin)
+                        shutil.copytree(src_plugin, dst_plugin, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+                if (marketplace_root / "skill-pack.json").is_file():
+                    shutil.copy2(marketplace_root / "skill-pack.json", mp_dir / "skill-pack.json")
+                zip_directory(mp_dir, desktop_dir / f"{mp_dir.name}.zip")
+
+            manifest_file = desktop_dir / "EXPORT-MANIFEST.json"
+            if manifest_file.is_file():
+                try:
+                    m_data = load_json(manifest_file)
+                    for sk in m_data.get("skills", []):
+                        sk_id = sk.get("id")
+                        pj_f = marketplace_root / "plugins" / sk_id / ".codex-plugin" / "plugin.json"
+                        if pj_f.is_file():
+                            pj_d = load_json(pj_f)
+                            v = pj_d.get("version", sk.get("version"))
+                            sk["version"] = v
+                            sk["sourcePackage"] = v
+                            sk["displayName"] = pj_d.get("interface", {}).get("displayName", sk.get("displayName"))
+                            z_path = desktop_dir / f"{sk.get('order', 0):02d}-{sk_id}.zip"
+                            if z_path.is_file():
+                                sk["contentSha256"] = sha256_file(z_path)
+                    manifest_file.write_text(json.dumps(m_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                except Exception:
+                    pass
+
+    return {
+        "status": "dry-run" if dry_run else ("synchronized" if synced_skills else "antigravity-not-found"),
+        "antigravityHome": str(antigravity_home),
+        "syncedSkillsCount": len(synced_skills),
+        "syncedSkills": synced_skills,
+        "desktopSync": desktop_sync,
+    }
+
+
 def refresh_from_verified_stable(
     args,
     root: Path,
@@ -1405,6 +1589,11 @@ def refresh_from_verified_stable(
         finally:
             if finalized and not retain_stable_root:
                 run([git, "worktree", "remove", str(stable_root)], cwd=root)
+    antigravity_sync = synchronize_antigravity_environment(
+        marketplace_root=final_registration_root,
+        workspace_root=workspace,
+        dry_run=False,
+    )
     return {
         "status": "installed-and-verified",
         "stableCommit": stable_commit,
@@ -1412,6 +1601,7 @@ def refresh_from_verified_stable(
         "retainedPersistentStableRoot": retain_stable_root,
         "persistentStableRoot": persistent,
         "registeredSourceSync": registered_source_sync,
+        "antigravitySync": antigravity_sync,
         "cacheVerified": True,
         "installationVerification": installation,
         "workspaceRoot": str(workspace),
@@ -1649,7 +1839,7 @@ def main() -> None:
     if sys.version_info < MINIMUM_PYTHON:
         raise RuntimeError("Python 3.10 or newer is required")
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("audit", "bootstrap", "install", "preflight", "publish", "update", "repair"))
+    parser.add_argument("mode", choices=("audit", "bootstrap", "install", "preflight", "publish", "update", "repair", "sync-antigravity"))
     parser.add_argument("--marketplace-root", type=Path)
     parser.add_argument("--destination", type=Path)
     parser.add_argument("--workspace-root", type=Path)
@@ -1731,6 +1921,15 @@ def main() -> None:
         print(json.dumps(publish_changes(args, root, codex_home), ensure_ascii=False, indent=2))
         return
 
+    if args.mode == "sync-antigravity":
+        sync_result = synchronize_antigravity_environment(
+            marketplace_root=root,
+            workspace_root=args.workspace_root,
+            dry_run=args.dry_run,
+        )
+        print(json.dumps({"syncAntigravity": sync_result}, ensure_ascii=False, indent=2))
+        return
+
     if args.mode == "bootstrap" and not args.workspace_root:
         raise ValueError("Bootstrap requires an explicit, user-approved --workspace-root")
 
@@ -1795,6 +1994,7 @@ def main() -> None:
 
     managed_guidance = None
     bootstrap_copy = None
+    antigravity_sync = None
     if args.mode == "audit":
         run_doctor(root, args.dry_run)
     else:
@@ -1802,6 +2002,12 @@ def main() -> None:
             raise FileNotFoundError("Codex CLI was not found. Add codex to PATH or pass --codex-cli with its full path.")
         run_doctor(root, args.dry_run)
         run_installer(args, root, codex_home, workspace_root, codex_cli)
+        if args.mode in {"install", "repair"} and not args.dry_run:
+            antigravity_sync = synchronize_antigravity_environment(
+                marketplace_root=root,
+                workspace_root=workspace_root,
+                dry_run=args.dry_run,
+            )
         if args.mode == "bootstrap" and not args.skip_managed_guidance:
             managed_guidance = install_managed_guidance(workspace_root, args.dry_run)
         if args.mode == "bootstrap" and args.disable_bootstrap_copy:
@@ -1825,6 +2031,7 @@ def main() -> None:
         "pluginCount": len(pack.get("plugins", [])),
         "git": facts_after,
         "installation": installation,
+        "antigravitySync": antigravity_sync,
         "managedGuidance": managed_guidance,
         "bootstrapCopy": bootstrap_copy,
         "restartRequired": args.mode != "audit" and not args.dry_run,

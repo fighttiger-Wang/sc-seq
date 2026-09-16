@@ -11,6 +11,33 @@ Build user-facing callable skills as plugins in the shared local marketplace, no
 
 Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode once for the task. If it installs an update, stop and ask the user to restart Codex and open a new task before continuing. Never edit an installed plugin cache as source.
 
+## Dual-Platform Architecture and Antigravity Parity
+
+Our skills operate under an integrated **Dual-Platform Architecture**:
+1. **Codex Platform**: Registered as marketplace plugins in `<shared-marketplace-root>/plugins/<id>`, declared in `skill-pack.json`, installed into `~/.codex/plugins/cache/workspace-local/<id>/<version>`.
+2. **Antigravity Platform**: Registered as slash-callable skills in `~/.gemini/config/skills/<NN-中文名>` (mirrored in `~/.gemini/config/plugins/personal-bio-skills/skills/<NN-中文名>`), configured via `~/.gemini/config/skills.json`.
+3. **Desktop Portable Archive**: Maintained in `E:\Desktop\检索调用文件\skill` containing standalone directories, ZIP archives, and `EXPORT-MANIFEST.json`.
+
+### Antigravity Naming and Frontmatter Standard
+For Antigravity, skills are called by their Chinese workflow name (e.g. `/04-单细胞亚群注释-精细分型`, `/10-skill写作`, `/13-共享Skill下载安装`). The directory and `SKILL.md` must follow:
+- **Folder name**: `NN-中文名` (e.g. `04-单细胞亚群注释-精细分型`, `10-skill写作`, `13-共享Skill下载安装`).
+- **SKILL.md Frontmatter**:
+  ```yaml
+  ---
+  name: NN-中文名
+  displayName: NN · 中文名 vX.Y.Z
+  description: NN · 中文名 vX.Y.Z：<shortDescription> <existing_description>
+  ---
+
+  # NN · 中文名 vX.Y.Z
+  ```
+- **Top Heading**: `# NN · 中文名 vX.Y.Z` matching the `displayName`.
+
+### Dual-Platform Parity & Anti-Regression Rule
+- **Single Source of Truth**: The Git checkout of the shared marketplace is the sole authoritative implementation.
+- **Synchronous Delivery**: When any Skill is modified, tested, and published via `personal-skill-marketplace-setup`, the release pipeline automatically updates both Codex (`workspace-local` cache) and Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`), ensuring zero lag or version discrepancy between platforms.
+- **Never Single-Sided Patch**: Never patch `~/.gemini/config/skills` without updating the authoritative Git repository and pushing through the validated release pipeline.
+
 ## Existing-rule baseline and anti-regression gate
 
 When modifying an existing Skill or any of its shared evidence, policy, schema,
