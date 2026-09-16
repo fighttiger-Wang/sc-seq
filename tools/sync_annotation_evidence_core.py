@@ -38,6 +38,39 @@ FILES = {
 }
 
 
+def declared_plugin_additions(existing: dict) -> dict:
+    """Validate explicitly declared, per-plugin runtime snapshots.
+
+    A consuming plugin may need a small additional runtime file without
+    changing the shared payload or another independent annotation plugin.  The
+    addition must remain a hash-bound copy of a file from the canonical core.
+    """
+    additions = existing.get("plugin_additions", {})
+    if not isinstance(additions, dict):
+        raise RuntimeError("plugin_additions must be an object")
+    normalized = {}
+    for source_name, item in additions.items():
+        if source_name in FILES or not isinstance(item, dict):
+            raise RuntimeError(f"Invalid plugin snapshot addition: {source_name}")
+        folder = str(item.get("folder", "")).strip()
+        filename = str(item.get("filename", "")).strip()
+        if not source_name or not folder or not filename or not item.get("reason"):
+            raise RuntimeError(f"Invalid plugin snapshot addition: {source_name}")
+        source = SHARED / source_name
+        destination = Path(folder) / filename
+        if Path(source_name).is_absolute() or destination.is_absolute() or ".." in Path(source_name).parts or ".." in destination.parts:
+            raise RuntimeError(f"Unsafe plugin snapshot addition: {source_name}")
+        if not source.is_file() or item.get("sha256") != sha256(source):
+            raise RuntimeError(f"Plugin snapshot addition is stale or missing: {source_name}")
+        normalized[source_name] = {
+            "folder": folder,
+            "filename": filename,
+            "sha256": item["sha256"],
+            "reason": str(item["reason"]),
+        }
+    return normalized
+
+
 def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -99,6 +132,7 @@ def synchronize(check: bool = False, skill_ids=None) -> list[dict]:
         manifest_path = target / "references" / "annotation-evidence-core.snapshot.json"
         existing = load_json(manifest_path) if manifest_path.is_file() else {}
         overrides = existing.get("plugin_overrides", {})
+        additions = declared_plugin_additions(existing)
         target_manifest = {**expected_manifest, "files": dict(shared_hashes)}
         if overrides:
             # An independently released plugin can retain an explicitly hashed
@@ -113,6 +147,8 @@ def synchronize(check: bool = False, skill_ids=None) -> list[dict]:
                     raise RuntimeError(f"Plugin override hash mismatch: {target}: {name}")
                 target_manifest["files"][name] = override["sha256"]
             target_manifest["plugin_overrides"] = overrides
+        if additions:
+            target_manifest["plugin_additions"] = additions
         for source_name, (folder, destination_name) in FILES.items():
             source = SHARED / source_name
             destination = target / folder / destination_name
@@ -123,6 +159,14 @@ def synchronize(check: bool = False, skill_ids=None) -> list[dict]:
                 raise FileNotFoundError(f"Vendored snapshot missing: {destination}")
             if sha256(destination) != target_manifest["files"][source_name]:
                 raise RuntimeError(f"Snapshot hash mismatch: {destination}")
+        for source_name, item in additions.items():
+            source = SHARED / source_name
+            destination = target / item["folder"] / item["filename"]
+            if not check:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, destination)
+            if not destination.is_file() or sha256(destination) != item["sha256"]:
+                raise RuntimeError(f"Plugin snapshot addition hash mismatch: {destination}")
         if check:
             if not manifest_path.is_file():
                 raise FileNotFoundError(f"Snapshot manifest missing: {manifest_path}")

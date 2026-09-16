@@ -1,6 +1,7 @@
 """Regressions for unsupported identity gates and an isolated plugin install."""
 
 import argparse
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -49,6 +50,30 @@ class IdentityGateTests(unittest.TestCase):
 
     def test_coherent_panel_still_passes_without_special_rule(self):
         self.assertEqual(self.evaluate(supported=True)["program_gate"], "通过")
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def bundled_snapshot_is_complete(skill):
+    """Validate package-local snapshot payloads when no source checkout exists."""
+    manifest = json.loads((skill / "references" / "annotation-evidence-core.snapshot.json").read_text(encoding="utf-8"))
+    for source_name, expected in manifest.get("files", {}).items():
+        if source_name.startswith("knowledge-base/"):
+            path = skill / "references" / Path(source_name).name
+        elif source_name.endswith((".json", ".md")):
+            path = skill / "references" / Path(source_name).name
+        else:
+            path = skill / "scripts" / source_name
+        assert path.is_file() and sha256(path) == expected, f"Bundled snapshot mismatch: {path}"
+    for source_name, item in manifest.get("plugin_additions", {}).items():
+        path = skill / item["folder"] / item["filename"]
+        assert path.is_file() and sha256(path) == item["sha256"], f"Bundled addition mismatch: {source_name}"
 
 
 def main():
@@ -107,38 +132,42 @@ def main():
     contract = isolated / "references" / "annotation-universal-contract.md"
     assert contract.is_file(), "Installed plugin must contain its required contract"
     assert "references/annotation-universal-contract.md" in (isolated / "SKILL.md").read_text(encoding="utf-8")
-    marketplace = SKILL.parents[3]
-    spec = importlib.util.spec_from_file_location("snapshot_sync", marketplace / "tools" / "sync_annotation_evidence_core.py")
-    sync = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(sync)
-    sync.synchronize(check=True, skill_ids=[SKILL.name])
-    # A copied install must reject changed payloads and stale shared bases.
-    sync.TARGETS = (isolated,)
-    sync.synchronize(check=True, skill_ids=[SKILL.name])
-    payload = isolated / "scripts" / "qualitative_evidence_core.py"
-    original = payload.read_bytes()
-    payload.write_bytes(original + b"\n# tampered\n")
-    try:
+    marketplace = next((parent for parent in SKILL.parents if (parent / "skill-pack.json").is_file()), None)
+    if marketplace:
+        spec = importlib.util.spec_from_file_location("snapshot_sync", marketplace / "tools" / "sync_annotation_evidence_core.py")
+        sync = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sync)
         sync.synchronize(check=True, skill_ids=[SKILL.name])
-    except RuntimeError as exc:
-        assert "override hash mismatch" in str(exc)
-    else:
-        raise AssertionError("Tampered override accepted")
-    finally:
-        payload.write_bytes(original)
-    manifest = isolated / "references" / "annotation-evidence-core.snapshot.json"
-    original_manifest = manifest.read_bytes()
-    data = json.loads(original_manifest)
-    data["plugin_overrides"]["qualitative_annotation_workbook.py"]["base_sha256"] = "0" * 64
-    manifest.write_text(json.dumps(data), encoding="utf-8")
-    try:
+        # A copied install must reject changed payloads and stale shared bases.
+        sync.TARGETS = (isolated,)
         sync.synchronize(check=True, skill_ids=[SKILL.name])
-    except RuntimeError as exc:
-        assert "Shared base changed" in str(exc)
+        payload = isolated / "scripts" / "qualitative_evidence_core.py"
+        original = payload.read_bytes()
+        payload.write_bytes(original + b"\n# tampered\n")
+        try:
+            sync.synchronize(check=True, skill_ids=[SKILL.name])
+        except RuntimeError as exc:
+            assert "override hash mismatch" in str(exc)
+        else:
+            raise AssertionError("Tampered override accepted")
+        finally:
+            payload.write_bytes(original)
+        manifest = isolated / "references" / "annotation-evidence-core.snapshot.json"
+        original_manifest = manifest.read_bytes()
+        data = json.loads(original_manifest)
+        data["plugin_overrides"]["qualitative_annotation_workbook.py"]["base_sha256"] = "0" * 64
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        try:
+            sync.synchronize(check=True, skill_ids=[SKILL.name])
+        except RuntimeError as exc:
+            assert "Shared base changed" in str(exc)
+        else:
+            raise AssertionError("Stale shared base accepted")
+        finally:
+            manifest.write_bytes(original_manifest)
     else:
-        raise AssertionError("Stale shared base accepted")
-    finally:
-        manifest.write_bytes(original_manifest)
+        bundled_snapshot_is_complete(SKILL)
+        bundled_snapshot_is_complete(isolated)
     print(json.dumps({"status": "pass", "checks": result.testsRun + 10, "work_dir": str(work)}))
 
 

@@ -226,6 +226,26 @@ class Doctor:
                         errors.append(source_name)
                     elif source.suffix.lower() in {".json", ".md", ".py"} and (b"\r\n" in source.read_bytes() or b"\r\n" in destination.read_bytes()):
                         snapshot_newline_errors.append(source_name)
+                additions = snapshot.get("plugin_additions", {})
+                if not isinstance(additions, dict):
+                    errors.append("plugin_additions")
+                else:
+                    for source_name, addition in additions.items():
+                        source = evidence / source_name
+                        folder = str((addition or {}).get("folder", ""))
+                        filename = str((addition or {}).get("filename", ""))
+                        destination = skill / folder / filename
+                        expected_hash = str((addition or {}).get("sha256", ""))
+                        if (
+                            not source.is_file() or not source_name or not folder or not filename
+                            or ".." in Path(source_name).parts or ".." in Path(folder).parts or ".." in Path(filename).parts
+                            or not str((addition or {}).get("reason", "")).strip()
+                            or sha256(source) != expected_hash or not destination.is_file()
+                            or sha256(destination) != expected_hash
+                        ):
+                            errors.append(f"addition:{source_name}")
+                        elif source.suffix.lower() in {".json", ".md", ".py"} and (b"\r\n" in source.read_bytes() or b"\r\n" in destination.read_bytes()):
+                            snapshot_newline_errors.append(f"addition:{source_name}")
                 self.add(f"annotation snapshot files {plugin_id}", not errors, ", ".join(errors))
                 self.add(f"annotation snapshot LF newlines {plugin_id}", not snapshot_newline_errors, ", ".join(snapshot_newline_errors))
         except Exception as exc:

@@ -5,9 +5,9 @@
     {
       "id": "shared_evidence_core",
       "group": "qualitative_identity_program_gates",
-      "script": "shared/sc-annotation-evidence-core/tests/test_evidence_core.py",
+      "script": "plugins/sc-marker-cluster-annotation-auto/skills/sc-marker-cluster-annotation-auto/tests/test_bundled_evidence_core.py",
       "work_subdir": "shared_evidence_core",
-      "expected_assertions": 12,
+      "expected_assertions": 17,
       "protects": [
         "no aggregate identity score, confidence grade, margin, or ranked-candidate output",
         "per-gene expression and detection evidence is retained",

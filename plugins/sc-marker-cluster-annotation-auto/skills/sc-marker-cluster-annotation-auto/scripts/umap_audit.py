@@ -2,6 +2,7 @@
 """Validate structured, all-cluster UMAP topology review records."""
 
 import json
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -9,9 +10,15 @@ from pathlib import Path
 def _load_resolution_module():
     local = Path(__file__).resolve().parent
     if (local / "qualitative_umap_resolution.py").is_file():
-        if str(local) not in sys.path:
-            sys.path.insert(0, str(local))
-        import qualitative_umap_resolution as module
+        sys.modules.pop("qualitative_umap_resolution", None)
+        spec = importlib.util.spec_from_file_location(
+            "qualitative_umap_resolution", local / "qualitative_umap_resolution.py"
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Cannot load bundled qualitative UMAP resolution module")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["qualitative_umap_resolution"] = module
+        spec.loader.exec_module(module)
         return module
     for parent in Path(__file__).resolve().parents:
         shared = parent / "shared" / "sc-annotation-evidence-core"
@@ -28,6 +35,16 @@ _RESOLUTION = _load_resolution_module()
 
 def _load_facts_module():
     local = Path(__file__).resolve().parent
+    bundled = local / "umap_facts.py"
+    if bundled.is_file():
+        sys.modules.pop("umap_facts", None)
+        spec = importlib.util.spec_from_file_location("umap_facts", bundled)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Cannot load bundled UMAP facts module")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["umap_facts"] = module
+        spec.loader.exec_module(module)
+        return module
     for parent in (local, *local.parents):
         shared = parent / "shared" / "sc-annotation-evidence-core"
         if (shared / "umap_facts.py").is_file():
