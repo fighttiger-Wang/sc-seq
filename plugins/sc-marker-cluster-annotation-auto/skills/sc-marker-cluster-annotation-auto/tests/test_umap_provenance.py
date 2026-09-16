@@ -12,11 +12,6 @@ from PIL import Image, ImageDraw
 
 
 ROOT = Path(__file__).resolve()
-for parent in ROOT.parents:
-    shared = parent / "shared" / "sc-annotation-evidence-core"
-    if (shared / "umap_facts.py").is_file():
-        sys.path.insert(0, str(shared))
-        break
 sys.path.insert(0, str(ROOT.parent.parent / "scripts"))
 
 import umap_facts

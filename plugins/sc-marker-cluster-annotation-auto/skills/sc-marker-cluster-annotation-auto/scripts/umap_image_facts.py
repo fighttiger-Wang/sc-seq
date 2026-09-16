@@ -8,6 +8,7 @@ never read by this tool; it only measures colored regions and their geometry.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import math
 import sys
@@ -18,6 +19,16 @@ from PIL import Image
 
 def _load_shared():
     local = Path(__file__).resolve().parent
+    bundled = local / "umap_facts.py"
+    if bundled.is_file():
+        sys.modules.pop("umap_facts", None)
+        spec = importlib.util.spec_from_file_location("umap_facts", bundled)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Cannot load bundled UMAP facts module")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["umap_facts"] = module
+        spec.loader.exec_module(module)
+        return module
     for parent in (local, *local.parents):
         shared = parent / "shared" / "sc-annotation-evidence-core"
         if (shared / "umap_facts.py").is_file():

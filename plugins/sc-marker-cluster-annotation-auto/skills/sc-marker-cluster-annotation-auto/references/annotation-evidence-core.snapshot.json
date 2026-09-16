@@ -48,5 +48,13 @@
       "sha256": "92b6acff37e8ab27ce563343a6cb863368b6a92be2dbd1ea4b2987a30dcfea6f",
       "reason": "Declare the generic formal-delivery action for any registered ontology ancestor-descendant conflict in subcluster mappings."
     }
+  },
+  "plugin_additions": {
+    "umap_facts.py": {
+      "folder": "scripts",
+      "filename": "umap_facts.py",
+      "sha256": "3e1e3c917dc37fecbb991e0d2759843c43e6595647f5f404d56f9522c8d4683f",
+      "reason": "Bundle the image-geometry validation runtime so installed caches do not depend on a marketplace-level shared directory."
+    }
   }
 }

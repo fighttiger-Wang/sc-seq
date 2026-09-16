@@ -49,8 +49,9 @@ def main():
     args = parser.parse_args()
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
-    repo = next(parent for parent in Path(__file__).resolve().parents if (parent / "skill-pack.json").is_file())
-    skill = repo / "plugins" / "sc-marker-cluster-annotation-auto" / "skills" / "sc-marker-cluster-annotation-auto"
+    bundled_skill = Path(__file__).resolve().parents[1]
+    repo = next((parent for parent in Path(__file__).resolve().parents if (parent / "skill-pack.json").is_file()), None)
+    skill = repo / "plugins" / "sc-marker-cluster-annotation-auto" / "skills" / "sc-marker-cluster-annotation-auto" if repo else bundled_skill
     evidence = {
         "clusters": ["3", "0", "1"], "average_shape": [8, 3], "average_reader": "test",
         "confirmed_metadata": {"species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster", "parent_population": "T_NK"},
