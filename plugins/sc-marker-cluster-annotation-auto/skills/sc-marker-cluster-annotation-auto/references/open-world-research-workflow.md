@@ -138,13 +138,20 @@ the same stronger level.
 
 - `identity`: bind the stable identity only when the source-supported label is
   exact and `identity_derivation=source_exact_identity`.
+  **Subcluster Specialization Rule**: For fine subcluster annotation (`annotation_level == "subcluster"`),
+  discrete functional subclusters, activation programs, or microenvironmental phenotypes
+  (e.g., `Mac_LAM`, `Mac_Spp1`, `Mac_ISG`, `Mac_cycling`, `Mac_C1q`, `Mac_resident_Lyve1`,
+  `Tex`, `Treg`, `cDC1`, `cDC2`) established in single-cell literature with distinct marker
+  modules (≥2 core markers) and ≥2 independent sources ARE legitimate subcluster identities.
+  They must be classified as `claim_level=identity` and `identity_derivation=source_exact_identity`,
+  and delivered as `validated_external_candidate` subclusters rather than collapsing into
+  uninformative broad ancestors (e.g. generic `Monocyte_derived_macrophage`).
 - `identity_like`: retain an ASCII `qualified_label` ending in `_like`. It may
   be the plotting identity or a lower-level descriptor, but its stem cannot be
   promoted to an unqualified identity.
-- `state` or `program`: use `neutral_contextual_identity` for the same-level
-  primary label and retain `state_label`, `program_label`, or the qualified
-  comparison separately. This preserves open-world discovery without turning
-  a phenotype into a canonical cell identity.
+- `state` or `program`: for major lineage annotation, use `neutral_contextual_identity`
+  for the primary lineage. However, in subcluster annotation, distinct functional programs
+  with ≥2 markers and ≥2 literature sources must be promoted to `identity` as defined above.
 - `lineage_identity`: require current-case lineage tracing, genetic fate
   mapping, or an orthogonally validated trajectory source. Aggregate expression
   and UMAP proximity are insufficient.

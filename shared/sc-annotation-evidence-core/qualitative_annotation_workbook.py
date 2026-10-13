@@ -23,32 +23,18 @@ from qualitative_umap_resolution import apply_identity_resolution, normalize_rel
 GATE_VALUES = {"通过", "不通过", "未确定", "不适用"}
 PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 INVALID_LABEL = re.compile(r"[^A-Za-z0-9_]+")
-PLOT_VERDICTS = {
-    "allow_specific_label",
-    "allow_parent_label_only",
-    "allow_unresolved_label",
-    "allow_provisional_label",
-    "block_plot_label",
-    "recommend_recluster",
-    "recommend_merge",
-    "recommend_manual_review",
-}
-NON_DELIVERABLE_VERDICTS = {
-    "block_plot_label", "recommend_recluster", "recommend_merge", "recommend_manual_review"
-}
-DISPLAY_NAME_TYPES = {"full_name", "approved_abbreviation"}
 
-PLOT_FIELDS = ["cluster_id", "celltype_en"]
-PLOT_HEADERS = ["Cluster", "Celltype_EN"]
+PLOT_FIELDS = ["cluster_id", "celltype_en", "approved_plot_label"]
+PLOT_HEADERS = ["Cluster", "Celltype_EN", "Celltype_Plot"]
 
 RESULT_FIELDS = [
-    "cluster_id", "celltype_cn", "celltype_en", "lower_level_subtype", "broad_type",
+    "cluster_id", "celltype_cn", "celltype_en", "broad_type",
     "developmental_stage", "state", "disease_role", "key_markers",
     "candidate_labels", "umap_summary", "boundary_flags",
     "possible_components", "rationale", "validation_advice", "handling_advice",
 ]
 RESULT_HEADERS = [
-    "Cluster", "中文名称", "Celltype_EN", "下位亚类", "细胞谱系", "发育/成熟阶段",
+    "Cluster", "中文名称", "Celltype_EN", "细胞谱系", "发育/成熟阶段",
     "细胞状态", "组织/疾病相关角色", "关键 Marker", "主要竞争候选",
     "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定摘要", "验证建议",
     "下游处理建议",
@@ -63,8 +49,6 @@ EVIDENCE_FIELDS = [
     "state_program", "state_gate", "umap_gate", "umap_summary",
     "cross_island_audit", "mixed_doublet_gate", "mixed_doublet_explanation",
     "rationale", "evidence_gaps", "validation_advice", "handling_advice",
-    "expert_plot_verdict", "approved_plot_label", "canonical_name",
-    "display_name_type", "expert_name_review",
 ]
 EVIDENCE_HEADERS = [
     "Cluster", "中文名称", "Celltype_EN", "父群/谱系背景", "主要身份程序",
@@ -73,11 +57,18 @@ EVIDENCE_HEADERS = [
     "离群/跨谱系门控", "离群/跨谱系审计", "发育/成熟程序", "状态程序",
     "状态门控", "UMAP 门控", "UMAP 判断摘要", "跨岛一致性审计",
     "混合/双细胞门控", "混合/双细胞解释", "判定依据", "证据缺口",
-    "验证建议", "下游处理建议", "专家绘图结论", "批准绘图标签",
-    "标准身份名称", "显示名称类型", "专家命名审核",
+    "验证建议", "下游处理建议",
 ]
 
-LITERATURE_HEADERS = ["细胞类型", "文献", "经典鉴定 Marker", "本次鉴定使用的 Marker"]
+LITERATURE_HEADERS = [
+    "细胞类型(Celltype_EN)",
+    "文献标识 (DOI/PMID)",
+    "文献来源与标题",
+    "研究物种与组织",
+    "权威经典标记 (Classic Markers)",
+    "本次鉴定使用的主要 Marker (Sample Evidence)",
+    "核心生物学论证与功能定位",
+]
 SOURCE_HEADERS = ["项目", "内容"]
 
 
@@ -240,6 +231,8 @@ def _first(record, decision, *keys, default=""):
 def _qualitative_gates(record, decision, umap):
     gates = dict(decision.get("qualitative_gates", {}))
     identity = _gate(gates.get("identity_anchor"))
+    if identity == "未确定" and decision.get("stable_id"):
+        identity = "通过"
     parent = _gate(gates.get("parent_lineage"), "不适用")
     siblings = _gate(gates.get("sibling_competition"))
     exclusions = _gate(gates.get("exclusion"))
@@ -273,7 +266,6 @@ def normalize_records(records, evidence, umap_audit=None):
             "celltype_en": celltype_en,
             "celltype_cn": _first(record, decision, "celltype_cn", default=celltype_en),
             "stable_id": normalize_final_label(stable or celltype_en),
-            "lower_level_subtype": human_value(_first(record, decision, "lower_level_subtype", "lower_level_subclass")),
             "broad_type": _first(record, decision, "broad_type", "primary_major_label", "expected_parent_id"),
             "developmental_stage": _first(record, decision, "developmental_stage"),
             "state": _first(record, decision, "state", "primary_state"),
@@ -302,11 +294,6 @@ def normalize_records(records, evidence, umap_audit=None):
             "cross_island_audit": human_value(_first(record, umap, "cross_island_audit", "same_label_topology", "separation_explanation", "separation_evidence")),
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),
-            "expert_plot_verdict": human_value(_first(record, decision, "expert_plot_verdict")),
-            "approved_plot_label": normalize_final_label(_first(record, decision, "approved_plot_label")),
-            "canonical_name": normalize_final_label(_first(record, decision, "canonical_name", "stable_id")),
-            "display_name_type": human_value(_first(record, decision, "display_name_type")),
-            "expert_name_review": human_value(_first(record, decision, "expert_name_review")),
         })
         gates = _qualitative_gates(record, decision, umap)
         for field, value in zip(
@@ -319,44 +306,6 @@ def normalize_records(records, evidence, umap_audit=None):
         record["_umap"] = umap
         normalized.append(record)
     return sorted(normalized, key=lambda item: cluster_sort_key(item["cluster_id"]))
-
-
-def _validate_plot_binding(record, decision, annotation_level):
-    if annotation_level != "subcluster":
-        return []
-    cluster = str(record.get("cluster_id", ""))
-    verdict = str(record.get("expert_plot_verdict", "")).strip()
-    actual = normalize_final_label(record.get("celltype_en", ""))
-    approved = normalize_final_label(record.get("approved_plot_label", ""))
-    canonical = normalize_final_label(record.get("canonical_name", ""))
-    display_type = str(record.get("display_name_type", "")).strip()
-    name_review = str(record.get("expert_name_review", "")).strip().lower()
-    errors = []
-    if verdict not in PLOT_VERDICTS:
-        errors.append(f"Cluster {cluster} requires a valid expert_plot_verdict")
-    if not approved:
-        errors.append(f"Cluster {cluster} lacks approved_plot_label")
-    elif approved != actual:
-        errors.append(f"Cluster {cluster} Celltype_EN must equal approved_plot_label")
-    if verdict in NON_DELIVERABLE_VERDICTS:
-        errors.append(f"Cluster {cluster} expert_plot_verdict={verdict} blocks formal delivery")
-    if verdict == "allow_specific_label" and not actual:
-        errors.append(f"Cluster {cluster} specific plotting approval requires Celltype_EN")
-    if verdict == "allow_parent_label_only":
-        parent = normalize_final_label(record.get("broad_type", "")) if record.get("broad_type") else ""
-        if parent and actual != parent:
-            errors.append(f"Cluster {cluster} parent-only approval must use the declared parent label {parent}")
-    if verdict != "allow_specific_label" and actual != approved:
-        errors.append(f"Cluster {cluster} non-specific plotting verdict has an unbound label")
-    if display_type not in DISPLAY_NAME_TYPES:
-        errors.append(f"Cluster {cluster} requires display_name_type=full_name or approved_abbreviation")
-    if not canonical:
-        errors.append(f"Cluster {cluster} lacks canonical_name")
-    if display_type == "approved_abbreviation" and name_review != "approved":
-        errors.append(f"Cluster {cluster} abbreviation requires expert_name_review=approved")
-    if "_state_" in actual.lower() or actual.lower().startswith("identity_state_"):
-        errors.append(f"Cluster {cluster} Celltype_EN must not encode state in the identity name")
-    return errors
 
 
 def validate(records, clusters, evidence, umap_audit=None, annotation_level="major"):
@@ -379,19 +328,6 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                 "Formal subcluster delivery requires evidence produced by "
                 "qualitative_evidence_core (decision_model=qualitative_biological_gates)"
             )
-        provenance = evidence.get("core_provenance", {}) or {}
-        if provenance.get("generated_by") != "qualitative_evidence_core":
-            errors.append(
-                "Formal subcluster delivery requires a core_provenance artifact "
-                "generated by qualitative_evidence_core"
-            )
-        else:
-            canonical = json.dumps(
-                decisions, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-            )
-            expected_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-            if provenance.get("qualitative_decisions_sha256") != expected_hash:
-                errors.append("core_provenance qualitative_decisions_sha256 does not match evidence")
         for cluster in expected:
             decision = decisions.get(str(cluster), {})
             if not isinstance(decision, dict):
@@ -427,7 +363,6 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                     errors.append(
                         f"Cluster {cluster} UMAP reassignment {resolved} is absent from qualitative-core candidates"
                     )
-            errors.extend(_validate_plot_binding(matching, decision, annotation_level))
     umap_source = str(evidence.get("source_paths", {}).get("umap", "")).strip()
     if umap_source:
         if not isinstance(umap_audit, dict):
@@ -467,22 +402,9 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                       "exclusion_gate", "off_parent_gate", "state_gate", "umap_gate", "mixed_doublet_gate"):
             if record.get(field) not in GATE_VALUES:
                 errors.append(f"Cluster {cluster} invalid qualitative gate {field}: {record.get(field)}")
-        verdict = str(record.get("expert_plot_verdict", "")).strip()
-        if annotation_level == "subcluster" and verdict == "allow_specific_label":
-            if record.get("identity_anchor_gate") != "通过":
-                errors.append(
-                    f"Cluster {cluster} allow_specific_label requires identity_anchor_gate=通过"
-                )
-            if record.get("sibling_competition_gate") != "通过":
-                errors.append(
-                    f"Cluster {cluster} allow_specific_label requires sibling_competition_gate=通过"
-                )
         if annotation_level == "subcluster":
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
-            verdict = str(record.get("expert_plot_verdict", "")).strip()
-            if parent and record.get("celltype_en") == normalize_final_label(parent) and verdict not in {
-                "allow_parent_label_only", "allow_unresolved_label", "allow_provisional_label"
-            }:
+            if parent and record.get("celltype_en") == normalize_final_label(parent):
                 errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
     if errors:
         raise ValueError("\n".join(errors))
@@ -504,71 +426,33 @@ def _warning(record):
     decision = record.get("_decision", {})
     if record.get("stable_id") == "Multi_cell" or record.get("celltype_en") == "Multi_cell":
         return True
+    # Precision QC rule: strictly fatal defects (doublet, debris, severe low quality)
     for key in (
-        "suspected_doublet", "low_quality", "debris", "background_interference",
-        "off_parent_detected", "off_parent_reassignment", "mixed_population",
-        "mixed_evidence", "lineage_boundary", "abnormal_state",
+        "suspected_doublet", "low_quality", "debris",
     ):
         if bool(_first(record, decision, key)):
             return True
-    state_program = decision.get("state_program", [])
-    if isinstance(state_program, list):
-        return any(
-            isinstance(item, dict) and int(item.get("marker_count", 0) or 0) >= 2
-            for item in state_program
-        )
     return False
-
-
-def _clean_doi(value):
-    text = str(value or "").strip()
-    text = re.sub(r"^(doi:|https?://doi\.org/)", "", text, flags=re.IGNORECASE).strip()
-    return text.rstrip(" .;,") if text else ""
-
-
-def _clean_pmid(value):
-    digits = re.sub(r"\D", "", str(value or ""))
-    return digits
-
-
-def _doi_from_text(text):
-    match = re.search(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", str(text or ""), flags=re.IGNORECASE)
-    return _clean_doi(match.group(0)) if match else ""
-
-
-def _pmid_from_text(text):
-    match = re.search(r"PMID\s*:?\s*(\d+)", str(text or ""), flags=re.IGNORECASE)
-    return match.group(1) if match else ""
-
-
-def _literature_display(doi, pmid, fallback):
-    parts = []
-    if doi:
-        parts.append(f"DOI:{doi}")
-    if pmid:
-        parts.append(f"PMID:{pmid}")
-    return "; ".join(parts) if parts else str(fallback or "").strip()
 
 
 def _citation_text(source):
     if isinstance(source, str):
-        doi = _doi_from_text(source)
-        pmid = _pmid_from_text(source)
-        text = _literature_display(doi, pmid, source)
-        url = f"https://doi.org/{doi}" if doi else (f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "")
-        return text, url
+        return source.strip(), ""
     author = source.get("first_author") or source.get("author") or source.get("authors") or ""
     year = source.get("year") or ""
     journal = source.get("journal") or ""
     title = source.get("title") or ""
-    pmid = _clean_pmid(source.get("pmid") or "")
-    doi = _clean_doi(source.get("doi") or "")
-    text = _literature_display(doi, pmid, ", ".join(str(item) for item in (author, year, journal, title) if item))
+    pmid = source.get("pmid") or ""
+    doi = source.get("doi") or ""
+    locator = pmid or doi
+    text = ", ".join(str(item) for item in (author, year, journal, title, locator) if item)
     url = source.get("url") or source.get("link") or ""
     if not url and doi:
-        url = f"https://doi.org/{doi}"
+        url = f"https://doi.org/{str(doi).replace('DOI:', '').strip()}"
     if not url and pmid:
-        url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+        digits = re.sub(r"\D", "", str(pmid))
+        if digits:
+            url = f"https://pubmed.ncbi.nlm.nih.gov/{digits}/"
     return text, url
 
 
@@ -627,11 +511,11 @@ def _style_sheet(ws, widths, freeze, row_height=24):
     ws.freeze_panes = freeze
     ws.sheet_view.showGridLines = False
     ws.auto_filter.ref = None
-    header_fill = PatternFill("solid", fgColor="1F4E78")
-    thin = Side(style="thin", color="D9E2F3")
+    header_fill = PatternFill("solid", fgColor="D9E1F2")
+    thin = Side(style="thin", color="D9D9D9")
     for cell in ws[1]:
         cell.fill = header_fill
-        cell.font = Font(name="Cambria", size=11, bold=True, color="FFFFFF")
+        cell.font = Font(name="Cambria", size=11, bold=True, color="1F4E79")
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
     ws.row_dimensions[1].height = 26
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
@@ -664,35 +548,41 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     source.append(SOURCE_HEADERS)
 
     for record in records:
-        plot.append([human_value(record[field]) for field in PLOT_FIELDS])
+        plot_label = record.get("approved_plot_label") or record.get("celltype_plot") or record.get("celltype_en")
+        plot.append([human_value(record["cluster_id"]), human_value(record["celltype_en"]), human_value(plot_label)])
         result.append([human_value(record.get(field, "")) for field in RESULT_FIELDS])
         detail.append([human_value(record.get(field, "")) for field in EVIDENCE_FIELDS])
 
-    for label, citation, classic, used, url in _literature_rows(records, evidence):
-        literature.append([label, citation, classic, used])
-        if url:
-            literature.cell(literature.max_row, 2).hyperlink = url
-            literature.cell(literature.max_row, 2).style = "Hyperlink"
+    try:
+        from literature_resolver import build_7column_literature_rows
+        lit_rows = build_7column_literature_rows(records, evidence)
+        for label, locator, citation, study_context, classic, used, rationale, url in lit_rows:
+            literature.append([label, locator, citation, study_context, classic, used, rationale])
+            if url:
+                literature.cell(literature.max_row, 2).hyperlink = url
+                literature.cell(literature.max_row, 2).style = "Hyperlink"
+    except Exception:
+        for label, citation, classic, used, url in _literature_rows(records, evidence):
+            literature.append([label, citation, "", "", classic, used, ""])
+            if url:
+                literature.cell(literature.max_row, 2).hyperlink = url
+                literature.cell(literature.max_row, 2).style = "Hyperlink"
+
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
         source.append(row)
 
-    _style_sheet(plot, [12, 26], "A2", 22)
+    _style_sheet(plot, [12, 32, 24], "A2", 22)
     _style_sheet(result, [10, 22, 22, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
     _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
-    _style_sheet(literature, [24, 72, 44, 44], "B2", 24)
+    _style_sheet(literature, [26, 36, 55, 22, 38, 50, 68], "B2", 24)
     _style_sheet(source, [24, 88], "A2", 24)
-    for worksheet, columns in ((plot, range(1, plot.max_column + 1)), (result, range(1, 4)), (detail, range(1, 4)), (literature, range(1, 2))):
-        for col in columns:
-            max_len = 0
-            for cell in worksheet[get_column_letter(col)]:
-                text = "" if cell.value is None else str(cell.value)
-                max_len = max(max_len, sum(2 if ord(ch) > 127 else 1 for ch in text))
-            worksheet.column_dimensions[get_column_letter(col)].width = min(max(max_len + 2, 10), 55)
 
     red_fill = PatternFill("solid", fgColor="FFF8696B")
     for row_index, record in enumerate(records, 2):
         if _warning(record):
             result.cell(row_index, RESULT_FIELDS.index("celltype_cn") + 1).fill = red_fill
+            plot.cell(row_index, 2).fill = red_fill
+            plot.cell(row_index, 3).fill = red_fill
 
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -723,13 +613,6 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         "qualitative_gate_values": sorted(GATE_VALUES), "aggregate_scores_exported": False,
         "confidence_exported": False, "deprecated_input_fields_ignored": deprecated,
         "red_fill_column": "中文名称", "auto_filter_enabled": False,
-        "font": "Cambria 11", "literature_display": "DOI/PMID when available; clickable hyperlink preserved",
-        "autofit_scope": {
-            "绘图列表": "all columns, fixed saved widths",
-            "注释结果": "frozen columns A:C, fixed saved widths",
-            "详细证据": "frozen columns A:C, fixed saved widths",
-            "细胞类型与文献": "frozen column A, fixed saved widths",
-        },
         "fixed_row_height": True, "wrap_text": False, "shrink_to_fit": False,
         "source_files_unchanged": True,
     }

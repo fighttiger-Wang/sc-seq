@@ -9,6 +9,7 @@ candidate table.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 from qualitative_gate_helpers import (
@@ -22,6 +23,11 @@ from knowledge_base import build_runtime_config, load_knowledge_base
 
 
 GATES = {"通过", "不通过", "未确定", "不适用"}
+
+
+def _canonical_sha256(value):
+    payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _status(passed=None, assessed=True, applicable=True):
@@ -466,6 +472,11 @@ def enrich_evidence(
         }
 
     evidence["qualitative_annotation_evidence"] = decisions
+    evidence["core_provenance"] = {
+        "generated_by": "qualitative_evidence_core",
+        "core_version": f"{CORE_VERSION}-qualitative",
+        "qualitative_decisions_sha256": _canonical_sha256(decisions),
+    }
     evidence.pop("deterministic_annotation_evidence", None)
     evidence.pop("deterministic_tnk_arbitration", None)
     evidence["annotation_evidence_policy"] = {

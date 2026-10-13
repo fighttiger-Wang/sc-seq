@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -184,12 +185,51 @@ def main() -> None:
     destination_hash = sha256(destination)
     if source_hash != destination_hash:
         raise RuntimeError("destination hash does not match source after copy")
-    print(json.dumps({
+    registration = None
+    try:
+        records_candidate = source.parent / "annotation_records.json"
+        if not records_candidate.is_file():
+            records_candidate = source.parent / "records.json"
+        evidence_candidate = source.parent / "annotation_evidence_pack.json"
+        if not evidence_candidate.is_file():
+            evidence_candidate = source.parent / "evidence.json"
+        qa_path = source.with_suffix(".qa.json")
+
+        if records_candidate.is_file() and qa_path.is_file():
+            for p in Path(__file__).resolve().parents:
+                reg_script = p / "shared" / "sc-annotation-case-registry" / "case_registry.py"
+                if reg_script.is_file():
+                    cmd = [
+                        sys.executable, str(reg_script), "register",
+                        "--records", str(records_candidate),
+                        "--qa", str(qa_path),
+                        "--project-dir", str(destination_dir),
+                        "--skill-name", "sc-marker-cluster-annotation-auto",
+                        "--skill-version", "0.7.8",
+                    ]
+                    if evidence_candidate.is_file():
+                        cmd.extend(["--evidence", str(evidence_candidate)])
+                    proc = subprocess.run(cmd, capture_output=True, text=True)
+                    if proc.returncode == 0:
+                        try:
+                            registration = json.loads(proc.stdout)
+                        except Exception:
+                            registration = {"status": "registered_raw", "stdout": proc.stdout}
+                    else:
+                        registration = {"status": "failed", "stderr": proc.stderr}
+                    break
+    except Exception as exc:
+        registration = {"status": "exception", "error": str(exc)}
+
+    out_payload = {
         "status": "copied", "source": str(source), "destination": str(destination),
         "destination_mode": "explicit" if args.destination else "inferred_from_original_inputs",
         "sha256": source_hash, "qa_status": qa.get("status"), "copied_files": 1,
         "qa_sidecar_copied": False,
-    }, ensure_ascii=False))
+    }
+    if registration:
+        out_payload["case_registration"] = registration
+    print(json.dumps(out_payload, ensure_ascii=False))
 
 
 if __name__ == "__main__":

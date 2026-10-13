@@ -87,7 +87,7 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 - `install`: install an existing verified checkout, or clone to an exact approved destination. It does not add managed workspace guidance.
 - `update`: legacy explicit full update; require a clean worktree, use `git pull --ff-only`, then validate and reinstall all plugins. Prefer `preflight` for routine use.
 - `repair`: do not fetch or pull. Validate and reinstall the exact local versions.
-- `sync-antigravity`: synchronize all marketplace skills into Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`) and Desktop portable packages with Chinese workflow names and dual-platform frontmatter metadata.
+- `sync-antigravity`: synchronize all marketplace skills into Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`) and Desktop portable packages with Chinese workflow names and dual-platform frontmatter metadata. This operation is decoupled from Git/network prerequisites and can run offline or in local non-Git directories.
 - relocation is an explicit install/update option, not an automatic recovery path.
 
 ## GitHub transport and merge closeout
@@ -138,6 +138,8 @@ The bootstrap cannot log the user into GitHub, install Git/Python with an OS pac
 9. Every maintained plugin's `plugin.json.interface.displayName` and `agents/openai.yaml.interface.display_name` must end with the same technical package version, rendered as `vX.Y.Z` before any `+codex...` cachebuster suffix. Audit must report a mismatch as a release failure; do not silently repair it from a cache.
 10. The full release closeout order is fixed: semantic version increment, metadata synchronization, local tests, branch/commit/push, PR creation or reuse, CI success, clean mergeability, SHA-pinned merge, stable-main verification, stable preflight/doctor, safe final registration, real cache directory/manifest/hash verification, restart notice, and new-task Skill-path verification. Stop at the first failed gate and never report later stages as complete. Safe final registration means retaining a clean stable source or switching to a persistent clean stable clone; it never means restoring an unsafe old source.
 11. Retired versions may remain only as explicitly labeled rollback copies or verified cache history. They must never remain in active registries, active source discovery, or enabled plugin entries. Delete or quarantine old candidates only after the new stable release and its rollback point have been verified.
+12. Smart Git Auto-Discovery: `setup.py` automatically detects Git from standard locations (including `E:\A001-软件安装\Git\cmd\git.exe` and default Program Files paths) and injects it into `PATH` if not active in the current process environment, preventing runtime execution failures across varied deployment environments.
+13. Session Cache Invalidation: Antigravity and Codex IDE cache skill metadata, system prompts, and slash commands upon session initialization. Any file-level updates on disk or via `sync-antigravity` do not hot-reload into existing active chat conversations. Always instruct users to open a new chat session or restart the IDE to see updated versions in `/` slash auto-completions.
 
 ## Managed synchronization guidance
 

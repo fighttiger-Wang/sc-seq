@@ -14,11 +14,11 @@
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.3.4+codex.20260909085707"
+      "version": "0.7.0+codex.20261013102451"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.7.7+codex.20260916111249"
+      "version": "0.11.0+codex.20261013102451"
     },
     {
       "id": "feature-gene-heatmap-violin",
@@ -42,7 +42,7 @@
     },
     {
       "id": "skill-writing",
-      "version": "0.3.2+codex.20260916113308"
+      "version": "0.3.3+codex.20261013102451"
     },
     {
       "id": "bioinformatics-results-report",
@@ -54,7 +54,7 @@
     },
     {
       "id": "personal-skill-marketplace-setup",
-      "version": "0.3.2+codex.20260916113308"
+      "version": "0.3.3+codex.20261013102451"
     },
     {
       "id": "bioinformatics-results-report-classic",

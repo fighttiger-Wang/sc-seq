@@ -24,8 +24,8 @@ GATE_VALUES = {"通过", "不通过", "未确定", "不适用"}
 PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 INVALID_LABEL = re.compile(r"[^A-Za-z0-9_]+")
 
-PLOT_FIELDS = ["cluster_id", "celltype_en"]
-PLOT_HEADERS = ["Cluster", "Celltype_EN"]
+PLOT_FIELDS = ["cluster_id", "celltype_en", "approved_plot_label"]
+PLOT_HEADERS = ["Cluster", "Celltype_EN", "Celltype_Plot"]
 
 RESULT_FIELDS = [
     "cluster_id", "celltype_cn", "celltype_en", "broad_type",
@@ -60,7 +60,15 @@ EVIDENCE_HEADERS = [
     "验证建议", "下游处理建议",
 ]
 
-LITERATURE_HEADERS = ["细胞类型", "文献", "经典鉴定 Marker", "本次鉴定使用的 Marker"]
+LITERATURE_HEADERS = [
+    "细胞类型(Celltype_EN)",
+    "文献标识 (DOI/PMID)",
+    "文献来源与标题",
+    "研究物种与组织",
+    "权威经典标记 (Classic Markers)",
+    "本次鉴定使用的主要 Marker (Sample Evidence)",
+    "核心生物学论证与功能定位",
+]
 SOURCE_HEADERS = ["项目", "内容"]
 
 
@@ -418,19 +426,12 @@ def _warning(record):
     decision = record.get("_decision", {})
     if record.get("stable_id") == "Multi_cell" or record.get("celltype_en") == "Multi_cell":
         return True
+    # Precision QC rule: strictly fatal defects (doublet, debris, severe low quality)
     for key in (
-        "suspected_doublet", "low_quality", "debris", "background_interference",
-        "off_parent_detected", "off_parent_reassignment", "mixed_population",
-        "mixed_evidence", "lineage_boundary", "abnormal_state",
+        "suspected_doublet", "low_quality", "debris",
     ):
         if bool(_first(record, decision, key)):
             return True
-    state_program = decision.get("state_program", [])
-    if isinstance(state_program, list):
-        return any(
-            isinstance(item, dict) and int(item.get("marker_count", 0) or 0) >= 2
-            for item in state_program
-        )
     return False
 
 
@@ -510,16 +511,17 @@ def _style_sheet(ws, widths, freeze, row_height=24):
     ws.freeze_panes = freeze
     ws.sheet_view.showGridLines = False
     ws.auto_filter.ref = None
-    header_fill = PatternFill("solid", fgColor="1F4E78")
-    thin = Side(style="thin", color="D9E2F3")
+    header_fill = PatternFill("solid", fgColor="D9E1F2")
+    thin = Side(style="thin", color="D9D9D9")
     for cell in ws[1]:
         cell.fill = header_fill
-        cell.font = Font(bold=True, color="FFFFFF")
+        cell.font = Font(name="Cambria", size=11, bold=True, color="1F4E79")
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
     ws.row_dimensions[1].height = 26
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
         ws.row_dimensions[row[0].row].height = row_height
         for cell in row:
+            cell.font = Font(name="Cambria", size=11)
             cell.alignment = Alignment(vertical="top", wrap_text=False, shrink_to_fit=False)
             cell.border = Border(bottom=thin)
     for index, width in enumerate(widths, 1):
@@ -546,28 +548,41 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     source.append(SOURCE_HEADERS)
 
     for record in records:
-        plot.append([human_value(record[field]) for field in PLOT_FIELDS])
+        plot_label = record.get("approved_plot_label") or record.get("celltype_plot") or record.get("celltype_en")
+        plot.append([human_value(record["cluster_id"]), human_value(record["celltype_en"]), human_value(plot_label)])
         result.append([human_value(record.get(field, "")) for field in RESULT_FIELDS])
         detail.append([human_value(record.get(field, "")) for field in EVIDENCE_FIELDS])
 
-    for label, citation, classic, used, url in _literature_rows(records, evidence):
-        literature.append([label, citation, classic, used])
-        if url:
-            literature.cell(literature.max_row, 2).hyperlink = url
-            literature.cell(literature.max_row, 2).style = "Hyperlink"
+    try:
+        from literature_resolver import build_7column_literature_rows
+        lit_rows = build_7column_literature_rows(records, evidence)
+        for label, locator, citation, study_context, classic, used, rationale, url in lit_rows:
+            literature.append([label, locator, citation, study_context, classic, used, rationale])
+            if url:
+                literature.cell(literature.max_row, 2).hyperlink = url
+                literature.cell(literature.max_row, 2).style = "Hyperlink"
+    except Exception:
+        for label, citation, classic, used, url in _literature_rows(records, evidence):
+            literature.append([label, citation, "", "", classic, used, ""])
+            if url:
+                literature.cell(literature.max_row, 2).hyperlink = url
+                literature.cell(literature.max_row, 2).style = "Hyperlink"
+
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
         source.append(row)
 
-    _style_sheet(plot, [12, 26], "A2", 22)
+    _style_sheet(plot, [12, 32, 24], "A2", 22)
     _style_sheet(result, [10, 22, 22, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
     _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
-    _style_sheet(literature, [24, 72, 44, 44], "B2", 24)
+    _style_sheet(literature, [26, 36, 55, 22, 38, 50, 68], "B2", 24)
     _style_sheet(source, [24, 88], "A2", 24)
 
     red_fill = PatternFill("solid", fgColor="FFF8696B")
     for row_index, record in enumerate(records, 2):
         if _warning(record):
             result.cell(row_index, RESULT_FIELDS.index("celltype_cn") + 1).fill = red_fill
+            plot.cell(row_index, 2).fill = red_fill
+            plot.cell(row_index, 3).fill = red_fill
 
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)

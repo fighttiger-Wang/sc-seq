@@ -99,5 +99,14 @@ the formatting baseline: Cambria 11, content-fit frozen columns, fixed long-text
 widths, wrapping and shrink-to-fit disabled, sample freeze panes, and red fill
 `#F8696B` only on the Chinese-name cell.
 
+### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
+1. **数据目录绝对纯净**：交付件必须且仅允许包含时间戳 Excel 完整注释大表（及按需生成的 `cluster注释信息.xlsx` 简表）。严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。
+2. **严禁跨项目扩散扫描**：执行过程中严禁使用通配符跳出当前输入路径，去全局递归遍历其他客户历史售后目录（如 `E:\Desktop\售后\*`），杜绝历史项目非标准命名造成的交叉污染及无谓耗时。
+3. **环境调用一次到位**：使用预设的稳定 Python 运行时（`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`），禁止递归全盘查找 Python 路径。
+
+### 开放生物学发现与防负优化保证 (Open Discovery & Non-Degradation Guarantee)
+1. **第一阶段纯数据驱动**：注释第一阶段始终基于当前样本自身的全基因组经验基石、连续拓扑流形与双向排他门控，绝对不退化为封闭白名单或死字典硬匹配。
+2. **第二阶段文献缓存加速**：内置文献与命名库仅作为成熟通用细胞类型的第二阶段免检索加速池，绝不对陌生、罕见、病理或非模式生物细胞类型行使否决权；面对未知特化程序，完整保留数据驱动特征，触发靶向学术检索或恪守科学诚实原则客观披露待实验验证状态，守护 100% 注释准确性。
+
 Never output generic `Cell`, silently discard a cluster, use one marker or one
 UMAP location as sole proof, or claim confirmed doublet from aggregate evidence.

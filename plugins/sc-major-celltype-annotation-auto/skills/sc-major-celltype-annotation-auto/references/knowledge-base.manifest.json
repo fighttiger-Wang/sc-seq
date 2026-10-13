@@ -1,34 +1,34 @@
 {
   "schema_version": "2.0.0",
-  "approved_at": "2026-08-25",
+  "approved_at": "2026-09-17",
   "source": "shared/sc-annotation-evidence-core/knowledge-base",
   "source_workbook": "cell_annotation_standard_evidence_review.xlsx",
   "counts": {
-    "ontology_nodes": 133,
+    "ontology_nodes": 155,
     "alias_records": 419,
-    "marker_panels": 227,
+    "marker_panels": 253,
     "tissue_modules": 12,
     "state_rules": 9,
     "decision_rules": 15,
-    "evidence_sources": 30,
+    "evidence_sources": 57,
     "legacy_migrations": 25,
     "annotation_decision_rules": 1,
     "naming_dictionary": 1,
     "calibration_policy": 1
   },
   "sha256": {
-    "cell-annotation-knowledge-base.v2.json": "b27803b24f0bdb918047cb47417f63a5cbeb42b1d463d3afb68aee7bde45abcb",
-    "ontology.v2.json": "e73407d20fd919935bf60a12bd441b51c452da3cfc1b14b8315ffae981830399",
+    "cell-annotation-knowledge-base.v2.json": "40d9095c2809fadcb09e5edbd8b19b99c12fff36a32e0f9df4b9203915ebd53b",
+    "ontology.v2.json": "f15094eaeae0fc9d7387c262fa6263c35e77e5eb38ce7766fff805744f2026ee",
     "aliases.v2.json": "e51150be3709c6e7edd49b274963705e42f3c6ad8134c4553b86a1666a3a5232",
-    "marker-panels.v2.json": "68f6d47a480a7950ae622c03d5c25f4dbd27a401c751b3327cca137f4dd3dd9b",
+    "marker-panels.v2.json": "18b8fdb514f05d96961c623d14869b60ad32610711988637ef3885b50cad01e5",
     "tissue-modules.v2.json": "aca2dc5f7a87e9317fc917140febe13afc913e214b53f6ba5be6bbfdfefba720",
     "state-rules.v2.json": "438ed861e7da4cde79dacb834ba5faad3b230b89e3231ccd92a674ac1d71751b",
     "decision-rules.v2.json": "55efef88f90bf4bd2fe0784535d4e3b3db1e4b365892552d11259cb94535ab72",
-    "evidence-sources.v2.json": "bce75a21a8d5d78bd794b99fd4d2acd645cf9fe5841e59870fc360da813805a9",
+    "evidence-sources.v2.json": "c2b2761765c561cdd717d66be95aad658b5124045caa8397b932a66b35d3668e",
     "legacy-migration.v2.json": "26a8e13b1b9743c28b2921fbe7da0823773917a9e3a63c7fea7b17c319b975a1",
     "decision-rules.v3.json": "05fac484036361a69e31d2cf308e67596360192bd39eccad8106eb27b7e5be0e",
     "naming-dictionary.v1.json": "2f0acec02414f881a2351d1cf10a2ec76fd265b63df27964111b2e4885b8da54",
     "calibration-policy.v1.json": "6b914f12c1b3f05ad1de099edfe7b3e8801755ede4dbd28125051a61d532a53c"
   },
-  "knowledge_base_version": "3.0.2"
+  "knowledge_base_version": "3.0.25"
 }

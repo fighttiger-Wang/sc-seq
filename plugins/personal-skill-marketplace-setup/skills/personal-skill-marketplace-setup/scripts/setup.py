@@ -362,9 +362,21 @@ def locate_marketplace(explicit: Path | None, codex_home: Path, allow_explicit_c
 
 def require_git() -> str:
     git = shutil.which("git")
-    if not git:
-        raise FileNotFoundError("Git was not found in PATH. Install Git separately or provide an existing downloaded ZIP checkout.")
-    return git
+    if git:
+        return git
+    well_known = [
+        Path(r"E:\A001-软件安装\Git\cmd\git.exe"),
+        Path(r"C:\Program Files\Git\cmd\git.exe"),
+        Path(r"C:\Program Files (x86)\Git\cmd\git.exe"),
+        Path.home() / "AppData" / "Local" / "Programs" / "Git" / "cmd" / "git.exe",
+    ]
+    for candidate in well_known:
+        if candidate.is_file():
+            cmd_dir = str(candidate.parent)
+            if cmd_dir not in os.environ.get("PATH", ""):
+                os.environ["PATH"] = cmd_dir + os.pathsep + os.environ.get("PATH", "")
+            return str(candidate)
+    raise FileNotFoundError("Git was not found in PATH. Install Git separately or provide an existing downloaded ZIP checkout.")
 
 
 def git_facts(root: Path, expected_repository: str) -> dict:
@@ -1446,10 +1458,9 @@ def synchronize_antigravity_environment(
             synced_skills.append(chinese_cmd_name)
 
         if not dry_run and target_skills_dir.is_dir():
-            if target_plugins_skills_dir.exists():
-                shutil.rmtree(target_plugins_skills_dir)
-            target_plugins_skills_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(target_skills_dir, target_plugins_skills_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+            plugin_root = antigravity_home / "config" / "plugins" / "personal-bio-skills"
+            if plugin_root.exists():
+                shutil.rmtree(plugin_root)
 
             skills_json_file = antigravity_home / "config" / "skills.json"
             skills_json_data = {"entries": [{"path": target_skills_dir.as_posix()}]}
@@ -1911,6 +1922,15 @@ def main() -> None:
     if paths_overlap(root, codex_home):
         raise RuntimeError(f"Marketplace source and Codex home must not overlap: {root} <-> {codex_home}")
 
+    if args.mode == "sync-antigravity":
+        sync_result = synchronize_antigravity_environment(
+            marketplace_root=root,
+            workspace_root=args.workspace_root,
+            dry_run=args.dry_run,
+        )
+        print(json.dumps({"syncAntigravity": sync_result}, ensure_ascii=False, indent=2))
+        return
+
     facts_before = git_facts(root, args.repo_url) if not (cloned and args.dry_run) else {"git": True, "remote": args.repo_url, "branch": args.ref or "main", "commit": None, "dirty": False}
     if args.mode == "bootstrap" and facts_before.get("dirty"):
         raise RuntimeError("Bootstrap requires a clean authoritative marketplace checkout")
@@ -1919,15 +1939,6 @@ def main() -> None:
 
     if args.mode == "publish":
         print(json.dumps(publish_changes(args, root, codex_home), ensure_ascii=False, indent=2))
-        return
-
-    if args.mode == "sync-antigravity":
-        sync_result = synchronize_antigravity_environment(
-            marketplace_root=root,
-            workspace_root=args.workspace_root,
-            dry_run=args.dry_run,
-        )
-        print(json.dumps({"syncAntigravity": sync_result}, ensure_ascii=False, indent=2))
         return
 
     if args.mode == "bootstrap" and not args.workspace_root:

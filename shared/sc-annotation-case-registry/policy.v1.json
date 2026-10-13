@@ -46,6 +46,10 @@
     "retain_all_versions": true,
     "marker_core_frequency": 0.8,
     "marker_supportive_frequency": 0.5,
-    "never_hard_delete": true
+    "never_hard_delete": true,
+    "fast_track_external_candidates": true,
+    "fast_track_min_literature": 2,
+    "fast_track_min_core_markers": 2,
+    "fast_track_core_consistency": 0.8
   }
 }

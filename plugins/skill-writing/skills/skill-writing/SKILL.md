@@ -1,9 +1,10 @@
 ---
 name: skill-writing
-description: Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
+displayName: 10 · skill写作 v0.3.3
+description: 10 · skill写作 v0.3.3：编写可 / 调用的个人 Codex skill 与插件标准流程 Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
 ---
 
-# Skill Writing
+# 10 · skill写作 v0.3.3
 
 ## Operating Rule
 
@@ -15,7 +16,7 @@ Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode on
 
 Our skills operate under an integrated **Dual-Platform Architecture**:
 1. **Codex Platform**: Registered as marketplace plugins in `<shared-marketplace-root>/plugins/<id>`, declared in `skill-pack.json`, installed into `~/.codex/plugins/cache/workspace-local/<id>/<version>`.
-2. **Antigravity Platform**: Registered as slash-callable skills in `~/.gemini/config/skills/<NN-中文名>` (mirrored in `~/.gemini/config/plugins/personal-bio-skills/skills/<NN-中文名>`), configured via `~/.gemini/config/skills.json`.
+2. **Antigravity Platform**: Registered as slash-callable skills in `~/.gemini/config/skills/<NN-中文名>`, configured via `~/.gemini/config/skills.json` (avoid duplicating into `plugins/` which causes duplicate slash menu items).
 3. **Desktop Portable Archive**: Maintained in `E:\Desktop\检索调用文件\skill` containing standalone directories, ZIP archives, and `EXPORT-MANIFEST.json`.
 
 ### Antigravity Naming and Frontmatter Standard
@@ -25,7 +26,7 @@ For Antigravity, skills are called by their Chinese workflow name (e.g. `/04-单
   ```yaml
   ---
   name: NN-中文名
-  displayName: NN · 中文名 vX.Y.Z
+  displayName: 10 · skill写作 v0.3.3
   description: NN · 中文名 vX.Y.Z：<shortDescription> <existing_description>
   ---
 
@@ -35,8 +36,18 @@ For Antigravity, skills are called by their Chinese workflow name (e.g. `/04-单
 
 ### Dual-Platform Parity & Anti-Regression Rule
 - **Single Source of Truth**: The Git checkout of the shared marketplace is the sole authoritative implementation.
-- **Synchronous Delivery**: When any Skill is modified, tested, and published via `personal-skill-marketplace-setup`, the release pipeline automatically updates both Codex (`workspace-local` cache) and Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`), ensuring zero lag or version discrepancy between platforms.
+- **Synchronous Delivery**: When any Skill is modified, tested, and published via `personal-skill-marketplace-setup`, the release pipeline automatically updates both Codex (`workspace-local` cache) and Antigravity (`~/.gemini/config/skills`), ensuring zero lag, zero duplicates, or version discrepancy between platforms.
 - **Never Single-Sided Patch**: Never patch `~/.gemini/config/skills` without updating the authoritative Git repository and pushing through the validated release pipeline.
+- **Pre-publish Gate 0: Baseline & Semantic Versioning Integrity**:
+  1. Before proposing or executing any version bump, run `python tools/test_personal_skill_marketplace.py` and `python scripts/setup.py audit` to verify existing baseline integrity.
+  2. For version increments, never edit versions manually across fragmented files. Always execute `python tools/bump_skill_version.py <skill-id> <semver>` to perform atomic 4-point metadata synchronization across:
+     - `plugins/<id>/.codex-plugin/plugin.json` (`version` and `interface.displayName`)
+     - `plugins/<id>/skills/<id>/agents/openai.yaml` (`interface.display_name`)
+     - `plugins/<id>/skills/<id>/SKILL.md` (frontmatter `displayName` and Markdown header `# NN · Name vX.Y.Z`)
+     - `skill-pack.json` (`plugins[<id>].version`)
+- **Shared Core Knowledge Base Boundary**:
+  - `shared/sc-annotation-evidence-core` is the immutable single source of truth for marker knowledge databases (`evidence_markers.json`, `lineage_ontology.json`, etc.).
+  - Domain skills (such as `03-单细胞大类注释-主要谱系` and `04-单细胞亚群注释-精细分型`) consume verified snapshot files. Never modify local snapshot files directly within a domain skill plugin without synchronizing shared core, as `test_personal_skill_marketplace.py` verifies snapshot SHA-256 integrity against the shared core. Knowledge updates must follow `/12-注释知识库发布`.
 
 ## Existing-rule baseline and anti-regression gate
 

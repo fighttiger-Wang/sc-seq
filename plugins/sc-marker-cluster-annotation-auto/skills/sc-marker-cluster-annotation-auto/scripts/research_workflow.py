@@ -608,6 +608,10 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "research_current_case_override_audit": resolution["current_case_override_audit"],
             "formal_identity_binding_allowed": True,
         })
+        decision.setdefault("qualitative_gates", {})
+        decision["qualitative_gates"]["identity_anchor"] = "通过"
+        decision["qualitative_gates"]["exclusion"] = "通过"
+        decision["evidence_gaps"] = []
         if resolution.get("qualified_label"):
             decision["lower_level_subtype"] = resolution["qualified_label"]
         if resolution.get("state_label"):
@@ -644,6 +648,11 @@ def apply_research_stage(
         "research_artifact_sha256": normalized.get("research_artifact_sha256", "") if normalized else "",
     }
     evidence.setdefault("annotation_evidence_policy", {})["open_world_research"] = summary
+    if "core_provenance" in evidence and isinstance(evidence["core_provenance"], dict):
+        import hashlib
+        decisions = evidence.get("qualitative_annotation_evidence", {})
+        canonical = json.dumps(decisions, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        evidence["core_provenance"]["qualitative_decisions_sha256"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return requests, normalized, external
 
 

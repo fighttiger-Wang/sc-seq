@@ -16,29 +16,27 @@ prefixes.
 
 ## 注释结果
 
-Columns (the optional finer-identity field is retained only when it adds
-information beyond `Celltype_EN`):
+Columns (exactly 15 standard columns matching `qualitative_annotation_workbook.py`):
 
 1. Cluster
 2. 中文名称
 3. Celltype_EN
-4. 定位/区室
-5. 细胞谱系
-6. 发育/成熟阶段
-7. 细胞状态
-8. 组织/疾病相关角色
-9. 下位亚类
-10. 关键 Marker
-11. 主要竞争候选
-12. UMAP 判断摘要
-13. 异常/边界标记
-14. 可能组成
-15. 判定摘要
-16. 验证建议
-17. 下游处理建议
+4. 细胞谱系
+5. 发育/成熟阶段
+6. 细胞状态
+7. 组织/疾病相关角色
+8. 关键 Marker
+9. 主要竞争候选
+10. UMAP 判断摘要
+11. 异常/边界标记
+12. 可能组成
+13. 判定摘要
+14. 验证建议
+15. 下游处理建议
 
 The sheet contains no score, confidence, candidate rank, or numeric quality
-field. `关键 Marker` contains gene symbols only.
+field. `关键 Marker` contains gene symbols only. Red fill `#F8696B` is applied
+only to `中文名称` for state programs, doublets, boundaries, or low quality.
 
 ## 详细证据
 

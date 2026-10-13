@@ -456,13 +456,15 @@ def enrich_evidence(
         cell_mixed = bool(cell_record.get("mixed_population_confirmed"))
         resolved_components = [str(item) for item in cell_record.get("resolved_components", []) if str(item).strip()]
         major_identity_first = annotation_level == "major"
-        mixed_population = bool(cell_mixed or (unresolved_rivals and not major_identity_first))
-        mixed_evidence = bool(unresolved_rivals and major_identity_first)
+        # Only explicit cell-level confirmation triggers hard Multi_cell collapse.
+        # Cluster-level aggregate competition retains the dominant primary program with mixed_evidence flagged.
+        mixed_population = bool(cell_mixed)
+        mixed_evidence = bool(unresolved_rivals or (cell_mixed and major_identity_first))
         suspected_doublet = bool(cell_record.get("doublet_call"))
         possible_components = (
             resolved_components if resolved_components else
             [primary["label"]] + [item["label"] for item in unresolved_rivals]
-            if (mixed_population or mixed_evidence) else []
+            if (mixed_population or mixed_evidence or unresolved_rivals) else []
         )
         final_identity = "Multi_cell" if mixed_population else (
             primary["major_label"] if major_identity_first else primary["label"]
@@ -492,6 +494,12 @@ def enrich_evidence(
             evidence_gaps.append("存在无明确优势的完整竞争程序；Cluster 汇总不能证明同一细胞共表达")
         if primary["tissue_scope_match"] is False:
             evidence_gaps.append("候选身份不属于当前知识库的典型组织范围")
+
+        dev_stage = "" if mixed_population else primary.get("developmental_stage", "")
+        if dev_stage in {"Effector_memory", "Naive", "Double_negative", "Central_memory", "pro_B", "pre_B", "immature", "transitional"}:
+            p_path = " ".join(primary.get("parent_path", []))
+            if not any(k in p_path for k in ["T_cell", "B_cell", "Lymphoid", "NK_cell", "T_NK"]):
+                dev_stage = ""
 
         decisions[cluster] = {
             "evidence_mode": "ratio_enhanced" if full_ratio else "minimal",
@@ -523,7 +531,7 @@ def enrich_evidence(
             "off_parent_detected": off_parent,
             "off_parent_audit": primary.get("off_parent_audit", False),
             "off_parent_programs": [item["label"] for item in off_parent_candidates],
-            "developmental_stage": "" if mixed_population else primary["developmental_stage"],
+            "developmental_stage": dev_stage,
             "panel_species": primary["panel_species"],
             "cross_species_inference": primary["cross_species_inference"],
             "marker_panel_evidence_ids": primary["evidence_ids"],
