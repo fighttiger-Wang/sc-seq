@@ -90,17 +90,20 @@ date, species, tissue, defining program, exclusions, and adoption rationale.
 
 Write a reusable data-specific evidence sheet listing involved types, markers,
 definitions, and sources. Record versions, hashes, counter, input paths, cluster
-order, context, and UMAP audit. Deliver a timestamped Excel workbook to the
-order, context, and UMAP audit. Deliver only the timestamped Excel workbook to
-the supplied E-drive input directory. Internal evidence/QA JSON sidecars remain
-in the E-drive workspace build directory and are not copied to the input
-directory unless explicitly requested. Use the approved subcluster workbook as
+order, context, and UMAP audit. Deliver only the timestamped Excel workbook and
+the companion cluster reference table (`cluster注释信息.xlsx`) to the supplied E-drive input directory.
+Internal evidence/QA JSON sidecars remain in the E-drive workspace build directory and are not copied
+to the input directory unless explicitly requested. Use the approved subcluster workbook as
 the formatting baseline: Cambria 11, content-fit frozen columns, fixed long-text
 widths, wrapping and shrink-to-fit disabled, sample freeze panes, and red fill
 `#F8696B` only on the Chinese-name cell.
 
 ### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
-1. **数据目录绝对纯净**：交付件必须且仅允许包含时间戳 Excel 完整注释大表（及按需生成的 `cluster注释信息.xlsx` 简表）。严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。
+1. **交付文件规范与数据目录绝对纯净**：交付件**固定且仅允许保留两份表格**：
+   - **时间戳完整注释大表**：`{project_name}_大类注释结果_{YYYYMMDD_HHMMSS}.xlsx`（5-sheet 完整版，遵循样式契约与版本追溯）。
+   - **简明对应关系表**：`cluster注释信息.xlsx`（固定包含 `Cluster`, `Celltype_EN`, `中文名称` 3列，自适应列宽，无筛选，冻结首行，专供下游快速查阅与对接制图）。
+   - **严禁输出无时间戳的大表副本**（杜绝 `{project_name}_大类注释结果.xlsx` 同名无时间戳冗余大表，避免客户混淆）。
+   - **过程文件零残留**：严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。
 2. **严禁跨项目扩散扫描**：执行过程中严禁使用通配符跳出当前输入路径，去全局递归遍历其他客户历史售后目录（如 `E:\Desktop\售后\*`），杜绝历史项目非标准命名造成的交叉污染及无谓耗时。
 3. **环境调用一次到位**：使用预设的稳定 Python 运行时（`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`），禁止递归全盘查找 Python 路径。
 

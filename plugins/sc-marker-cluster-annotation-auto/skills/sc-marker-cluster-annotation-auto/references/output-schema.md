@@ -169,3 +169,11 @@ rules, limitations, and the no-auto-modification declaration.
   also requires an independently generated `--umap-facts` artifact bound to the
   supplied UMAP image/coordinate source by SHA-256; declared topology fields
   and `reviewed=true` cannot stand in for image-derived geometry.
+
+## 交付产物规范 (Delivery Artifacts Specification)
+
+最终向用户数据目录交付的文件固定且仅保留两个：
+1. **时间戳注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`，严格包含上述完整的 5 个 sheet 及其格式契约。
+2. **简明对应关系表**：`cluster注释信息.xlsx`，仅含 `Cluster`, `Celltype_EN`, `中文名称` 3 列，无 AutoFilter，冻结 A2，自适应列宽。
+- **杜绝冗余无时间戳大表**：严禁在数据目录下交付或保留 `{project_name}_亚群注释结果.xlsx`。
+- **绝对纯净**：严禁在用户目录下生成或遗留任何中间过程文件（如 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等）。

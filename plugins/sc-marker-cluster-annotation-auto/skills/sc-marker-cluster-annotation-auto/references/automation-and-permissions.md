@@ -59,8 +59,11 @@ When a unique `avg_expr_result.txt`, `expression_ratio.tsv`, or `detection_ratio
 
 ## Automatic delivery
 
-- Default the final workbook destination to the common parent directory of original paired Excel inputs.
-- For Seurat input, default to the original object directory.
-- Do not ask when one unique existing E-drive directory is inferable.
-- Ask only when paths are lost/unavailable, source parents conflict, or the inferred location is not on E:.
-- Sandbox write approval is a permission step, not a reason to request a different destination.
+- Default the final filename to `{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`; for example, `皮层-小胶质细胞_亚群注释结果_20261014_145035.xlsx`.
+- Automatically generate and deliver the companion `cluster注释信息.xlsx` (Cluster, Celltype_EN, 中文名称) to the same directory.
+- Strictly prohibit delivering non-timestamped workbooks (`{project_name}_亚群注释结果.xlsx`) to avoid redundant duplicate files and confusion.
+- Call `scripts/copy_final_workbook.py` without `--destination` when the common original directory is unique. Use `--output-name` only for an explicit user-confirmed filename (which will preserve or attach timestamp).
+- Default paired inputs to their common original directory; default Seurat to the object directory.
+- Do not ask when one unique E-drive directory is inferable.
+- Never overwrite existing timestamped workbooks. If the destination exists, use `<stem>_2.xlsx`, then `_3`, and so on.
+- Require SHA-256 equality after copying and report atomic delivery of both workbooks.

@@ -1,15 +1,22 @@
 import argparse
+from datetime import datetime
 import hashlib
 import importlib.util
 import json
 import os
+from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
 import sys
-from pathlib import Path
 
-from openpyxl import load_workbook
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 
 def load_contract_module():
@@ -94,6 +101,115 @@ def infer_destination(inputs: list[str]) -> Path:
     return parents.pop()
 
 
+def default_output_name(directory: Path, timestamp: str | None = None) -> str:
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    project_name = directory.name.strip()
+    return f"{project_name}_亚群注释结果_{timestamp}.xlsx"
+
+
+def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: Path) -> Path:
+    wb_source = load_workbook(source_workbook_path, data_only=True)
+    if "注释结果" not in wb_source.sheetnames:
+        raise ValueError(f"Source workbook lacks '注释结果' sheet: {source_workbook_path}")
+    src_sheet = wb_source["注释结果"]
+
+    header_row = [cell.value for cell in src_sheet[1]]
+    try:
+        col_cluster = header_row.index("Cluster") + 1
+        col_en = header_row.index("Celltype_EN") + 1
+        col_cn = header_row.index("中文名称") + 1
+    except ValueError as exc:
+        raise ValueError(f"Required column missing in '注释结果' sheet: {exc}")
+
+    records = []
+    for r in range(2, src_sheet.max_row + 1):
+        cluster_val = src_sheet.cell(r, col_cluster).value
+        if cluster_val is None:
+            continue
+        en_val = src_sheet.cell(r, col_en).value or ""
+        cn_val = src_sheet.cell(r, col_cn).value or ""
+        records.append((str(cluster_val), str(en_val), str(cn_val)))
+
+    wb_info = Workbook()
+    ws = wb_info.active
+    ws.title = "cluster注释信息"
+
+    headers = ["Cluster", "Celltype_EN", "中文名称"]
+    ws.append(headers)
+
+    font_header = Font(name="Cambria", size=11, bold=True)
+    font_data = Font(name="Cambria", size=11)
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+
+    ws.row_dimensions[1].height = 24
+    for col_idx in range(1, 4):
+        cell = ws.cell(1, col_idx)
+        cell.font = font_header
+        cell.alignment = align_center
+        cell.fill = header_fill
+        cell.border = thin_border
+
+    for r_idx, (c_val, en_val, cn_val) in enumerate(records, 2):
+        ws.row_dimensions[r_idx].height = 20
+        c_cell = ws.cell(r_idx, 1, value=int(c_val) if c_val.isdigit() else c_val)
+        c_cell.font = font_data
+        c_cell.alignment = align_center
+        c_cell.border = thin_border
+
+        en_cell = ws.cell(r_idx, 2, value=en_val)
+        en_cell.font = font_data
+        en_cell.alignment = align_left
+        en_cell.border = thin_border
+
+        cn_cell = ws.cell(r_idx, 3, value=cn_val)
+        cn_cell.font = font_data
+        cn_cell.alignment = align_left
+        cn_cell.border = thin_border
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = None
+
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            val_str = str(cell.value or "")
+            val_len = sum(2 if ord(char) > 127 else 1 for char in val_str)
+            if val_len > max_len:
+                max_len = val_len
+        ws.column_dimensions[col_letter].width = max(14, max_len + 3)
+
+    output_info_path.parent.mkdir(parents=True, exist_ok=True)
+    wb_info.save(output_info_path)
+    return output_info_path
+
+
+def cleanup_legacy_non_timestamped(directory: Path, current_dest: Path, suffix_type: str = "亚群") -> list[str]:
+    cleaned = []
+    base_name = directory.name.strip()
+    candidates = [
+        directory / f"{base_name}_{suffix_type}注释结果.xlsx",
+        directory / f"{base_name}{suffix_type}注释结果.xlsx",
+    ]
+    for cand in candidates:
+        if cand.is_file() and cand.resolve() != current_dest.resolve():
+            try:
+                cand.unlink()
+                cleaned.append(str(cand))
+            except Exception:
+                pass
+    return cleaned
+
+
 def validate_formal_workbook(source: Path) -> dict:
     qa_path = source.with_suffix(".qa.json")
     if not qa_path.is_file():
@@ -155,6 +271,7 @@ def main() -> None:
     parser.add_argument("--workspace-root", required=True)
     parser.add_argument("--destination")
     parser.add_argument("--input", action="append", default=[], help="Original input file; repeat for paired inputs to infer their common directory.")
+    parser.add_argument("--output-name", help="Explicit destination file name.")
     args = parser.parse_args()
     workspace_root = Path(args.workspace_root).resolve()
     source = Path(args.source).resolve()
@@ -171,7 +288,24 @@ def main() -> None:
     check_dir = destination_arg.parent if destination_arg.suffix.lower() == ".xlsx" else destination_arg
     if has_reparse_component(check_dir):
         raise ValueError(f"destination directory must not contain a junction/reparse point: {check_dir}")
-    destination = destination_arg if destination_arg.suffix.lower() == ".xlsx" else destination_arg / source.name
+
+    now_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if destination_arg.suffix.lower() == ".xlsx":
+        destination = destination_arg
+    else:
+        if args.output_name:
+            out_name = args.output_name
+            if not re.search(r"_\d{8}_\d{6}\.xlsx$", out_name, re.IGNORECASE):
+                stem = Path(out_name).stem
+                out_name = f"{stem}_{now_ts}.xlsx"
+            destination = destination_arg / out_name
+        elif re.search(r"_\d{8}_\d{6}\.xlsx$", source.name, re.IGNORECASE):
+            destination = destination_arg / source.name
+        elif "注释结果" in source.name or source.name in ("output.xlsx", "subcluster.xlsx", "final.xlsx"):
+            destination = destination_arg / default_output_name(check_dir, now_ts)
+        else:
+            destination = destination_arg / source.name
+
     destination = destination.absolute()
     destination_dir = destination.parent
     if destination.suffix.lower() != ".xlsx":
@@ -185,6 +319,11 @@ def main() -> None:
     destination_hash = sha256(destination)
     if source_hash != destination_hash:
         raise RuntimeError("destination hash does not match source after copy")
+
+    cluster_info_path = destination_dir / "cluster注释信息.xlsx"
+    export_cluster_info_workbook(destination, cluster_info_path)
+    cleaned = cleanup_legacy_non_timestamped(destination_dir, destination, "亚群")
+
     registration = None
     try:
         records_candidate = source.parent / "annotation_records.json"
@@ -223,9 +362,11 @@ def main() -> None:
 
     out_payload = {
         "status": "copied", "source": str(source), "destination": str(destination),
+        "cluster_info_destination": str(cluster_info_path),
         "destination_mode": "explicit" if args.destination else "inferred_from_original_inputs",
-        "sha256": source_hash, "qa_status": qa.get("status"), "copied_files": 1,
+        "sha256": source_hash, "qa_status": qa.get("status"), "copied_files": 2,
         "qa_sidecar_copied": False,
+        "cleaned_non_timestamped": cleaned,
     }
     if registration:
         out_payload["case_registration"] = registration
