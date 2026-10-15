@@ -14,11 +14,11 @@
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.7.1+codex.20261014071701"
+      "version": "0.7.2+codex.20261015090827"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.11.1+codex.20261014071709"
+      "version": "0.11.2+codex.20261015090828"
     },
     {
       "id": "feature-gene-heatmap-violin",
