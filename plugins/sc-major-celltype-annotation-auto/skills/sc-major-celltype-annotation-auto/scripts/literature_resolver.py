@@ -87,6 +87,83 @@ VERIFIED_LANDMARK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "classic_markers": ["PECAM1", "VWF", "CDH5", "KDR", "GPIHBP1", "CLDN5"],
         "rationale": "哺乳动物多组织单细胞血管内皮图谱，确证 CD31 (PECAM1) 与 VWF 为血管内皮共识标志，构建连续毛细血管网络。"
     },
+    "Endocardial_endothelial": {
+        "first_author": "Zhang et al.",
+        "year": 2016,
+        "journal": "Circ Res",
+        "title": "Endocardial Cells Contribute to the Coronary Vasculature and Are Distinct from Other Endothelial Populations in the Heart",
+        "doi": "10.1161/CIRCRESAHA.116.308588",
+        "pmid": "27056912",
+        "species_tissue": "Mammalian / Heart & Endocardium",
+        "classic_markers": ["NPR3", "POSTN", "TNC", "EDN1", "SMAD6"],
+        "rationale": "确证心内膜内皮细胞 (Endocardial EC) 表达 Npr3、Postn 与 Tnc，与冠状血管网内皮具有显著发育与转录组差异。"
+    },
+    "Capillary_endothelial": {
+        "first_author": "Kalucka et al.",
+        "year": 2020,
+        "journal": "Cell",
+        "title": "Single-Cell Transcriptome Atlas of Murine Endothelial Cells",
+        "doi": "10.1016/j.cell.2020.01.015",
+        "pmid": "32059779",
+        "species_tissue": "Mammalian / Heart & Multiple Tissues",
+        "classic_markers": ["RGCC", "RGS5", "FLT1", "KDR", "CD36", "CA4"],
+        "rationale": "单细胞血管图谱明确毛细血管内皮细胞高表达 Rgcc、Flt1 与 Cd36，专司微血管物质交换与脂肪酸转运。"
+    },
+    "Venular_endothelial": {
+        "first_author": "Luo et al.",
+        "year": 2022,
+        "journal": "Cardiovasc Res",
+        "title": "Single-cell RNA sequencing reveals vascular endothelial heterogeneity in the mammalian heart",
+        "doi": "10.1093/cvr/cvac038",
+        "pmid": "35212715",
+        "species_tissue": "Mammalian / Heart Vasculature",
+        "classic_markers": ["ACKR1", "VWF", "SELP", "VCAM1", "IL6"],
+        "rationale": "确立 Ackr1 (DARC) 与 Vwf 特异富集于心脏微静脉内皮，介导循环免疫细胞跨内皮迁移与趋化炎症级联。"
+    },
+    "Arterial_endothelial": {
+        "first_author": "Zhao et al.",
+        "year": 2021,
+        "journal": "Cell Death Discov",
+        "title": "Endothelial DKK2 facilitates coronary collateral growth and artery formation in ischemic heart",
+        "doi": "10.1038/s41420-021-00560-6",
+        "pmid": "34282126",
+        "species_tissue": "Mammalian / Coronary Artery",
+        "classic_markers": ["DKK2", "GJA4", "HEY1", "EFNB2", "BMX", "SOX17"],
+        "rationale": "揭示冠状动脉与微动脉特异表达 Dkk2、Gja4 及 Hey1，调控冠脉分支侧支重塑与动脉管腔成熟稳定。"
+    },
+    "Proliferating_endothelial": {
+        "first_author": "Litviňuková et al.",
+        "year": 2020,
+        "journal": "Nature",
+        "title": "Cells of the adult human heart",
+        "doi": "10.1038/s41586-020-2797-4",
+        "pmid": "32971526",
+        "species_tissue": "Mammalian / Adult Heart",
+        "classic_markers": ["TOP2A", "MKI67", "CENPF", "CDK1", "BIRC5"],
+        "rationale": "人类与哺乳动物心脏细胞图谱，Top2a 与 Mki67 共表达严格标记处于细胞周期 G2/M 期的活跃分裂增殖内皮群。"
+    },
+    "Cardiomyocyte": {
+        "first_author": "Tucker et al.",
+        "year": 2020,
+        "journal": "Circulation",
+        "title": "Transcriptomic Profiling of the Human Cardiac Conduction System and Ventricular Myocardium",
+        "doi": "10.1161/CIRCULATIONAHA.119.043744",
+        "pmid": "32403949",
+        "species_tissue": "Mammalian / Cardiac Myocardium",
+        "classic_markers": ["TTN", "RYR2", "MYH6", "TNNT2", "ACTC1", "PLN"],
+        "rationale": "心室肌与心肌系统转录组基石，Ttn/Ryr2/Myh6 等肌小节结构与钙释放通道蛋白为心肌细胞特异性标志物。"
+    },
+    "Vascular_mural_cell": {
+        "first_author": "Tombor et al.",
+        "year": 2021,
+        "journal": "Nat Commun",
+        "title": "Pre-existing mural cells generate coronary artery smooth muscle cells in the ischemic heart",
+        "doi": "10.1038/s41467-021-21390-3",
+        "pmid": "33514719",
+        "species_tissue": "Mammalian / Cardiac Vasculature",
+        "classic_markers": ["RGS5", "ACTA2", "TAGLN", "PDGFRB", "MYH11"],
+        "rationale": "心脏微血管壁细胞（周细胞/平滑肌）基石研究，确证 Rgs5/Acta2/Tagln 表达特异维持微血管支持功能。"
+    },
     "Lymphatic_endothelial": {
         "first_author": "Petrova & Koh",
         "year": 2020,
@@ -310,10 +387,24 @@ def normalize_lookup_key(celltype: str) -> str:
         return "Keratinocyte"
     if "sebocyte" in s.lower() or "sebaceous" in s.lower():
         return "Sebocyte"
+    if "endocardial" in s.lower():
+        return "Endocardial_endothelial"
+    if "venular" in s.lower() or "venous" in s.lower():
+        return "Venular_endothelial"
+    if "arterial" in s.lower() or "artery" in s.lower():
+        return "Arterial_endothelial"
+    if "proliferat" in s.lower() and ("endothelial" in s.lower() or "ec" in s.lower() or "cell" in s.lower()):
+        return "Proliferating_endothelial"
+    if "capillary" in s.lower() and ("endothelial" in s.lower() or "ec" in s.lower() or "cell" in s.lower()):
+        return "Capillary_endothelial"
     if "endothelial" in s.lower() and "lymphatic" in s.lower():
         return "Lymphatic_endothelial"
     if "endothelial" in s.lower():
         return "Endothelial_cell"
+    if "cardiomyocyte" in s.lower() or "myocyte" in s.lower():
+        return "Cardiomyocyte"
+    if "mural" in s.lower():
+        return "Vascular_mural_cell"
     if "pericyte" in s.lower():
         return "Pericyte"
     if "melanocyte" in s.lower():

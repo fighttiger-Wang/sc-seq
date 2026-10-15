@@ -101,13 +101,23 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         raise ValueError(f"Required column missing in '注释结果' sheet: {exc}")
 
     records = []
+    red_rgb = {"FFF8696B", "F8696B"}
     for r in range(2, src_sheet.max_row + 1):
         cluster_val = src_sheet.cell(r, col_cluster).value
         if cluster_val is None:
             continue
         en_val = src_sheet.cell(r, col_en).value or ""
         cn_val = src_sheet.cell(r, col_cn).value or ""
-        records.append((str(cluster_val), str(en_val), str(cn_val)))
+        is_warning = False
+        cn_cell_src = src_sheet.cell(r, col_cn)
+        en_cell_src = src_sheet.cell(r, col_en)
+        for cell_src in (cn_cell_src, en_cell_src):
+            if cell_src.fill and cell_src.fill.fgColor:
+                rgb = str(cell_src.fill.fgColor.rgb or "").upper()
+                if rgb in red_rgb:
+                    is_warning = True
+                    break
+        records.append((str(cluster_val), str(en_val), str(cn_val), is_warning))
 
     wb_info = Workbook()
     ws = wb_info.active
@@ -127,6 +137,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         bottom=Side(style="thin", color="D9D9D9"),
     )
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    red_fill = PatternFill(start_color="FFF8696B", end_color="FFF8696B", fill_type="solid")
 
     ws.row_dimensions[1].height = 24
     for col_idx in range(1, 4):
@@ -136,7 +147,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         cell.fill = header_fill
         cell.border = thin_border
 
-    for r_idx, (c_val, en_val, cn_val) in enumerate(records, 2):
+    for r_idx, (c_val, en_val, cn_val, is_warning) in enumerate(records, 2):
         ws.row_dimensions[r_idx].height = 20
         c_cell = ws.cell(r_idx, 1, value=int(c_val) if c_val.isdigit() else c_val)
         c_cell.font = font_data
@@ -152,6 +163,10 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         cn_cell.font = font_data
         cn_cell.alignment = align_left
         cn_cell.border = thin_border
+
+        if is_warning:
+            en_cell.fill = red_fill
+            cn_cell.fill = red_fill
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = None

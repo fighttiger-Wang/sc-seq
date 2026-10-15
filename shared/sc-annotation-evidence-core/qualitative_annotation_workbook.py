@@ -426,12 +426,17 @@ def _warning(record):
     decision = record.get("_decision", {})
     if record.get("stable_id") == "Multi_cell" or record.get("celltype_en") == "Multi_cell":
         return True
-    # Precision QC rule: strictly fatal defects (doublet, debris, severe low quality)
     for key in (
         "suspected_doublet", "low_quality", "debris",
+        "off_parent_detected", "off_parent_reassignment",
     ):
         if bool(_first(record, decision, key)):
             return True
+    if str(record.get("off_parent_gate", "")).strip() in {"不通过", "fail", "failed"}:
+        return True
+    boundary = str(record.get("boundary_flags", "")).lower()
+    if any(k in boundary for k in ("off_parent", "ambient", "debris", "doublet")):
+        return True
     return False
 
 
@@ -487,6 +492,32 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
     policy = evidence.get("annotation_evidence_policy", {})
     filenames = [Path(str(value)).name for value in paths.values() if str(value).strip()]
     constraints = metadata.get("annotation_constraints") or policy.get("user_constraints") or "无"
+
+    palette_pool = [
+        "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B",
+        "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF", "#AEC7E8", "#FFBB78",
+        "#98DF8A", "#FF9896", "#C5B0D5", "#C49C94", "#F7B6D2", "#C7C7C7",
+        "#DBDB8D", "#9EDAE5", "#393B79", "#5254A3", "#6B6ECF", "#9C9EDE",
+        "#637939", "#8CA252", "#B5CF6B", "#CEDB9C", "#8C6D31", "#BD9E39",
+    ]
+    palette_items = []
+    hex_list = []
+    for idx, r in enumerate(records):
+        cid = str(r.get("cluster_id", idx))
+        plot_lbl = r.get("approved_plot_label") or r.get("celltype_plot") or r.get("celltype_en") or f"C{cid}"
+        c_hex = palette_pool[idx % len(palette_pool)]
+        hex_list.append(c_hex)
+        palette_items.append(f"Cluster {cid} ({plot_lbl}): {c_hex}")
+    palette_desc = "; ".join(palette_items)
+    cols_joined = '", "'.join(hex_list)
+    r_code = (
+        'library(readxl); library(Seurat); library(ggplot2); '
+        'anno <- read_excel("cluster注释信息.xlsx"); '
+        'seurat_obj$celltype <- anno$Celltype_EN[match(seurat_obj$seurat_clusters, anno$Cluster)]; '
+        f'cols_vector <- c("{cols_joined}"); '
+        'DimPlot(seurat_obj, group.by="celltype", cols=cols_vector, label=TRUE, pt.size=0.8) + theme_classic()'
+    )
+
     return [
         ["物种", metadata.get("species", "")],
         ["组织/器官", metadata.get("tissue", "")],
@@ -499,7 +530,11 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["生成时间", datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")],
         ["限定条件", human_value(constraints)],
         ["排序规则", "所有含 Cluster 的表均按数值升序，再按自然字母数字顺序"],
-        ["红色填充规则", "仅中文名称列；用于显著状态程序、Multi_cell、疑似双细胞、低质量/碎片/背景干扰及谱系边界"],
+        ["红色填充规则", "用于显著状态程序、Multi_cell、疑似双细胞、非目标谱系(Off-parent)、低质量/碎片/背景干扰及谱系边界"],
+        ["双轨绘图标签规范", "提供 Celltype_EN (国际权威全称) 与 Celltype_Plot (紧凑作图标签)，避免 UMAP 图例文字遮挡与排版挤压"],
+        ["谱系专属推荐调色板 (HEX)", palette_desc],
+        ["Seurat 3步极速出图与质控 R代码", r_code],
+        ["下游定量分析与过滤实操建议", "经文献实证通过的各亚群（未标红）可直接用于差异表达、比例变动统计及下游功能分析；红色警示单元格标出的非目标谱系/双细胞/严重污染群，在下游进行纯系机制解析前应予以过滤或单独隔离。"],
         ["证据解释", "不使用评分或置信度；原始数值仅作为单个 Marker 的证据，身份由生物学门控和专家推理决定"],
         ["局限性", "Cluster 汇总证据不能证明同一细胞共表达，也不能确认 doublet；UMAP 仅作一致性审计"],
         ["数据处理声明", "注释过程未自动删除、过滤、合并或修改细胞及原始数据"],
