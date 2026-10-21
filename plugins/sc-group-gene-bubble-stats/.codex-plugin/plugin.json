@@ -1,0 +1,24 @@
+{
+  "name": "sc-group-gene-bubble-stats",
+  "version": "0.1.0+codex.20261008120000",
+  "description": "Generate publication-ready single-cell split group gene expression bubble plots (DotPlots) and comprehensive statistical analysis tables (means, SEM, fold change, p-values).",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "17 · 单细胞分组基因表达气泡图与统计 v0.1.0",
+    "shortDescription": "从单细胞表达谱数据生成分组基因表达分面气泡图与完整组间统计分析表",
+    "longDescription": "支持单细胞表达矩阵、Seurat 分析长表 (avg_expr_result.txt) 或 ZIP 数据包，针对目标基因和细胞亚群绘制组间分面气泡图 (Split DotPlot)、组间表达柱状散点图、阳性细胞占比图及双面板综合图，并自动计算均值、SEM、倍数变化及假设检验，输出出版级矢量图与多 Sheet Excel 统计分析表。",
+    "developerName": "fight",
+    "category": "Education & Research",
+    "capabilities": [
+      "Single-cell gene expression visualization",
+      "Split dotplot / bubble plot",
+      "Inter-group statistical analysis",
+      "Multi-sheet Excel workbook export",
+      "Publication-ready PDF and PNG graphics"
+    ],
+    "defaultPrompt": "根据单细胞表达谱数据和指定基因绘制组间分面气泡图并输出完整统计分析表。"
+  }
+}

@@ -1357,6 +1357,7 @@ ANTIGRAVITY_SKILLS_MAP: dict[str, tuple[int, str]] = {
     "bioinformatics-results-report-classic": (14, "14-生信结果智能解读报告-经典文档版"),
     "celltype-function-heatmap": (15, "15-细胞类型功能基因热图"),
     "scientific-diagram-016": (16, "16-科研流程图与概念图"),
+    "sc-group-gene-bubble-stats": (17, "17-单细胞分组基因表达气泡图与统计"),
 }
 
 

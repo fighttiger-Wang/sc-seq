@@ -195,6 +195,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Education & Research"
+    },
+    {
+      "name": "sc-group-gene-bubble-stats",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sc-group-gene-bubble-stats"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
     }
   ]
 }

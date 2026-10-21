@@ -155,8 +155,9 @@ NN · Name
 
 15. `celltype-function-heatmap`
 16. `scientific-diagram-016`
+17. `sc-group-gene-bubble-stats`
 
-Assign later maintained skills the next unused two-digit number, currently `17`. Do not renumber existing skills unless the user explicitly changes the workflow.
+Assign later maintained skills the next unused two-digit number, currently `18`. Do not renumber existing skills unless the user explicitly changes the workflow.
 
 ## Direct Workflow
 

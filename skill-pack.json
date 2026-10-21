@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 16,
+  "expectedPluginCount": 17,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -67,6 +67,10 @@
     {
       "id": "scientific-diagram-016",
       "version": "0.1.0+codex.20260907002131"
+    },
+    {
+      "id": "sc-group-gene-bubble-stats",
+      "version": "0.1.0+codex.20261008120000"
     }
   ],
   "sharedPaths": [

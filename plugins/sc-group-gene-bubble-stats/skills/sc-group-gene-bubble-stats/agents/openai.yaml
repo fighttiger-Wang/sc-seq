@@ -1,0 +1,7 @@
+interface:
+  display_name: "17 · 单细胞分组基因表达气泡图与统计 v0.1.0"
+  short_description: "从单细胞表达谱数据生成分组基因表达分面气泡图与完整组间统计分析表"
+  default_prompt: "Use $sc-group-gene-bubble-stats to generate publication-ready split bubble plots and comprehensive statistical analysis tables from single-cell expression data."
+
+policy:
+  allow_implicit_invocation: true
