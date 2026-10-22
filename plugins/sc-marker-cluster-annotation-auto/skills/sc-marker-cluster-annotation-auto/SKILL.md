@@ -24,6 +24,11 @@ with same-level evidence, an approved residual leaf, or a blocked/recluster
 outcome; never hide it in `下位亚类`. States, programs, and disease roles remain
 separate fields and must not be concatenated into `Celltype_EN`.
 
+### 严禁偷懒粗化合并与强制精细化命名规范 (Strict Anti-Lumping & Fine-Grained Mandate)
+1. **禁止大类泛化与大锅饭合并**：凡在 UMAP 上成簇分布、构成独立拓扑分支（如外突岛、半岛），或具有明确特异 Marker 表达谱的亚群（如神经伴行 ANGPTL7/CDH19、神经束膜屏障 CLDN1/SLC2A1、微钙化调控 MGP、弹力板 ELN 等），**必须在最终交付的 `Celltype_EN`、`中文名称` 以及 `cluster注释信息.xlsx` 主列中直接赋予独立、特异的精细亚型名称**。
+2. **严禁利用门控漏洞偷懒**：严禁为了迎合“同名亚群拓扑相邻门控”而将具有不同生物学特异性的多个簇偷懒打包归入同一宽泛标签（例如将多个不同的成纤维亚群全部归入 `Adv2_Structural_Fibroblast`）。
+3. **交付主表一致性**：交付的 Excel 表格（《绘图列表》、《注释结果》和《cluster注释信息.xlsx》）主列必须直接呈现差异化精细命名，严禁“在正文解释中声称有细分，但大表主列全为同一大类”的脱节行为。
+
 ## Inputs
 
 Require species, tissue/organ, parent population, average-expression input,

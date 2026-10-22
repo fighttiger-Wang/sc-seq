@@ -41,6 +41,13 @@ targeted literature research; it does not force a fine-grained subtype. A
 parent-level, unresolved, provisional, manual-review, merge, or recluster
 decision is valid when the expert plotting standard is not reached.
 
+## Strict anti-lumping and fine-grained annotation mandate (严禁偷懒粗化合并与强制精细化命名规范)
+
+In any single-cell annotation task (major cell types or subclusters):
+1. **Never Coarsen or Lump Distinct Clusters (禁止大类泛化与大锅饭合并)**: If clusters have distinct marker gene profiles, form separate topological branches/islands on UMAP, or correspond to biologically recognized sub-identities, they MUST be given distinct, specific cell type labels in the primary output columns (`Celltype_EN`, `中文名称`, and `cluster注释信息.xlsx`). Never lazily bundle them into a broad parent label (e.g., bundling multiple distinct fibroblast sub-lineages into `Adv2_Structural_Fibroblast`).
+2. **Delivery Column Consistency (交付主表列一致性)**: The primary delivery columns in Excel workbooks (`绘图列表`, `注释结果`, and `cluster注释信息.xlsx`) must directly display the differentiated specific annotations. Never excuse a broad label by claiming the distinction exists in secondary or internal fields (such as `下位亚类`).
+3. **Biological First Principles Over Verification Shortcuts (生物学第一性原理严于门控捷径)**: Never choose an overly broad or lumped label just because it is easier to pass UMAP adjacency or knowledge base constraints. Resolve specific identities via rigorous marker and literature evidence.
+
 ## UMAP and mixed populations
 
 Review every cluster on the complete UMAP. UMAP is mandatory consistency

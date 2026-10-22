@@ -12,6 +12,10 @@ annotated at one major-celltype level; never refine only one lineage because its
 markers are clearer. Candidate discovery may be open-ended, but final plotting
 labels must use controlled, reusable names at one presentation level.
 
+### 严禁偷懒粗化合并与主要谱系特异性规范 (Strict Specificity Mandate)
+1. **禁止模糊泛化**：具有明确谱系特异 Marker（如内皮、平滑肌、成纤维、巨噬、T/NK 等）或 UMAP 独立分支的群，必须直接在主列给出明确大类身份，不得模糊泛化或错误归并。
+2. **交付主表一致性**：交付的 Excel 表格（《绘图列表》、《注释结果》和《cluster注释信息.xlsx》）主列必须直接呈现确切分类名称。
+
 ## Inputs
 
 Require species, tissue/organ, average-expression input, marker workbook, and a
