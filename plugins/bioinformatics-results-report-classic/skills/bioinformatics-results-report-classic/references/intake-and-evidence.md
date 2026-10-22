@@ -50,17 +50,42 @@ Use the ledger to populate visible `数据依据` notes for the report's core cl
 - A large effect with weak statistical support and a small effect with strong support are different findings; report both dimensions when provided.
 - Cell-level observations do not replace biological replicates. Never treat thousands of cells as thousands of independent subjects.
 
-## Literature verification
+## Literature verification and DOI anti-hallucination
 
 Search using scientific concepts only. Never send paths, filenames containing customer information, sample IDs, raw table rows, or source images to external services.
 
 Prioritize:
-
-1. recent peer-reviewed primary research;
+1. recent peer-reviewed primary research in high-impact journals (Nature/Science/Cell series, Circulation, Advanced Science, Eur Heart J, etc.);
 2. recent systematic reviews or consensus/guidelines;
 3. older landmark work required to explain an established mechanism.
 
 Check that each source actually supports the nearby claim in the relevant species, tissue, disease, or method context. Do not cite a broad review as proof of a dataset-specific causal mechanism. Use a short linked label such as `Smith 2024 / Nature Medicine` beside the sentence. If no reliable source is found, use the exact phrase `未获文献验证的机制推测`.
+
+**Mandatory DOI Anti-Hallucination Gate**:
+- Never guess or interpolate a publisher's DOI format (e.g. inserting publication years into Wiley or Springer prefixes).
+- Every external citation must be verifiable via Crossref (`https://api.crossref.org/works/<doi>`). The static validator strictly rejects 404 or unverified DOIs.
+
+## Academic Title Formula and Prohibited Buzzwords
+
+Every report must present as a formal, peer-reviewed caliber scientific research monograph:
+
+- **Mandatory Title Formula**:
+  `《[研究物种/组织] + [疾病/实验模型] + [主要组学技术] + [核心科学议题/病理机制] + 研究报告》`
+- **Hard Prohibited Buzzwords**:
+  Never use meta-tool terms in titles, headings, or conclusions, such as `智能解读`, `智能报告`, `生信助手`, `AI解读`, `模型生成`.
+- **Complete De-identification**:
+  Never expose customer names, client institution tags, or personal folder names in titles, headers, footers, or filenames.
+
+## Three-Tier Biological Argumentation Contract
+
+To prevent superficial, token-saving summary drift in complex JSON blocks, every primary finding section MUST develop these three layers:
+
+1. **Layer 1 (Statistical Grounding)**:
+   Exact pairwise contrast, statistical test method, adjusted significance ($p_{\text{adj}}$ or FDR), and numerical effect size (ROE, Log2FC, or proportion difference).
+2. **Layer 2 (Cellular State & Molecular Mechanism)**:
+   Integration with specific verified marker genes, pathway enrichment signals (GSEA/KEGG), and cell-cell communication pairs (L-R pairs).
+3. **Layer 3 (Pathological & Translational Relevance)**:
+   Biomechanical consequences on tissue architecture, disease progression staging, and potential clinical biomarker/therapeutic hypothesis (with clear evidence leveling).
 
 ## Writing discipline
 

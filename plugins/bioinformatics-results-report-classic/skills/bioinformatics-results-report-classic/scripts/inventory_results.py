@@ -26,6 +26,8 @@ HINTS = [
     ("enrichment", re.compile(r"go|kegg|gsea|gsva|enrich|pathway|富集|通路", re.I)),
     ("cell-communication", re.compile(r"cellchat|nichenet|cellphonedb|ligand|receptor|communication|通讯", re.I)),
     ("trajectory", re.compile(r"pseudotime|trajectory|monocle|slingshot|paga|dpt|velocity|拟时序|轨迹", re.I)),
+    ("regulon-network", re.compile(r"scenic|regulon|transcription_factor|tf_activity|pyscenic|转录因子", re.I)),
+    ("spatial-transcriptomics", re.compile(r"spatial|visium|stereo|spot|seurat_spatial|空转|切片", re.I)),
 ]
 
 
@@ -95,6 +97,8 @@ def _image_preview(path: Path) -> dict[str, Any]:
 
 def _pdf_preview(path: Path) -> dict[str, Any]:
     try:
+        if path.stat().st_size > 2 * 1024 * 1024:
+            return {"pages": 1, "notice": "High-density vector PDF (>2MB): text stream parsing skipped for performance."}
         from pypdf import PdfReader
         reader = PdfReader(str(path))
         text = ""
@@ -103,6 +107,19 @@ def _pdf_preview(path: Path) -> dict[str, Any]:
         return {"pages": len(reader.pages), "first_page_text": text}
     except Exception as exc:
         return {"warning": f"PDF metadata unavailable: {exc}"}
+
+
+def detect_omics_modules(files: list[dict[str, Any]]) -> dict[str, bool]:
+    paths = " ".join(f["path"].lower() for f in files)
+    return {
+        "has_proportions": bool(re.search(r"proportion|ratio|roe|composition|fraction|占比|比例", paths)),
+        "has_deg": bool(re.search(r"deg|differential|findmarker|marker|logfc|差异", paths)),
+        "has_enrichment": bool(re.search(r"go|kegg|gsea|gsva|enrich|pathway|富集|通路", paths)),
+        "has_communication": bool(re.search(r"cellchat|nichenet|cellphonedb|ligand|receptor|communication|通讯", paths)),
+        "has_trajectory": bool(re.search(r"pseudotime|trajectory|monocle|slingshot|paga|dpt|velocity|拟时序|轨迹", paths)),
+        "has_regulon": bool(re.search(r"scenic|regulon|transcription_factor|tf_activity|pyscenic|转录因子", paths)),
+        "has_spatial": bool(re.search(r"spatial|visium|stereo|spot|seurat_spatial|空转|切片", paths)),
+    }
 
 
 def _docx_preview(path: Path) -> dict[str, Any]:
@@ -195,6 +212,7 @@ def main() -> int:
             "scan_truncated": truncated,
             "scan_limits": {"max_depth": args.max_depth, "max_files": args.max_files, "max_preview_bytes": args.max_preview_bytes},
             "analysis_hints": dict(sorted(hint_counts.items())),
+            "omics_modules": detect_omics_modules(files),
             "files": files,
             "notice": "Filename hints are provisional. Confirm groups, sample counts, comparison direction, file roles, scan truncation, and inspection errors before interpretation.",
         }

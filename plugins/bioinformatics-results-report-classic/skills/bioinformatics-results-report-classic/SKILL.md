@@ -13,7 +13,9 @@ Turn a completed local result folder into a professional Chinese report without 
 - Do not open Seurat/Scanpy objects, rerun pipelines, recompute statistics, invent missing contrasts, or upgrade descriptive patterns to significance.
 - Treat notes and filenames as context, not ground truth. Resolve claims against machine-readable tables and figure annotations.
 - Default to Chinese prose; retain gene, pathway, ligand-receptor, method, and necessary technical names in English.
-- Do not add client branding, logos, or identifying customer metadata.
+- Adopt the persona of a senior principal investigator / domain scientist. Never use meta-tool buzzwords in titles, headings, or conclusions (智能解读, 智能报告, 生信助手, AI解读, 模型生成).
+- Strictly enforce the Academic Title Formula: 《[研究物种/组织] + [疾病/实验模型] + [主要组学技术] + [核心科学议题/病理机制] + 研究报告》. Never leak client branding, customer names, or private folder names in titles, headers, footers, or filenames.
+- Every cited DOI must be genuine and verifiable via Crossref API. The static validator strictly rejects hallucinated, non-existent, or 404 DOIs.
 - Never upload file contents, sample identifiers, tables, or figures to an external service. Literature queries may contain only scientific concepts such as disease, tissue, species, cell type, gene, pathway, or method.
 - Keep intermediate inventories and specifications in the approved shared workspace. Write only a new versioned final HTML to the result folder; never overwrite source files or an earlier report.
 
@@ -51,6 +53,7 @@ The visual language is fixed but the section structure is adaptive: a centered w
 - For GO, KEGG, GSEA, or GSVA, read [enrichment](references/enrichment.md).
 - For CellChat, NicheNet, ligand-receptor, or related outputs, read [cell communication](references/cell-communication.md).
 - For pseudotime, trajectories, branches, or dynamic genes, read [trajectory](references/trajectory.md).
+- For multi-module integration across proportions, DEGs, enrichment, communication, and trajectory, read [multi-omics synthesis](references/multi-omics-synthesis.md).
 - Before drafting the JSON specification, read [report schema](references/report-schema.md).
 - Before rendering or changing the shell, read [visual system](references/visual-system.md).
 - Before creating or replacing conceptual figures, read [scientific diagrams](references/scientific-diagrams.md).
