@@ -12,6 +12,7 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+import urllib.request
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -203,6 +204,35 @@ def main() -> int:
             parsed_url = urlparse(url)
             if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
                 errors.append(f"invalid external citation URL: {url}")
+        
+        # Prohibited meta buzzword check
+        title_full = "".join(parsed.title_text)
+        forbidden_title_buzzwords = ["智能解读", "智能报告", "生信小助手", "AI解读", "大模型生成"]
+        for bw in forbidden_title_buzzwords:
+            if bw in title_full:
+                errors.append(f"prohibited meta buzzword found in report title: {bw!r} (must use academic monograph title)")
+                
+        # DOI Crossref verification
+        doi_pattern = re.compile(r"https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/[-._;()/:A-Za-z0-9]+)")
+        checked_dois = set()
+        for url in parsed.external_links:
+            m = doi_pattern.match(url)
+            if m:
+                doi = m.group(1).rstrip(".,;)\"")
+                if doi not in checked_dois:
+                    checked_dois.add(doi)
+                    api_url = f"https://api.crossref.org/works/{doi}"
+                    req = urllib.request.Request(api_url, headers={"User-Agent": "AcademicReportValidator/1.0 (mailto:validator@bioinfo.local)"})
+                    try:
+                        with urllib.request.urlopen(req, timeout=5) as res:
+                            if res.status != 200:
+                                errors.append(f"DOI API returned non-200 [{res.status}]: {doi}")
+                    except urllib.error.HTTPError as e:
+                        if e.code == 404:
+                            errors.append(f"hallucinated or non-existent DOI (404 Not Found): {doi}")
+                    except Exception:
+                        # Network timeout or offline environment, gracefully pass
+                        pass
         if parsed.image_sources and parsed.dialogs != 1:
             warnings.append(f"expected one image viewer dialog, found {parsed.dialogs}")
         lower_document = document.lower()

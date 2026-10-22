@@ -6,10 +6,10 @@ Create a UTF-8 JSON file and pass it to `scripts/render_report.py`. Paths are re
 
 ```json
 {
-  "title": "项目结果智能解读报告",
-  "subtitle": "基于既有统计结果与可核查文献的综合判读",
-  "project_label": "项目结果报告",
-  "output_stem": "项目名_生信结果解读报告",
+  "title": "人类胸主动脉夹层与主动脉瘤单细胞转录组图谱与病理亚型精细分型研究报告",
+  "subtitle": "基于多中心临床队列与单细胞微环境重塑的系统生物学解析",
+  "project_label": "主动脉多组学研究 · 单细胞转录组精细图谱",
+  "output_stem": "人类胸主动脉夹层与主动脉瘤单细胞转录组图谱与病理亚型精细分型研究报告",
   "base_dir": "/path/to/result-folder",
   "meta": [
     {"label": "物种/组织", "value": "Human / tissue"},
@@ -19,12 +19,12 @@ Create a UTF-8 JSON file and pass it to `scripts/render_report.py`. Paths are re
     {"value": "3", "label": "研究分组"}
   ],
   "summary": {
-    "lead": "一段不夸大的核心结论。",
+    "lead": "一段严谨且具备生物学因果深度的核心结论。",
     "findings": ["关键结果一", "关键结果二"],
     "limitations": ["限制一"]
   },
   "sections": [],
-  "conclusion": "综合结论。",
+  "conclusion": "综合结论与转化启示。",
   "footer": "基于用户提供的既有统计结果生成；未重新计算统计检验。"
 }
 ```
