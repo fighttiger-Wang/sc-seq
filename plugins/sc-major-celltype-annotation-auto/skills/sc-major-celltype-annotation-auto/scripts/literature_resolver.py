@@ -462,17 +462,33 @@ def resolve_celltype_literature(
     sample_m_str = ", ".join(sample_markers) if sample_markers else "特征 Marker 群"
 
     # 1. Custom override passed from external verified retrieval
-    if custom_override and custom_override.get("doi"):
+    if custom_override and (custom_override.get("doi") or custom_override.get("pmid")):
         doi = str(custom_override.get("doi", "")).strip()
         pmid = str(custom_override.get("pmid", "")).strip()
-        locator = f"DOI: {doi}" + (f" | PMID: {pmid}" if pmid else "")
+        parts = []
+        if doi:
+            parts.append(f"DOI:{doi}")
+        if pmid:
+            parts.append(f"PMID:{pmid}")
+        locator = "; ".join(parts) or (f"DOI:{doi}" if doi else f"PMID:{pmid}")
         url = custom_override.get("url") or (f"https://doi.org/{doi}" if doi else "")
+        if not url and pmid:
+            digits = "".join(ch for ch in pmid if ch.isdigit())
+            if digits:
+                url = f"https://pubmed.ncbi.nlm.nih.gov/{digits}/"
+        classic_markers = custom_override.get("classic_markers", [])
+        if isinstance(classic_markers, str):
+            classic_markers_str = classic_markers
+        elif isinstance(classic_markers, (list, tuple)):
+            classic_markers_str = ", ".join(str(m) for m in classic_markers if str(m).strip())
+        else:
+            classic_markers_str = ""
         return {
             "celltype_en": celltype_en,
             "locator": locator,
             "citation": str(custom_override.get("title", "")),
             "study_context": str(custom_override.get("species_tissue", f"{species} / {tissue}")),
-            "classic_markers": ", ".join(custom_override.get("classic_markers", [])),
+            "classic_markers": classic_markers_str,
             "sample_evidence": sample_m_str,
             "rationale": str(custom_override.get("rationale", "经外部验证通过的细胞标志物文献实证。")),
             "url": url,
@@ -529,24 +545,35 @@ def build_7column_literature_rows(
     resolved_species = metadata.get("species") or species or "Mammalian"
     resolved_tissue = metadata.get("tissue") or tissue or "Tissue"
 
-    grouped: Dict[str, List[str]] = {}
+    grouped: Dict[str, Dict[str, Any]] = {}
     for r in records:
         en = r.get("celltype_en") or r.get("canonical_name") or "Cell"
         markers = r.get("key_markers") or r.get("supporting_markers") or []
         if isinstance(markers, str):
             markers = [m.strip() for m in re.split(r"[,;]+", markers) if m.strip()]
-        grouped.setdefault(en, [])
+        entry = grouped.setdefault(en, {"markers": [], "override": None})
         for m in markers[:12]:
-            if m not in grouped[en]:
-                grouped[en].append(m)
+            if m not in entry["markers"]:
+                entry["markers"].append(m)
+        lit = r.get("literature_details") or r.get("literature_source")
+        if lit and not entry["override"]:
+            if isinstance(lit, list) and lit:
+                entry["override"] = dict(lit[0]) if isinstance(lit[0], dict) else {"title": str(lit[0])}
+            elif isinstance(lit, dict):
+                entry["override"] = dict(lit)
+            elif isinstance(lit, str) and (lit.startswith("10.") or "doi" in lit.lower() or "pmid" in lit.lower()):
+                entry["override"] = {"title": lit}
+        if r.get("classic_markers") and entry["override"] and not entry["override"].get("classic_markers"):
+            entry["override"]["classic_markers"] = r.get("classic_markers")
 
     rows = []
-    for en, m_list in grouped.items():
+    for en, info in grouped.items():
         res = resolve_celltype_literature(
             celltype_en=en,
             species=resolved_species,
             tissue=resolved_tissue,
-            sample_markers=m_list
+            sample_markers=info["markers"],
+            custom_override=info["override"]
         )
         rows.append((
             res["celltype_en"],

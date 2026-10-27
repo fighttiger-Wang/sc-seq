@@ -88,9 +88,10 @@ def next_available(path: Path) -> Path:
 
 def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: Path) -> Path:
     wb_source = load_workbook(source_workbook_path, data_only=True)
-    if "注释结果" not in wb_source.sheetnames:
-        raise ValueError(f"Source workbook lacks '注释结果' sheet: {source_workbook_path}")
-    src_sheet = wb_source["注释结果"]
+    target_sheet = "注释与详细证据" if "注释与详细证据" in wb_source.sheetnames else "注释结果"
+    if target_sheet not in wb_source.sheetnames:
+        raise ValueError(f"Source workbook lacks '{target_sheet}' sheet: {source_workbook_path}")
+    src_sheet = wb_source[target_sheet]
 
     header_row = [cell.value for cell in src_sheet[1]]
     try:
@@ -98,7 +99,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         col_en = header_row.index("Celltype_EN") + 1
         col_cn = header_row.index("中文名称") + 1
     except ValueError as exc:
-        raise ValueError(f"Required column missing in '注释结果' sheet: {exc}")
+        raise ValueError(f"Required column missing in '{target_sheet}' sheet: {exc}")
 
     records = []
     red_rgb = {"FFF8696B", "F8696B"}

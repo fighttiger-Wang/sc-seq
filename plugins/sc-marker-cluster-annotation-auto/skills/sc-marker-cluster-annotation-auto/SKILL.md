@@ -27,7 +27,7 @@ separate fields and must not be concatenated into `Celltype_EN`.
 ### 严禁偷懒粗化合并与强制精细化命名规范 (Strict Anti-Lumping & Fine-Grained Mandate)
 1. **禁止大类泛化与大锅饭合并**：凡在 UMAP 上成簇分布、构成独立拓扑分支（如外突岛、半岛），或具有明确特异 Marker 表达谱的亚群（如神经伴行 ANGPTL7/CDH19、神经束膜屏障 CLDN1/SLC2A1、微钙化调控 MGP、弹力板 ELN 等），**必须在最终交付的 `Celltype_EN`、`中文名称` 以及 `cluster注释信息.xlsx` 主列中直接赋予独立、特异的精细亚型名称**。
 2. **严禁利用门控漏洞偷懒**：严禁为了迎合“同名亚群拓扑相邻门控”而将具有不同生物学特异性的多个簇偷懒打包归入同一宽泛标签（例如将多个不同的成纤维亚群全部归入 `Adv2_Structural_Fibroblast`）。
-3. **交付主表一致性**：交付的 Excel 表格（《绘图列表》、《注释结果》和《cluster注释信息.xlsx》）主列必须直接呈现差异化精细命名，严禁“在正文解释中声称有细分，但大表主列全为同一大类”的脱节行为。
+3. **交付主表一致性**：交付的主 Excel 表格（《注释与详细证据》和《cluster注释信息.xlsx》）主列必须直接呈现差异化精细命名，严禁“在正文解释中声称有细分，但大表主列全为同一大类”的脱节行为。
 
 ## Inputs
 
@@ -249,7 +249,7 @@ the underlying object.
 
 ### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
 1. **交付文件规范与数据目录绝对纯净**：交付件**固定且仅允许保留两份表格**：
-   - **时间戳完整亚群注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`（5-sheet 完整版，遵循样式契约与版本追溯）。
+   - **时间戳完整亚群注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`（4-sheet 标准版：注释与详细证据、细胞配色、细胞类型与文献、说明与数据来源，遵循格式契约）。
    - **简明对应关系表**：`cluster注释信息.xlsx`（固定包含 `Cluster`, `Celltype_EN`, `中文名称` 3列，自适应列宽，无筛选，冻结首行，专供下游快速查阅与对接制图）。
    - **严禁输出无时间戳的大表副本**（杜绝 `{project_name}_亚群注释结果.xlsx` 同名无时间戳冗余大表，避免客户混淆）。
    - **过程文件零残留**：严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。

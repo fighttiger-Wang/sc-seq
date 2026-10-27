@@ -110,9 +110,10 @@ def default_output_name(directory: Path, timestamp: str | None = None) -> str:
 
 def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: Path) -> Path:
     wb_source = load_workbook(source_workbook_path, data_only=True)
-    if "注释结果" not in wb_source.sheetnames:
-        raise ValueError(f"Source workbook lacks '注释结果' sheet: {source_workbook_path}")
-    src_sheet = wb_source["注释结果"]
+    target_sheet = "注释与详细证据" if "注释与详细证据" in wb_source.sheetnames else "注释结果"
+    if target_sheet not in wb_source.sheetnames:
+        raise ValueError(f"Source workbook lacks '{target_sheet}' sheet: {source_workbook_path}")
+    src_sheet = wb_source[target_sheet]
 
     header_row = [cell.value for cell in src_sheet[1]]
     try:
@@ -120,7 +121,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         col_en = header_row.index("Celltype_EN") + 1
         col_cn = header_row.index("中文名称") + 1
     except ValueError as exc:
-        raise ValueError(f"Required column missing in '注释结果' sheet: {exc}")
+        raise ValueError(f"Required column missing in '{target_sheet}' sheet: {exc}")
 
     records = []
     red_rgb = {"FFF8696B", "F8696B"}
@@ -237,24 +238,23 @@ def validate_formal_workbook(source: Path) -> dict:
         raise ValueError("formal workbook hash does not match its builder QA sidecar")
 
     workbook = load_workbook(source, read_only=False, data_only=False)
-    expected = ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
+    expected = ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
     if workbook.sheetnames != expected:
-        raise ValueError(f"formal workbook violates the five-sheet contract: {workbook.sheetnames}")
+        raise ValueError(f"formal workbook violates the four-sheet contract: {workbook.sheetnames}")
     headers = {
-        "绘图列表": CONTRACT.PLOT_HEADERS,
-        "注释结果": CONTRACT.RESULT_HEADERS,
-        "详细证据": CONTRACT.EVIDENCE_HEADERS,
+        "注释与详细证据": CONTRACT.ANNO_HEADERS,
+        "细胞配色": CONTRACT.COLOR_HEADERS,
         "细胞类型与文献": CONTRACT.LITERATURE_HEADERS,
         "说明与数据来源": CONTRACT.SOURCE_HEADERS,
     }
-    freezes = {"绘图列表": "A2", "注释结果": "D2", "详细证据": "D2", "细胞类型与文献": "B2", "说明与数据来源": "A2"}
-    forbidden = {"Confidence", "Quality_score", "置信度", "质量评分", "候选评分", "评分差值"}
+    freezes = {"注释与详细证据": "D2", "细胞配色": "A2", "细胞类型与文献": "B2", "说明与数据来源": "A2"}
+    forbidden = {"Confidence", "Quality_score", "置信度", "质量评分", "候选评分", "评分差值", "验证建议", "下游处理建议"}
     red_rgb = {"FFF8696B", "F8696B"}
     for name in expected:
         sheet = workbook[name]
         observed_headers = [cell.value for cell in sheet[1]]
         if observed_headers != headers[name]:
-            raise ValueError(f"{name} header contract mismatch")
+            raise ValueError(f"{name} header contract mismatch: {observed_headers} != {headers[name]}")
         if forbidden.intersection(str(value) for value in observed_headers if value is not None):
             raise ValueError(f"{name} contains forbidden score/confidence headers")
         if sheet.auto_filter.ref is not None:
@@ -269,8 +269,8 @@ def validate_formal_workbook(source: Path) -> dict:
                     raise ValueError(f"{name}!{cell.coordinate} enables wrapping or shrink-to-fit")
                 rgb = str(cell.fill.fgColor.rgb or "").upper()
                 allowed_red = (
-                    (name == "绘图列表" and cell.column in (2, 3) and cell.row > 1)
-                    or (name == "注释结果" and cell.column == 2 and cell.row > 1)
+                    (name == "注释与详细证据" and cell.column == 2 and cell.row > 1)
+                    or (name == "细胞配色" and cell.column == 2 and cell.row > 1)
                 )
                 if rgb in red_rgb and not allowed_red:
                     raise ValueError(

@@ -4,6 +4,7 @@ Use the approved stable IDs and parent relationships in `cell-annotation-knowled
 
 - Species share one ontology and use exact-species Marker panels where available. If no exact panel exists, use documented cross-species transfer with ortholog/program conservation, an explicit evidence-gap statement, and manual validation advice.
 - Select the finest reliable node for `stable_id`; major mode displays the nearest enabled major ancestor, while subcluster mode displays the finest reliable within-parent node.
+- Strictly enforce the Ancestor-Descendant Exclusion Theorem: never mix a broad parent label (e.g. `Epithelial_cell`) with a descendant subtype (e.g. `Ciliated_cell` or `Neuroendocrine_cell`) in primary delivery columns (`Celltype_EN`, `cluster注释信息.xlsx`). Sub-lineage identities are preserved 100% in the `state` column.
 - Enable `core_multi_tissue` and tissue modules matching the confirmed tissue.
 - Allow different independent branches to stop at different depths. Never co-display an ontology ancestor with its descendant in one final subcluster mapping; require same-level evidence, an approved residual leaf, or a blocked/recluster outcome.
 - Allow repeated standard IDs. Never add top-marker prefixes solely for uniqueness.

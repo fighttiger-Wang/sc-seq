@@ -1,90 +1,89 @@
 # Output schema
 
-The final workbook contains exactly these sheets in order:
+The final workbook contains exactly these 4 sheets in order:
 
-1. `绘图列表`
-2. `注释结果`
-3. `详细证据`
-4. `细胞类型与文献`
-5. `说明与数据来源`
+1. `注释与详细证据`
+2. `细胞配色`
+3. `细胞类型与文献`
+4. `说明与数据来源`
 
-## 绘图列表
+## 1. 注释与详细证据
 
-Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
-Repeated labels are allowed and are not decorated with cluster IDs or Marker
-prefixes.
+One row per cluster. Deduplicated merge of annotation results and detailed evidence into a single primary table (exactly 18 columns, matching `qualitative_annotation_workbook.py`):
 
-## 注释结果
+1. `Cluster`
+2. `中文名称`
+3. `Celltype_EN`
+4. `细胞谱系`
+5. `发育/成熟阶段`
+6. `细胞状态`
+7. `组织/疾病相关角色`
+8. `关键 Marker`
+9. `支持 Marker 证据`
+10. `冲突/缺失 Marker`
+11. `主要身份程序`
+12. `主要竞争候选`
+13. `定性门控审计`
+14. `UMAP 判断摘要`
+15. `异常/边界标记`
+16. `可能组成`
+17. `判定依据与论证`
+18. `证据缺口`
 
-Columns (exactly 15 standard columns matching `qualitative_annotation_workbook.py`):
+- **No numeric scoring / advice columns**: Contains no score, confidence, rank, `验证建议`, or `下游处理建议`.
+- **Gene formatting**: `关键 Marker` contains gene symbols only. Supporting evidence formats values as:
+  ```text
+  FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
+  ```
+- **Visual Warning**: Static red fill `#FFF8696B` is applied only to `中文名称` when a cluster carries a significant state program, is `Multi_cell`, suspected doublet, low quality, debris, ambient contamination, or lineage boundary.
+- **Freeze Panes**: Frozen at `D2` (columns A-C: Cluster, 中文名称, Celltype_EN stay visible during horizontal scrolling).
 
-1. Cluster
-2. 中文名称
-3. Celltype_EN
-4. 细胞谱系
-5. 发育/成熟阶段
-6. 细胞状态
-7. 组织/疾病相关角色
-8. 关键 Marker
-9. 主要竞争候选
-10. UMAP 判断摘要
-11. 异常/边界标记
-12. 可能组成
-13. 判定摘要
-14. 验证建议
-15. 下游处理建议
+## 2. 细胞配色
 
-The sheet contains no score, confidence, candidate rank, or numeric quality
-field. `关键 Marker` contains gene symbols only. Red fill `#F8696B` is applied
-only to `中文名称` for state programs, doublets, boundaries, or low quality.
+Standard 2-column cell type color mapping sheet:
 
-## 详细证据
+1. `细胞类型`: Distinct `Celltype_EN` values appearing in the annotation.
+2. `色号`: Publication-grade HEX color codes (e.g., `#4DAF4A`).
+   - Cell text value is the pure HEX string.
+   - Cell background is rendered with the corresponding color fill preview.
+   - Text color dynamically adjusts (white/black) based on background luminance for optimal contrast.
+- **Freeze Panes**: Frozen at `A2`.
 
-One row per cluster. Include final identity, parent context, primary and
-competing programs, supporting/conflicting/missing Marker evidence, eight
-qualitative gates, off-parent audit, development/state programs, UMAP and
-cross-island audit, mixed/doublet explanation, rationale, evidence gaps,
-validation, and handling.
+## 3. 细胞类型与文献
 
-Available Marker values use:
+Publication-grade 7-column grounded literature registry:
 
-```text
-FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
-```
+1. `细胞类型(Celltype_EN)`
+2. `文献标识 (DOI/PMID)`: Physical DOI / PMID locator with clickable hyperlink.
+3. `文献来源与标题`: First author, year, journal, and paper title.
+4. `研究物种与组织`: Species and tissue context.
+5. `权威经典标记 (Classic Markers)`: Benchmark markers from literature.
+6. `本次鉴定使用的主要 Marker (Sample Evidence)`: Sample markers verified in current data.
+7. `核心生物学论证与功能定位`: Rigorous biological functional argument.
 
-Use `NA` for unavailable values. Do not infer zero without a verified complete
-matrix.
+- One cell type x one reference is one row. Do not merge cells.
+- Clickable hyperlinks on Column 2 (`文献标识 (DOI/PMID)`).
+- **Freeze Panes**: Frozen at `B2`.
 
-## 细胞类型与文献
+## 4. 说明与数据来源
 
-Exactly `细胞类型 | 文献 | 经典鉴定 Marker | 本次鉴定使用的 Marker`.
-One cell type x one reference is one row. Do not merge cells. Every final type
-has at least one reference with a clickable PMID, DOI, or URL when available.
+2-column table (`项目 | 内容`) providing biological and methodological context:
+- Records tissue, species, parent population context, input file names (basenames only), quantitative metrics definitions, cluster count, and analytical limitations.
+- Excludes tool version numbers, execution timestamps, red-fill logic declarations, and disclaimer clauses.
+- **Freeze Panes**: Frozen at `A2`.
 
-## 说明与数据来源
+## Shared Table Styling & QA Contract
 
-Exactly `项目 | 内容`. Show filenames only. Record species, tissue, parent,
-mode, metric definitions, versions, run time, constraints, sorting and red-fill
-rules, limitations, and the no-auto-modification declaration.
-
-## Shared QA
-
-- All three Cluster sheets use the same numeric ascending order and exact IDs.
-- Match the approved subcluster workbook's saved formatting: Cambria 11;
-  content-fit widths/heights for frozen columns; fixed long-text widths;
-  wrapping, shrink-to-fit, and autofilters disabled.
-- Freeze panes: `A2` for plotting, `D2` for result/evidence, `B2` for
-  literature, and `A2` for notes.
-- Static red fill `#F8696B` applies only to `中文名称` for coherent significant
-  state, `Multi_cell`, suspected doublet, low quality, debris, background
-  interference, or lineage/off-parent boundary.
-- Every cluster receives a final annotation. Subcluster output cannot retreat to
-  the supplied parent solely because evidence is incomplete.
+- Font: `Cambria 11` across all sheets.
+- Header row: Grey header fill (`#D9D9D9` or `#F2F2F2`), thin bottom border, bold text, height 24 pt.
+- Data rows: Row height 22-24 pt, left-aligned text, centered Cluster and Color codes.
+- AutoFilter: Strictly disabled (`auto_filter.ref is None`) on all worksheets.
+- Order: Numerical ascending order on `Cluster` (0, 1, 2, ... 10).
 
 ## 交付产物规范 (Delivery Artifacts Specification)
 
 最终向用户数据目录交付的文件固定且仅保留两个：
-1. **时间戳注释大表**：`{project_name}_大类注释结果_{YYYYMMDD_HHMMSS}.xlsx`，严格包含上述完整的 5 个 sheet 及其格式契约。
+1. **时间戳注释大表**：`{project_name}_大类注释结果_{YYYYMMDD_HHMMSS}.xlsx`，严格包含上述 4 个 sheet 及其格式契约。
 2. **简明对应关系表**：`cluster注释信息.xlsx`，仅含 `Cluster`, `Celltype_EN`, `中文名称` 3 列，无 AutoFilter，冻结 A2，自适应列宽。
 - **杜绝冗余无时间戳大表**：严禁在数据目录下交付或保留 `{project_name}_大类注释结果.xlsx`。
 - **绝对纯净**：严禁在用户目录下生成或遗留任何中间过程文件（如 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等）。

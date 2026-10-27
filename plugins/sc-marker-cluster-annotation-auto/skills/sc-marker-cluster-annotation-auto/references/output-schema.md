@@ -1,179 +1,89 @@
 # Output schema
 
-The final workbook contains exactly these sheets in order:
+The final workbook contains exactly these 4 sheets in order:
 
-1. `绘图列表`
-2. `注释结果`
-3. `详细证据`
-4. `细胞类型与文献`
-5. `说明与数据来源`
+1. `注释与详细证据`
+2. `细胞配色`
+3. `细胞类型与文献`
+4. `说明与数据来源`
 
-## 绘图列表
+## 1. 注释与详细证据
 
-Exactly `Cluster | Celltype_EN`. `Celltype_EN` matches `[A-Za-z0-9_]+`.
-Repeated labels are allowed and are not decorated with cluster IDs or Marker
-prefixes. `Celltype_EN` is the expert-facing subcluster label. Preserve a
-case-supported leaf, but do not co-display it with any registered ontology
-ancestor in the final mapping. `Celltype_EN` is a stable identity display label. Do not append state,
-functional program, disease role, marker names, or cluster IDs to create a
-new plotting identity. A provisional or unresolved decision is recorded in
-the expert verdict, state, evidence, and handling fields; it must not be
-hidden by a state-qualified identity string.
+One row per cluster. Deduplicated merge of annotation results and detailed evidence into a single primary table (exactly 18 columns, matching `qualitative_annotation_workbook.py`):
 
-`Celltype_EN` remains clean and usable for UMAP even when the review status is
-`conditional`. Red fill in `绘图列表/Celltype_EN` is an optional visual warning
-and is never part of the label value. The same text value must be retained in
-`注释结果` so cluster-to-label joins remain exact. Conditional, off-parent, or
-boundary labels must carry structured handling such as `manual_review_only` or
-`exclude_from_quantitative_analysis`; color alone is not a machine-readable
-decision.
+1. `Cluster`
+2. `中文名称`
+3. `Celltype_EN`
+4. `细胞谱系`
+5. `发育/成熟阶段`
+6. `细胞状态`
+7. `组织/疾病相关角色`
+8. `关键 Marker`
+9. `支持 Marker 证据`
+10. `冲突/缺失 Marker`
+11. `主要身份程序`
+12. `主要竞争候选`
+13. `定性门控审计`
+14. `UMAP 判断摘要`
+15. `异常/边界标记`
+16. `可能组成`
+17. `判定依据与论证`
+18. `证据缺口`
 
-The result and evidence sheets must separately preserve `identity_resolution`,
-`boundary_status`, `review_status`, `downstream_eligible`, and
-`sibling_consistency_status`. `downstream_eligible=true` is permitted only for
-a specific, passed identity with no unresolved boundary, evidence gap, or UMAP
-conflict. Parent-level fallback is permitted only when a specific identity gate
-fails or is unknown; UMAP adjacency is not a parent-fallback rule.
+- **No numeric scoring / advice columns**: Contains no score, confidence, rank, `验证建议`, or `下游处理建议`.
+- **Gene formatting**: `关键 Marker` contains gene symbols only. Supporting evidence formats values as:
+  ```text
+  FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
+  ```
+- **Visual Warning**: Static red fill `#FFF8696B` is applied only to `中文名称` when a cluster carries a significant state program, is `Multi_cell`, suspected doublet, low quality, debris, ambient contamination, or lineage boundary.
+- **Freeze Panes**: Frozen at `D2` (columns A-C: Cluster, 中文名称, Celltype_EN stay visible during horizontal scrolling).
 
-Sibling consistency constrains the resolution and review level, not equality of
-biological labels. Similar neighboring clusters may retain different identities
-only when current-case discriminator evidence is recorded in
-`discriminator_evidence_ids`; otherwise the formal output must retain the same
-conservative resolution/review level.
+## 2. 细胞配色
 
-An abbreviation may be used only when `display_name_type=approved_abbreviation`,
-`canonical_name` contains the complete standard identity, and
-`expert_name_review=approved`. The abbreviation must be a recognized,
-unambiguous name from the naming dictionary; the builder must reject invented
-or unreviewed abbreviations.
+Standard 2-column cell type color mapping sheet:
 
-## 注释结果
+1. `细胞类型`: Distinct `Celltype_EN` values appearing in the annotation.
+2. `色号`: Publication-grade HEX color codes (e.g., `#4DAF4A`).
+   - Cell text value is the pure HEX string.
+   - Cell background is rendered with the corresponding color fill preview.
+   - Text color dynamically adjusts (white/black) based on background luminance for optimal contrast.
+- **Freeze Panes**: Frozen at `A2`.
 
-Columns:
+## 3. 细胞类型与文献
 
-1. Cluster
-2. 中文名称
-3. Celltype_EN
-4. 下位亚类
-5. 细胞谱系
-6. 发育/成熟阶段
-7. 细胞状态
-8. 组织/疾病相关角色
-9. 关键 Marker
-10. 主要竞争候选
-11. UMAP 判断摘要
-12. 异常/边界标记
-13. 可能组成
-14. 判定摘要
-15. 验证建议
-16. 下游处理建议
-17. 身份分辨率
-18. 边界/纯度状态
-19. 评审状态
-20. 可用于下游定量
-21. 同级一致性状态
+Publication-grade 7-column grounded literature registry:
 
-`下位亚类` is an optional evidence-description field. It may contain a
-case-supported lower-level subtype when the current evidence justifies one;
-otherwise it remains blank. It does not replace `Celltype_EN`, does not enter
-identity arbitration or UMAP resolution, and cannot be used to hide a supported
-identity from the plotting mapping.
+1. `细胞类型(Celltype_EN)`
+2. `文献标识 (DOI/PMID)`: Physical DOI / PMID locator with clickable hyperlink.
+3. `文献来源与标题`: First author, year, journal, and paper title.
+4. `研究物种与组织`: Species and tissue context.
+5. `权威经典标记 (Classic Markers)`: Benchmark markers from literature.
+6. `本次鉴定使用的主要 Marker (Sample Evidence)`: Sample markers verified in current data.
+7. `核心生物学论证与功能定位`: Rigorous biological functional argument.
 
-If a result contains both a registered parent and one of its registered
-descendants, formal delivery must stop. Resolve the conflict with same-level
-evidence, an approved residual leaf, or an explicit blocked/recluster outcome;
-do not force a descendant back to the parent merely for visual uniformity.
-If the final identity is a neutral bridge admitted from weak literature
-semantics, use `<stable_id>_provisional` in `Celltype_EN`, retain the unsuffixed
-identity internally, and preserve the qualified comparison and state in
-`下位亚类` and `细胞状态`.
+- One cell type x one reference is one row. Do not merge cells.
+- Clickable hyperlinks on Column 2 (`文献标识 (DOI/PMID)`).
+- **Freeze Panes**: Frozen at `B2`.
 
-The expert plotting decision is mandatory. `allow_specific_label` is required
-for a specific subtype. `allow_parent_label_only`, `allow_unresolved_label`,
-or `allow_provisional_label` may produce conservative labels. `block_plot_label`,
-`recommend_recluster`, `recommend_merge`, and `recommend_manual_review` block
-formal workbook delivery.
+## 4. 说明与数据来源
 
-The sheet contains no score, confidence, candidate rank, or numeric quality
-field. `关键 Marker` contains gene symbols only.
+2-column table (`项目 | 内容`) providing biological and methodological context:
+- Records tissue, species, parent population context, input file names (basenames only), quantitative metrics definitions, cluster count, and analytical limitations.
+- Excludes tool version numbers, execution timestamps, red-fill logic declarations, and disclaimer clauses.
+- **Freeze Panes**: Frozen at `A2`.
 
-## 详细证据
+## Shared Table Styling & QA Contract
 
-One row per cluster. Include final identity, parent context, primary and
-competing programs, supporting/conflicting/missing Marker evidence, eight
-qualitative gates, off-parent audit, development/state programs, UMAP and
-cross-island audit, mixed/doublet explanation, rationale, evidence gaps,
-validation, handling, identity resolution, boundary/purity status, review
-status, downstream eligibility, sibling consistency status, and discriminator
-evidence IDs.
-
-The bound evidence record also retains `identity_arbitration` for every
-applicable high-risk boundary: rule id, left/right program completeness,
-resolution, binding action, and the explicit roles of absolute gates, state,
-and topology. These fields support the written gate/rationale columns and are
-not converted into a score or confidence value.
-
-Available Marker values use:
-
-```text
-FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
-```
-
-Use `NA` for unavailable values. Do not infer zero without a verified complete
-matrix.
-
-## 细胞类型与文献
-
-Exactly `细胞类型 | 文献 | 经典鉴定 Marker | 本次鉴定使用的 Marker`.
-One cell type x one reference is one row. Do not merge cells. Every final type
-has at least one reference with a clickable PMID, DOI, or URL when available.
-The visible text in `文献` must be `DOI:<value>; PMID:<value>` when those
-identifiers are known, falling back to the available identifier or URL only
-when DOI/PMID is unavailable. Do not use the article title as the visible
-hyperlink text.
-
-## 说明与数据来源
-
-Exactly `项目 | 内容`. Show filenames only. Record species, tissue, parent,
-mode, metric definitions, versions, run time, constraints, sorting and red-fill
-rules, limitations, and the no-auto-modification declaration.
-
-## Shared QA
-
-- All three Cluster sheets use the same numeric ascending order and exact IDs.
-- Use Cambria 11 as the workbook font.
-- Save concrete column widths/row heights rather than relying on future dynamic
-  AutoFit rules. Apply content-fit sizing only to `绘图列表` all columns,
-  frozen columns A:C in `注释结果`, frozen columns A:C in `详细证据`, and frozen
-  column A in `细胞类型与文献`. Keep the long-text evidence/reference columns at
-  fixed widths. Wrapping, shrink-to-fit, and autofilters are disabled.
-- Freeze first row; freeze first three columns in result/evidence and first
-  column in literature.
-- Static red fill may apply to `绘图列表/Celltype_EN` and
-  `注释结果/中文名称` for coherent significant state, `Multi_cell`, suspected
-  doublet, low quality, debris, background interference, or lineage/off-parent
-  boundary. The label values remain unchanged.
-- `passed` is evidence-derived and must be rejected when a mandatory identity
-  gate is failed/unknown or when material boundary, off-parent, background,
-  mixed-population, or unresolved evidence-gap fields are present.
-- Every cluster receives a gate-reviewed plotting label. Subcluster output may
-  remain at the parent or unresolved level when the expert plotting standard
-  is not reached; evidence incompleteness must not force a fine-grained label.
-- Every formal workbook is bound to its passing QA sidecar by SHA-256 in the
-  workspace build location. The delivery copier rechecks sheet order, headers,
-  freeze panes, fixed row heights, no-wrap/no-filter formatting, red-fill
-  location, and the hash; old four-sheet or QA-unbound workbooks cannot be
-  copied as formal output. Final delivery copies only the `.xlsx` workbook to
-  the original data directory; QA JSON sidecars stay in the workspace unless
-  the user explicitly asks for them. When UMAP is supplied, formal construction
-  also requires an independently generated `--umap-facts` artifact bound to the
-  supplied UMAP image/coordinate source by SHA-256; declared topology fields
-  and `reviewed=true` cannot stand in for image-derived geometry.
+- Font: `Cambria 11` across all sheets.
+- Header row: Grey header fill (`#D9D9D9` or `#F2F2F2`), thin bottom border, bold text, height 24 pt.
+- Data rows: Row height 22-24 pt, left-aligned text, centered Cluster and Color codes.
+- AutoFilter: Strictly disabled (`auto_filter.ref is None`) on all worksheets.
+- Order: Numerical ascending order on `Cluster` (0, 1, 2, ... 10).
 
 ## 交付产物规范 (Delivery Artifacts Specification)
 
 最终向用户数据目录交付的文件固定且仅保留两个：
-1. **时间戳注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`，严格包含上述完整的 5 个 sheet 及其格式契约。
+1. **时间戳注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`，严格包含上述 4 个 sheet 及其格式契约。
 2. **简明对应关系表**：`cluster注释信息.xlsx`，仅含 `Cluster`, `Celltype_EN`, `中文名称` 3 列，无 AutoFilter，冻结 A2，自适应列宽。
 - **杜绝冗余无时间戳大表**：严禁在数据目录下交付或保留 `{project_name}_亚群注释结果.xlsx`。
 - **绝对纯净**：严禁在用户目录下生成或遗留任何中间过程文件（如 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等）。

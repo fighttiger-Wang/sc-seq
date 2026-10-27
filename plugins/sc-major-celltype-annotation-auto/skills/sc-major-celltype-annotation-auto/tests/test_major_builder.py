@@ -19,7 +19,7 @@ def main():
     args = parser.parse_args()
     work = Path(args.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
-    repo = next(parent for parent in work.parents if (parent / "local-marketplace").is_dir()) / "local-marketplace"
+    repo = next((parent for parent in Path(__file__).resolve().parents if (parent / "skill-pack.json").is_file()), None)
     skill = repo / "plugins" / "sc-major-celltype-annotation-auto" / "skills" / "sc-major-celltype-annotation-auto"
     evidence = {
         "clusters": ["10", "2", "0"], "average_shape": [12, 3], "average_reader": "test",
@@ -55,15 +55,38 @@ def main():
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
     workbook = load_workbook(output)
-    assert workbook.sheetnames == ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
-    assert [workbook["绘图列表"].cell(row, 1).value for row in range(2, 5)] == ["0", "2", "10"]
-    headers = [cell.value for cell in workbook["注释结果"][1]]
-    assert "质量评分" not in headers and "置信度" not in headers
+    assert workbook.sheetnames == ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    assert [workbook["注释与详细证据"].cell(row, 1).value for row in range(2, 5)] == ["0", "2", "10"]
+    headers = [cell.value for cell in workbook["注释与详细证据"][1]]
+    assert "质量评分" not in headers and "置信度" not in headers and "验证建议" not in headers and "下游处理建议" not in headers
+    assert workbook["细胞配色"].max_row == 4
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
     assert all(not cell.alignment.wrap_text for sheet in workbook.worksheets for row in sheet.iter_rows() for cell in row)
     qa = json.loads(output.with_suffix(".qa.json").read_text(encoding="utf-8"))
     assert qa["aggregate_scores_exported"] is False and qa["confidence_exported"] is False
-    print(json.dumps({"status": "pass", "checks": 10, "output": str(output)}, ensure_ascii=False))
+
+    # Regression test: Hierarchy consistency check (Ancestor-Descendant Exclusion)
+    conflict_records = [
+        {"cluster_id": "0", "celltype_cn": "上皮细胞", "celltype_en": "Epithelial_cell", "rationale": "ok"},
+        {"cluster_id": "1", "celltype_cn": "纤毛细胞", "celltype_en": "Ciliated_cell", "rationale": "ok"}
+    ]
+    conflict_rp = work / "records_conflict.json"
+    conflict_output = work / "major_conflict.xlsx"
+    conflict_evidence = {
+        "clusters": ["0", "1"],
+        "confirmed_metadata": {"species": "Human", "tissue": "lung", "annotation_level": "major", "parent_population": "All_cells"}
+    }
+    (work / "evidence_conflict.json").write_text(json.dumps(conflict_evidence), encoding="utf-8")
+    conflict_rp.write_text(json.dumps(conflict_records), encoding="utf-8")
+    res_conflict = subprocess.run([
+        sys.executable, str(skill / "scripts" / "build_annotation_workbook.py"),
+        "--records", str(conflict_rp), "--evidence", str(work / "evidence_conflict.json"),
+        "--output", str(conflict_output), "--workspace-root", str(work.parents[1]), "--force",
+    ], text=True, capture_output=True)
+    assert res_conflict.returncode != 0, "Expected hierarchy conflict to raise error!"
+    assert "Hierarchy consistency violation in major delivery" in (res_conflict.stdout + res_conflict.stderr)
+
+    print(json.dumps({"status": "pass", "checks": 11, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

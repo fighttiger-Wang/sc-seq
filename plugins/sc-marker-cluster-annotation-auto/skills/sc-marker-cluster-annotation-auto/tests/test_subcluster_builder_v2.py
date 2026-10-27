@@ -125,26 +125,16 @@ def main():
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
     workbook = load_workbook(output)
-    assert workbook.sheetnames == ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
-    assert [workbook["绘图列表"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
-    result_headers = {cell.value: cell.column for cell in workbook["注释结果"][1]}
+    assert workbook.sheetnames == ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    assert [workbook["注释与详细证据"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
+    result_headers = {cell.value: cell.column for cell in workbook["注释与详细证据"][1]}
     assert "质量评分" not in result_headers and "置信度" not in result_headers
-    assert result_headers["下位亚类"] == result_headers["Celltype_EN"] + 1
-    assert workbook["注释结果"].cell(2, result_headers["下位亚类"]).value == "Naive_like_gdT"
-    assert workbook["注释结果"].cell(3, result_headers["下位亚类"]).value in (None, "")
-    assert workbook["注释结果"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
-    assert workbook["注释结果"].cell(2, result_headers["身份分辨率"]).value == "specific"
-    assert workbook["注释结果"].cell(2, result_headers["评审状态"]).value == "passed"
-    assert workbook["注释结果"].cell(2, result_headers["可用于下游定量"]).value == "是"
-    assert workbook["注释结果"].cell(2, result_headers["同级一致性状态"]).value == "reviewed"
-    assert workbook["绘图列表"].cell(3, 2).value == "NK_cell"
-    assert workbook["绘图列表"].cell(3, 2).fill.fgColor.rgb == "FFF8696B"
-    evidence_headers = {cell.value: cell.column for cell in workbook["详细证据"][1]}
-    marker_text = workbook["详细证据"].cell(3, evidence_headers["支持 Marker 证据"]).value
+    assert workbook["注释与详细证据"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    marker_text = workbook["注释与详细证据"].cell(3, result_headers["支持 Marker 证据"]).value
     assert "FGFBP2(mean=4.67, ratio=70.20%" in marker_text
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
-    assert workbook["绘图列表"]["A1"].font.name == "Cambria"
-    assert workbook["绘图列表"]["A1"].font.sz == 11
+    assert workbook["注释与详细证据"]["A1"].font.name == "Cambria"
+    assert workbook["注释与详细证据"]["A1"].font.sz == 11
     lit_cell = workbook["细胞类型与文献"].cell(2, 2)
     assert lit_cell.value == "DOI:10.1000/test.subcluster; PMID:12345678"
     assert lit_cell.hyperlink.target == "https://doi.org/10.1000/test.subcluster"
@@ -298,26 +288,19 @@ def main():
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
     myeloid_book = load_workbook(myeloid_output)
-    plot_rows = {
-        str(myeloid_book["绘图列表"].cell(row, 1).value): myeloid_book["绘图列表"].cell(row, 2).value
-        for row in range(2, myeloid_book["绘图列表"].max_row + 1)
+    anno_rows = {
+        str(myeloid_book["注释与详细证据"].cell(row, 1).value): myeloid_book["注释与详细证据"].cell(row, 3).value
+        for row in range(2, myeloid_book["注释与详细证据"].max_row + 1)
     }
-    plot_row_numbers = {
-        str(myeloid_book["绘图列表"].cell(row, 1).value): row
-        for row in range(2, myeloid_book["绘图列表"].max_row + 1)
+    anno_row_numbers = {
+        str(myeloid_book["注释与详细证据"].cell(row, 1).value): row
+        for row in range(2, myeloid_book["注释与详细证据"].max_row + 1)
     }
-    assert plot_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
-    result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果"][1]}
-    assert result_headers["下位亚类"] == result_headers["Celltype_EN"] + 1
-    result_rows = {
-        str(myeloid_book["注释结果"].cell(row, 1).value): row
-        for row in range(2, myeloid_book["注释结果"].max_row + 1)
-    }
-    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["中文名称"]).value == "经典单核细胞"
-    assert myeloid_book["注释结果"].cell(result_rows["B2"], result_headers["Celltype_EN"]).value == "DC3"
-    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["评审状态"]).value == "conditional"
-    assert myeloid_book["注释结果"].cell(result_rows["A1"], result_headers["可用于下游定量"]).value == "否"
-    assert myeloid_book["绘图列表"].cell(plot_row_numbers["A1"], 2).fill.fgColor.rgb == "FFF8696B"
+    assert anno_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
+    result_headers = {cell.value: cell.column for cell in myeloid_book["注释与详细证据"][1]}
+    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).value == "经典单核细胞"
+    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["B2"], result_headers["Celltype_EN"]).value == "DC3"
+    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
 
     # Mixed-depth ontology labels preserve the evidence-supported leaf instead
     # of hiding it under a co-occurring registered parent.
@@ -394,19 +377,19 @@ def main():
         sys.executable, str(skill / "scripts" / "copy_final_workbook.py"),
         "--source", str(myeloid_output), "--workspace-root", str(work.parents[1]),
         "--destination", str(delivery_dir),
-    ], text=True, capture_output=True)
+    ], capture_output=True, encoding="utf-8", errors="replace")
     if delivered.returncode:
         raise RuntimeError(delivered.stdout + delivered.stderr)
     assert (delivery_dir / myeloid_output.name).is_file()
     assert not (delivery_dir / myeloid_output.with_suffix(".qa.json").name).exists()
     assert '"qa_sidecar_copied": false' in delivered.stdout.lower()
 
-    legacy = work / "legacy_four_sheet.xlsx"
+    legacy = work / "legacy_invalid_sheet.xlsx"
     legacy_book = Workbook()
-    legacy_book.active.title = "注释结果"
+    legacy_book.active.title = "旧注释"
     for name in ("详细证据", "细胞类型与文献", "说明与数据来源"):
         legacy_book.create_sheet(name)
-    legacy_book["注释结果"].append(["Cluster", "Confidence", "Quality_score"])
+    legacy_book["旧注释"].append(["Cluster", "Confidence", "Quality_score"])
     legacy_book.save(legacy)
     legacy.with_suffix(".qa.json").write_text(json.dumps({
         "status": "pass", "workbook_sha256": hashlib.sha256(legacy.read_bytes()).hexdigest(),
@@ -415,9 +398,9 @@ def main():
         sys.executable, str(skill / "scripts" / "copy_final_workbook.py"),
         "--source", str(legacy), "--workspace-root", str(work.parents[1]),
         "--destination", str(delivery_dir),
-    ], text=True, capture_output=True)
+    ], capture_output=True, encoding="utf-8", errors="replace")
     assert legacy_copy.returncode != 0
-    assert "violates the five-sheet contract" in legacy_copy.stdout
+    assert "violates the four-sheet contract" in (legacy_copy.stderr + legacy_copy.stdout)
     print(json.dumps({"status": "pass", "checks": 28, "output": str(output)}, ensure_ascii=False))
 
 

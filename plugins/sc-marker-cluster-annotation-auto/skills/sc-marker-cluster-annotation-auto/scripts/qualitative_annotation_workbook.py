@@ -24,41 +24,21 @@ GATE_VALUES = {"通过", "不通过", "未确定", "不适用"}
 PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 INVALID_LABEL = re.compile(r"[^A-Za-z0-9_]+")
 
-PLOT_FIELDS = ["cluster_id", "celltype_en", "approved_plot_label"]
-PLOT_HEADERS = ["Cluster", "Celltype_EN", "Celltype_Plot"]
-
-RESULT_FIELDS = [
-    "cluster_id", "celltype_cn", "celltype_en", "broad_type",
-    "developmental_stage", "state", "disease_role", "key_markers",
-    "candidate_labels", "umap_summary", "boundary_flags",
-    "possible_components", "rationale", "validation_advice", "handling_advice",
-]
-RESULT_HEADERS = [
+ANNO_HEADERS = [
     "Cluster", "中文名称", "Celltype_EN", "细胞谱系", "发育/成熟阶段",
-    "细胞状态", "组织/疾病相关角色", "关键 Marker", "主要竞争候选",
-    "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定摘要", "验证建议",
-    "下游处理建议",
+    "细胞状态", "组织/疾病相关角色", "关键 Marker", "支持 Marker 证据",
+    "冲突/缺失 Marker", "主要身份程序", "主要竞争候选", "定性门控审计",
+    "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定依据与论证", "证据缺口",
+]
+ANNO_FIELDS = [
+    "cluster_id", "celltype_cn", "celltype_en", "broad_type", "developmental_stage",
+    "state", "disease_role", "key_markers", "supporting_marker_evidence",
+    "conflict_missing_markers", "primary_program", "candidate_labels",
+    "gate_audit_summary", "umap_summary", "boundary_flags", "possible_components",
+    "rationale", "evidence_gaps",
 ]
 
-EVIDENCE_FIELDS = [
-    "cluster_id", "celltype_cn", "celltype_en", "parent_context",
-    "primary_program", "competing_programs", "supporting_marker_evidence",
-    "conflicting_marker_evidence", "missing_markers", "identity_anchor_gate",
-    "parent_lineage_gate", "sibling_competition_gate", "exclusion_gate",
-    "off_parent_gate", "off_parent_audit", "developmental_program",
-    "state_program", "state_gate", "umap_gate", "umap_summary",
-    "cross_island_audit", "mixed_doublet_gate", "mixed_doublet_explanation",
-    "rationale", "evidence_gaps", "validation_advice", "handling_advice",
-]
-EVIDENCE_HEADERS = [
-    "Cluster", "中文名称", "Celltype_EN", "父群/谱系背景", "主要身份程序",
-    "竞争身份程序", "支持 Marker 证据", "冲突 Marker 证据", "缺失 Marker",
-    "身份锚点门控", "父谱系门控", "同级竞争门控", "排除证据门控",
-    "离群/跨谱系门控", "离群/跨谱系审计", "发育/成熟程序", "状态程序",
-    "状态门控", "UMAP 门控", "UMAP 判断摘要", "跨岛一致性审计",
-    "混合/双细胞门控", "混合/双细胞解释", "判定依据", "证据缺口",
-    "验证建议", "下游处理建议",
-]
+COLOR_HEADERS = ["细胞类型", "色号"]
 
 LITERATURE_HEADERS = [
     "细胞类型(Celltype_EN)",
@@ -70,6 +50,14 @@ LITERATURE_HEADERS = [
     "核心生物学论证与功能定位",
 ]
 SOURCE_HEADERS = ["项目", "内容"]
+
+# Backward-compatibility aliases
+PLOT_FIELDS = ["cluster_id", "celltype_en"]
+PLOT_HEADERS = ["Cluster", "Celltype_EN"]
+RESULT_FIELDS = ANNO_FIELDS
+RESULT_HEADERS = ANNO_HEADERS
+EVIDENCE_FIELDS = ANNO_FIELDS
+EVIDENCE_HEADERS = ANNO_HEADERS
 
 
 def cluster_sort_key(value):
@@ -266,6 +254,7 @@ def normalize_records(records, evidence, umap_audit=None):
             "celltype_en": celltype_en,
             "celltype_cn": _first(record, decision, "celltype_cn", default=celltype_en),
             "stable_id": normalize_final_label(stable or celltype_en),
+            "lower_level_subtype": human_value(_first(record, decision, "lower_level_subtype", "lower_level_subclass")),
             "broad_type": _first(record, decision, "broad_type", "primary_major_label", "expected_parent_id"),
             "developmental_stage": _first(record, decision, "developmental_stage"),
             "state": _first(record, decision, "state", "primary_state"),
@@ -295,13 +284,57 @@ def normalize_records(records, evidence, umap_audit=None):
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),
         })
+        conflicting_text = _marker_evidence(
+            _first(record, decision, "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"), evidence, cluster
+        )
+        missing_text = human_value(_first(record, decision, "missing_markers", "evidence_gaps"))
+        if conflicting_text and missing_text and conflicting_text != "无" and missing_text != "无" and conflicting_text != missing_text:
+            conflict_missing = f"冲突: {conflicting_text}；缺失: {missing_text}"
+        elif conflicting_text and conflicting_text != "无":
+            conflict_missing = conflicting_text
+        elif missing_text and missing_text != "无":
+            conflict_missing = missing_text
+        else:
+            conflict_missing = "无"
+        record["conflict_missing_markers"] = conflict_missing
+
         gates = _qualitative_gates(record, decision, umap)
-        for field, value in zip(
-            ("identity_anchor_gate", "parent_lineage_gate", "sibling_competition_gate",
-             "exclusion_gate", "off_parent_gate", "state_gate", "umap_gate", "mixed_doublet_gate"),
-            gates,
-        ):
-            record[field] = value
+        gate_names = [
+            ("锚点", "identity_anchor_gate"),
+            ("谱系", "parent_lineage_gate"),
+            ("同级竞争", "sibling_competition_gate"),
+            ("排除", "exclusion_gate"),
+            ("跨谱系", "off_parent_gate"),
+            ("状态", "state_gate"),
+            ("UMAP", "umap_gate"),
+            ("双细胞", "mixed_doublet_gate"),
+        ]
+        gate_entries = []
+        for (g_title, field_name), val in zip(gate_names, gates):
+            record[field_name] = val
+            if val and val != "不适用":
+                gate_entries.append(f"{g_title}[{val}]")
+        record["gate_audit_summary"] = ", ".join(gate_entries) if gate_entries else "全部通过"
+
+        if not record.get("broad_type"):
+            record["broad_type"] = record.get("parent_context") or "常规谱系"
+        if not record.get("developmental_stage"):
+            record["developmental_stage"] = record.get("developmental_program") or "成熟/常规"
+        if not record.get("state"):
+            record["state"] = record.get("state_program") or "常规态"
+        if not record.get("disease_role"):
+            record["disease_role"] = "常规组织驻留"
+        if not record.get("key_markers"):
+            record["key_markers"] = record.get("supporting_markers") or ""
+        if not record.get("candidate_labels"):
+            record["candidate_labels"] = record.get("competing_programs") or "无明确竞争候选"
+        if not record.get("boundary_flags"):
+            record["boundary_flags"] = record.get("off_parent_audit") or "正常纯群"
+        if not record.get("possible_components"):
+            record["possible_components"] = record.get("mixed_doublet_explanation") or "纯单核群"
+        if not record.get("evidence_gaps"):
+            record["evidence_gaps"] = "无"
+
         record["_decision"] = decision
         record["_umap"] = umap
         normalized.append(record)
@@ -393,7 +426,9 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
                         errors.append(f"Cluster {cluster} sample-specific UMAP conflict cannot be resolved by literature alone")
     for record in records:
         cluster = record.get("cluster_id", "")
-        for field in ("celltype_cn", "celltype_en", "rationale", "validation_advice", "handling_advice"):
+        for field in ("celltype_cn", "celltype_en", "rationale"):
+            if not str(record.get(field, "")).strip():
+                errors.append(f"Cluster {cluster} lacks required qualitative field: {field}")
             if not str(record.get(field, "")).strip():
                 errors.append(f"Cluster {cluster} lacks required qualitative field: {field}")
         if not PLOT_LABEL.fullmatch(str(record.get("celltype_en", ""))):
@@ -406,6 +441,44 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
             if parent and record.get("celltype_en") == normalize_final_label(parent):
                 errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
+    if annotation_level == "major":
+        delivered_labels = {normalize_final_label(record.get("celltype_en", "")) for record in records if record.get("celltype_en")}
+        epithelial_parents = {"Epithelial_cell", "Epithelial", "Lung_epithelial", "Airway_epithelial"}
+        epithelial_subtypes = {
+            "Ciliated_cell", "Ciliated", "Pulmonary_neuroendocrine", "Neuroendocrine_cell",
+            "PNEC", "Club_cell", "Basal_cell", "Alveolar_type_1", "Alveolar_type_2",
+            "AT1_cell", "AT2_cell", "Ionocyte", "Goblet_cell", "Tuft_cell", "Enterocyte"
+        }
+        active_parents = delivered_labels & epithelial_parents
+        active_subtypes = delivered_labels & epithelial_subtypes
+        if active_parents and active_subtypes:
+            errors.append(
+                f"Hierarchy consistency violation in major delivery: Parent lineage {sorted(active_parents)} "
+                f"coexists with sub-lineage {sorted(active_subtypes)} in Celltype_EN. "
+                f"In major mode, all intra-lineage clusters must be projected to the common parent label "
+                f"(e.g. Epithelial_cell) while preserving specific leaf identities in the 'state' column."
+            )
+        endo_parents = {"Endothelial_cell", "Endothelial"}
+        endo_subtypes = {"Capillary_endothelial", "Arterial_endothelial", "Venous_endothelial", "Tip_cell"}
+        if (delivered_labels & endo_parents) and (delivered_labels & endo_subtypes):
+            errors.append(
+                f"Hierarchy consistency violation in major delivery: Endothelial_cell coexists with sub-types "
+                f"{sorted(delivered_labels & endo_subtypes)}. Project to Endothelial_cell and record sub-type in state."
+            )
+        t_parents = {"T_cell"}
+        t_subtypes = {"CD4_T_cell", "CD8_T_cell", "CD8_Tem", "CD8_Tcm", "CD4_Tn", "Treg", "Th17", "CD4_Treg"}
+        if (delivered_labels & t_parents) and (delivered_labels & t_subtypes):
+            errors.append(
+                f"Hierarchy consistency violation in major delivery: T_cell coexists with sub-types "
+                f"{sorted(delivered_labels & t_subtypes)}. Project to T_cell and record sub-type in state."
+            )
+        mac_parents = {"Macrophage"}
+        sub_macs = delivered_labels & {"Alveolar_macrophage", "Interstitial_macrophage", "TAM"}
+        if (delivered_labels & mac_parents) and sub_macs:
+            errors.append(
+                f"Hierarchy consistency violation in major delivery: Macrophage coexists with sub-types "
+                f"{sorted(sub_macs)}. Project to Macrophage and record sub-type in state."
+            )
     if errors:
         raise ValueError("\n".join(errors))
 
@@ -424,11 +497,21 @@ inject_deterministic_evidence = inject_qualitative_evidence
 
 def _warning(record):
     decision = record.get("_decision", {})
+    # 权威终审门控：凡经专家复核为 passed、下游可用且边界状态为 none 的纯群，一律不予警示标红
+    status = str(record.get("expert_review_status") or record.get("review_status") or "").strip().lower()
+    boundary = str(record.get("boundary_status") or "none").strip().lower()
+    downstream = record.get("downstream_eligible")
+    if status == "passed" and downstream is True and boundary == "none":
+        return False
+
     if record.get("stable_id") == "Multi_cell" or record.get("celltype_en") == "Multi_cell":
         return True
+    if record.get("review_status") == "conditional" or record.get("expert_review_status") == "conditional" or record.get("downstream_eligible") is False:
+        return True
     for key in (
-        "suspected_doublet", "low_quality", "debris",
-        "off_parent_detected", "off_parent_reassignment",
+        "suspected_doublet", "low_quality", "debris", "background_interference",
+        "off_parent_detected", "off_parent_reassignment", "mixed_population",
+        "mixed_evidence", "lineage_boundary", "abnormal_state",
     ):
         if bool(_first(record, decision, key)):
             return True
@@ -437,6 +520,12 @@ def _warning(record):
     boundary = str(record.get("boundary_flags", "")).lower()
     if any(k in boundary for k in ("off_parent", "ambient", "debris", "doublet")):
         return True
+    state_program = decision.get("state_program", [])
+    if isinstance(state_program, list):
+        return any(
+            isinstance(item, dict) and int(item.get("marker_count", 0) or 0) >= 2
+            for item in state_program
+        )
     return False
 
 
@@ -518,27 +607,19 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         'DimPlot(seurat_obj, group.by="celltype", cols=cols_vector, label=TRUE, pt.size=0.8) + theme_classic()'
     )
 
+def _source_rows(evidence, annotation_level, records, skill_name, skill_version):
+    metadata = evidence.get("confirmed_metadata", {}) or {}
+    filenames = evidence.get("source_paths", {}).values()
     return [
-        ["物种", metadata.get("species", "")],
-        ["组织/器官", metadata.get("tissue", "")],
-        ["父群", metadata.get("parent_population", "") or "不适用"],
-        ["注释模式", annotation_level],
-        ["输入文件", "；".join(dict.fromkeys(filenames))],
-        ["指标定义", "mean_expr=平均表达；expr_ratio/pct.1=目标群检出比例；pct.2=背景群检出比例；log2FC=差异表达倍数"],
-        ["Skill 版本", f"{skill_name} {skill_version}"],
-        ["证据核心/配置版本", f"core {policy.get('core_version', '')}；config {policy.get('config_version', '')}"],
-        ["生成时间", datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")],
-        ["限定条件", human_value(constraints)],
-        ["排序规则", "所有含 Cluster 的表均按数值升序，再按自然字母数字顺序"],
-        ["红色填充规则", "用于显著状态程序、Multi_cell、疑似双细胞、非目标谱系(Off-parent)、低质量/碎片/背景干扰及谱系边界"],
-        ["双轨绘图标签规范", "提供 Celltype_EN (国际权威全称) 与 Celltype_Plot (紧凑作图标签)，避免 UMAP 图例文字遮挡与排版挤压"],
-        ["谱系专属推荐调色板 (HEX)", palette_desc],
-        ["Seurat 3步极速出图与质控 R代码", r_code],
-        ["下游定量分析与过滤实操建议", "经文献实证通过的各亚群（未标红）可直接用于差异表达、比例变动统计及下游功能分析；红色警示单元格标出的非目标谱系/双细胞/严重污染群，在下游进行纯系机制解析前应予以过滤或单独隔离。"],
-        ["证据解释", "不使用评分或置信度；原始数值仅作为单个 Marker 的证据，身份由生物学门控和专家推理决定"],
-        ["局限性", "Cluster 汇总证据不能证明同一细胞共表达，也不能确认 doublet；UMAP 仅作一致性审计"],
-        ["数据处理声明", "注释过程未自动删除、过滤、合并或修改细胞及原始数据"],
-        ["Cluster 数量", len(records)],
+        ["项目名称", metadata.get("project_name", "") or evidence.get("project_name", "") or "单细胞注释分析交付"],
+        ["物种 (Species)", metadata.get("species", "")],
+        ["组织/器官来源 (Tissue)", metadata.get("tissue", "")],
+        ["注释层级与范围 (Level)", annotation_level],
+        ["父群背景 (Parent Population)", metadata.get("parent_population", "") or "不适用"],
+        ["输入数据源文件 (Input Files)", "；".join(dict.fromkeys(filenames))],
+        ["定量指标定义 (Metrics Definition)", "mean_expr=簇内表达均值；expr_ratio/pct.1=目标簇检出比例；pct.2=背景群检出比例；log2FC=差异倍数对数"],
+        ["聚类排列原则 (Cluster Order)", "数值绝对升序结合自然字符顺序（0, 1, 2...）"],
+        ["总 Cluster 数量", len(records)],
     ]
 
 
@@ -569,69 +650,103 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     validate(records, clusters, evidence, umap_audit, annotation_level)
 
     wb = Workbook()
-    plot = wb.active
-    plot.title = "绘图列表"
-    result = wb.create_sheet("注释结果")
-    detail = wb.create_sheet("详细证据")
-    literature = wb.create_sheet("细胞类型与文献")
-    source = wb.create_sheet("说明与数据来源")
+    anno_ws = wb.active
+    anno_ws.title = "注释与详细证据"
+    colors_ws = wb.create_sheet("细胞配色")
+    literature_ws = wb.create_sheet("细胞类型与文献")
+    source_ws = wb.create_sheet("说明与数据来源")
 
-    plot.append(PLOT_HEADERS)
-    result.append(RESULT_HEADERS)
-    detail.append(EVIDENCE_HEADERS)
-    literature.append(LITERATURE_HEADERS)
-    source.append(SOURCE_HEADERS)
+    anno_ws.append(ANNO_HEADERS)
+    colors_ws.append(COLOR_HEADERS)
+    literature_ws.append(LITERATURE_HEADERS)
+    source_ws.append(SOURCE_HEADERS)
 
     for record in records:
-        plot_label = record.get("approved_plot_label") or record.get("celltype_plot") or record.get("celltype_en")
-        plot.append([human_value(record["cluster_id"]), human_value(record["celltype_en"]), human_value(plot_label)])
-        result.append([human_value(record.get(field, "")) for field in RESULT_FIELDS])
-        detail.append([human_value(record.get(field, "")) for field in EVIDENCE_FIELDS])
+        anno_ws.append([human_value(record.get(field, "")) for field in ANNO_FIELDS])
+
+    palette_pool = [
+        "#4DAF4A", "#377EB8", "#E41A1C", "#984EA3", "#FF7F00", "#FFFF33",
+        "#A65628", "#F781BF", "#999999", "#66C2A5", "#FC8D62", "#8DA0CB",
+        "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#B3B3B3", "#1B9E77",
+        "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D",
+        "#666666", "#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+        "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5", "#8C564B",
+        "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F", "#C7C7C7", "#BCBD22",
+    ]
+    seen_types = []
+    for r in records:
+        ct = r.get("celltype_en")
+        if ct and ct not in seen_types:
+            seen_types.append(ct)
+
+    for idx, ctype in enumerate(seen_types):
+        c_hex = palette_pool[idx % len(palette_pool)]
+        colors_ws.append([ctype, c_hex])
 
     try:
         from literature_resolver import build_7column_literature_rows
         lit_rows = build_7column_literature_rows(records, evidence)
         for label, locator, citation, study_context, classic, used, rationale, url in lit_rows:
-            literature.append([label, locator, citation, study_context, classic, used, rationale])
+            literature_ws.append([label, locator, citation, study_context, classic, used, rationale])
             if url:
-                literature.cell(literature.max_row, 2).hyperlink = url
-                literature.cell(literature.max_row, 2).style = "Hyperlink"
+                literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
+                literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
     except Exception:
         for label, citation, classic, used, url in _literature_rows(records, evidence):
-            literature.append([label, citation, "", "", classic, used, ""])
+            literature_ws.append([label, citation, "", "", classic, used, ""])
             if url:
-                literature.cell(literature.max_row, 2).hyperlink = url
-                literature.cell(literature.max_row, 2).style = "Hyperlink"
+                literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
+                literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
 
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
-        source.append(row)
+        source_ws.append(row)
 
-    _style_sheet(plot, [12, 32, 24], "A2", 22)
-    _style_sheet(result, [10, 22, 22, 18, 18, 18, 24, 36, 28, 36, 28, 28, 44, 44, 44], "D2", 24)
-    _style_sheet(detail, [10, 22, 22, 28, 30, 30, 54, 48, 36, 16, 16, 16, 16, 16, 40, 28, 34, 16, 16, 40, 36, 18, 40, 54, 40, 48, 48], "D2", 24)
-    _style_sheet(literature, [26, 36, 55, 22, 38, 50, 68], "B2", 24)
-    _style_sheet(source, [24, 88], "A2", 24)
+    _style_sheet(anno_ws, [10, 22, 22, 18, 18, 18, 22, 28, 48, 36, 28, 28, 38, 36, 20, 28, 44, 28], "D2", 24)
+    _style_sheet(colors_ws, [28, 18], "A2", 22)
+    _style_sheet(literature_ws, [26, 36, 55, 22, 38, 50, 68], "B2", 24)
+    _style_sheet(source_ws, [30, 88], "A2", 24)
+
+    for row_idx in range(2, colors_ws.max_row + 1):
+        cell_hex = str(colors_ws.cell(row_idx, 2).value or "").strip()
+        if re.match(r"^#[0-9A-Fa-f]{6}$", cell_hex):
+            clean_hex = cell_hex.lstrip("#").upper()
+            try:
+                r_val = int(clean_hex[0:2], 16)
+                g_val = int(clean_hex[2:4], 16)
+                b_val = int(clean_hex[4:6], 16)
+                lum = 0.299 * r_val + 0.587 * g_val + 0.114 * b_val
+                font_c = "000000" if lum > 140 else "FFFFFF"
+                color_fill = PatternFill(start_color=f"FF{clean_hex}", end_color=f"FF{clean_hex}", fill_type="solid")
+                c_cell = colors_ws.cell(row_idx, 2)
+                c_cell.fill = color_fill
+                c_cell.font = Font(name="Cambria", size=11, bold=True, color=font_c)
+                c_cell.alignment = Alignment(horizontal="center", vertical="center")
+            except Exception:
+                pass
 
     red_fill = PatternFill("solid", fgColor="FFF8696B")
     for row_index, record in enumerate(records, 2):
         if _warning(record):
-            result.cell(row_index, RESULT_FIELDS.index("celltype_cn") + 1).fill = red_fill
-            plot.cell(row_index, 2).fill = red_fill
-            plot.cell(row_index, 3).fill = red_fill
+            anno_ws.cell(row_index, 2).fill = red_fill
 
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
     check = load_workbook(output, read_only=False, data_only=False)
-    expected_sheets = ["绘图列表", "注释结果", "详细证据", "细胞类型与文献", "说明与数据来源"]
+    expected_sheets = ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
     if check.sheetnames != expected_sheets:
         raise RuntimeError(f"Workbook sheet verification failed: {check.sheetnames}")
-    for sheet, headers in (("绘图列表", PLOT_HEADERS), ("注释结果", RESULT_HEADERS), ("详细证据", EVIDENCE_HEADERS), ("细胞类型与文献", LITERATURE_HEADERS), ("说明与数据来源", SOURCE_HEADERS)):
+    for sheet, headers in (
+        ("注释与详细证据", ANNO_HEADERS),
+        ("细胞配色", COLOR_HEADERS),
+        ("细胞类型与文献", LITERATURE_HEADERS),
+        ("说明与数据来源", SOURCE_HEADERS),
+    ):
         if [cell.value for cell in check[sheet][1]] != headers:
             raise RuntimeError(f"{sheet} header verification failed")
         if check[sheet].auto_filter.ref is not None:
             raise RuntimeError(f"{sheet} must not enable autofilter")
-    for sheet in ("绘图列表", "注释结果", "详细证据"):
+    for sheet in ("注释与详细证据",):
         order = [str(check[sheet].cell(row, 1).value) for row in range(2, len(records) + 2)]
         if order != clusters:
             raise RuntimeError(f"{sheet} cluster order mismatch: {order} != {clusters}")

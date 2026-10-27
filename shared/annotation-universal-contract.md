@@ -43,10 +43,16 @@ decision is valid when the expert plotting standard is not reached.
 
 ## Strict anti-lumping and fine-grained annotation mandate (严禁偷懒粗化合并与强制精细化命名规范)
 
-In any single-cell annotation task (major cell types or subclusters):
-1. **Never Coarsen or Lump Distinct Clusters (禁止大类泛化与大锅饭合并)**: If clusters have distinct marker gene profiles, form separate topological branches/islands on UMAP, or correspond to biologically recognized sub-identities, they MUST be given distinct, specific cell type labels in the primary output columns (`Celltype_EN`, `中文名称`, and `cluster注释信息.xlsx`). Never lazily bundle them into a broad parent label (e.g., bundling multiple distinct fibroblast sub-lineages into `Adv2_Structural_Fibroblast`).
-2. **Delivery Column Consistency (交付主表列一致性)**: The primary delivery columns in Excel workbooks (`绘图列表`, `注释结果`, and `cluster注释信息.xlsx`) must directly display the differentiated specific annotations. Never excuse a broad label by claiming the distinction exists in secondary or internal fields (such as `下位亚类`).
-3. **Biological First Principles Over Verification Shortcuts (生物学第一性原理严于门控捷径)**: Never choose an overly broad or lumped label just because it is easier to pass UMAP adjacency or knowledge base constraints. Resolve specific identities via rigorous marker and literature evidence.
+In any single-cell annotation task (major cell types or subclusters), adopt the **Bottom-Up Four-Phase Framework (自底向上四阶段注释与层级协调架构)**:
+1. **Phase 1: Full-Spectrum Micro-Discovery (第一阶段：全谱系无拘微观探底)**:
+   Every cluster MUST first be explored to its finest, biologically authentic leaf identity supported by differential expression, detection prevalence (pct.1/pct.2), and open-world literature. Never lazily bundle clusters into broad parent labels during discovery. Strictly decouple lineage identity from functional state (cycling/stress) and technical artifacts.
+2. **Phase 2 & 3: Panoramic Hierarchy Audit & Bounded Cut Harmonization (第二、三阶段：全景层级拓扑审计与双向有界切面规约)**:
+   - **Ancestor-Descendant Exclusion Theorem (祖先-后代互斥定理)**: In any delivered label column (`Celltype_EN`), no primary label may be an ancestor or descendant of another primary label in the same table. A broad parent (e.g., `Epithelial_cell`) and its specialized child (e.g., `Ciliated_cell` or `Neuroendocrine_cell`) MUST NEVER coexist as primary peer labels.
+   - **Bounded Upward Projection (向上有界锁死基石)**: Sibling peer lineages within organ systems (e.g., `Fibroblast`, `Smooth_muscle_cell`, `Pericyte`, `Mesothelial_cell` in stroma; `T_cell`, `NK_cell`, `B_cell`, `Macrophage`, `Monocyte` in immune; `Endothelial_cell`, `Lymphatic_endothelial` in endothelium) represent genuine anatomical peer cuts and MUST NEVER be coarsened into generic `Stromal_cell` or `Immune_cell`.
+   - **Intra-lineage Cut Harmonization (谱系内特化群规约)**: When an epithelial compartment contains specialized sub-lineages (e.g., Ciliated, PNEC), all members are harmonized to the primary lineage cut (`Epithelial_cell`) in `Celltype_EN`, while their full micro-annotation (e.g., Ciliated, PNEC) is 100% preserved in the `state`, `key_markers`, and `rationale` columns (Zero Information Loss).
+   - **Outlier Lineage Exception (外周特化实体保护)**: Distinct lineages (e.g., Chondrocytes `ACAN+/COL2A1+`, Schwann cells `SOX10+/MPZ+`, Mast cells `KIT+/CPA3+`) with >= 2 exclusive DE markers retain independent major lineage identity and are never merged into fibroblasts or macrophages.
+3. **Phase 4: Subcluster Resolution Mandate (第四阶段：亚群注释禁止退回父级)**:
+   In subcluster annotation (04 skill), within a declared parent population, every cluster must resolve to an intra-lineage sibling leaf. Retreating to the parent label in `Celltype_EN` is strictly prohibited.
 
 ## UMAP and mixed populations
 

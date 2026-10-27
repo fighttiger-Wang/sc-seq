@@ -43,10 +43,16 @@ decision is valid when the expert plotting standard is not reached.
 
 ## Strict anti-lumping and fine-grained annotation mandate (严禁偷懒粗化合并与强制精细化命名规范)
 
-In any single-cell annotation task (major cell types or subclusters):
-1. **Never Coarsen or Lump Distinct Clusters (禁止大类泛化与大锅饭合并)**: If clusters have distinct marker gene profiles, form separate topological branches/islands on UMAP, or correspond to biologically recognized sub-identities, they MUST be given distinct, specific cell type labels in the primary output columns (`Celltype_EN`, `中文名称`, and `cluster注释信息.xlsx`). Never lazily bundle them into a broad parent label (e.g., bundling multiple distinct fibroblast sub-lineages into `Adv2_Structural_Fibroblast`).
-2. **Delivery Column Consistency (交付主表列一致性)**: The primary delivery columns in Excel workbooks (`绘图列表`, `注释结果`, and `cluster注释信息.xlsx`) must directly display the differentiated specific annotations. Never excuse a broad label by claiming the distinction exists in secondary or internal fields (such as `下位亚类`).
-3. **Biological First Principles Over Verification Shortcuts (生物学第一性原理严于门控捷径)**: Never choose an overly broad or lumped label just because it is easier to pass UMAP adjacency or knowledge base constraints. Resolve specific identities via rigorous marker and literature evidence.
+In any single-cell annotation task (major cell types or subclusters), adopt the **Bottom-Up Four-Phase Framework (自底向上四阶段注释与层级协调架构)**:
+1. **Phase 1: Full-Spectrum Micro-Discovery (第一阶段：全谱系无拘微观探底)**:
+   Every cluster MUST first be explored to its finest, biologically authentic leaf identity supported by differential expression, detection prevalence (pct.1/pct.2), and open-world literature. Never lazily bundle clusters into broad parent labels during discovery. Strictly decouple lineage identity from functional state (cycling/stress) and technical artifacts.
+2. **Phase 2 & 3: Panoramic Hierarchy Audit & Bounded Cut Harmonization (第二、三阶段：全景层级拓扑审计与双向有界切面规约)**:
+   - **Ancestor-Descendant Exclusion Theorem (祖先-后代互斥定理)**: In any delivered label column (`Celltype_EN`), no primary label may be an ancestor or descendant of another primary label in the same table. A broad parent (e.g., `Epithelial_cell`) and its specialized child (e.g., `Ciliated_cell` or `Neuroendocrine_cell`) MUST NEVER coexist as primary peer labels.
+   - **Bounded Upward Projection (向上有界锁死基石)**: Sibling peer lineages within organ systems (e.g., `Fibroblast`, `Smooth_muscle_cell`, `Pericyte`, `Mesothelial_cell` in stroma; `T_cell`, `NK_cell`, `B_cell`, `Macrophage`, `Monocyte` in immune; `Endothelial_cell`, `Lymphatic_endothelial` in endothelium) represent genuine anatomical peer cuts and MUST NEVER be coarsened into generic `Stromal_cell` or `Immune_cell`.
+   - **Intra-lineage Cut Harmonization (谱系内特化群规约)**: When an epithelial compartment contains specialized sub-lineages (e.g., Ciliated, PNEC), all members are harmonized to the primary lineage cut (`Epithelial_cell`) in `Celltype_EN`, while their full micro-annotation (e.g., Ciliated, PNEC) is 100% preserved in the `state`, `key_markers`, and `rationale` columns (Zero Information Loss).
+   - **Outlier Lineage Exception (外周特化实体保护)**: Distinct lineages (e.g., Chondrocytes `ACAN+/COL2A1+`, Schwann cells `SOX10+/MPZ+`, Mast cells `KIT+/CPA3+`) with >= 2 exclusive DE markers retain independent major lineage identity and are never merged into fibroblasts or macrophages.
+3. **Phase 4: Subcluster Resolution Mandate (第四阶段：亚群注释禁止退回父级)**:
+   In subcluster annotation (04 skill), within a declared parent population, every cluster must resolve to an intra-lineage sibling leaf. Retreating to the parent label in `Celltype_EN` is strictly prohibited.
 
 ## UMAP and mixed populations
 
@@ -74,23 +80,17 @@ The final Excel workbook contains exactly these sheets in this order:
 `详细证据`, and `绘图列表` contain every cluster, use exact cluster-ID joins,
 and share numeric ascending order followed by natural alphanumeric order.
 Repeated labels are allowed. `Celltype_EN` must match `[A-Za-z0-9_]+` and must
-not be decorated with cluster IDs or marker prefixes. In subcluster work it
-must preserve a supported leaf, but a final mapping must not co-display that
-leaf with any ontology ancestor. Different independent branches may remain at
-different depths; an ancestor-descendant conflict must be resolved with
-same-level evidence, an approved residual leaf, or a blocked/recluster outcome.
-Neutral context, state, program, disease-role, and topology qualifiers remain
-in dedicated fields and must not be concatenated into `Celltype_EN`. A
-shortened professional name is permitted only when it is a recognized
-naming-dictionary abbreviation and receives explicit expert naming approval.
+not be decorated with cluster IDs or marker prefixes. State, program,
+disease-role, and topology qualifiers remain in dedicated fields and must not
+be concatenated into `Celltype_EN`. A shortened professional name is permitted
+only when it is a recognized naming-dictionary abbreviation and receives
+explicit expert naming approval.
 
 The result sheet contains no score or confidence field. The evidence sheet has
 one row per cluster and includes the final identity, parent context, primary and
 competing programs, supporting/conflicting/missing markers, qualitative gates,
 off-parent audit, state/development evidence, UMAP audit, mixed/doublet
-interpretation, rationale, gaps, handling, identity resolution, boundary/purity
-status, review status, downstream eligibility, sibling consistency status, and
-current-case discriminator evidence IDs.
+interpretation, rationale, gaps, and handling.
 
 Marker evidence is rendered as, for example:
 
@@ -112,31 +112,7 @@ available in the formula bar. Freeze the first row in every sheet; additionally
 freeze the first three columns in `注释结果` and `详细证据`, and the first column
 in `细胞类型与文献`.
 
-Apply a static red background to the plotting label in `绘图列表/Celltype_EN`
-and, when present, the evidence label in `注释结果/中文名称` when a cluster
-carries a coherent significant state program, `Multi_cell`, suspected doublet,
+Apply a static red background only to the `中文名称` cell when a cluster carries
+a coherent significant state program, `Multi_cell`, suspected doublet,
 low-quality/debris/background interference, or lineage/off-parent boundary.
-The fill is a visual warning only: it must not alter the machine-readable
-`Celltype_EN` value, and plotting scripts must continue to consume the clean
-label text. One isolated state marker does not trigger red fill. A conditional
-label can remain UMAP-usable while being ineligible for quantitative downstream
-analysis; store that handling decision in structured fields rather than in the
-label text.
-
-Expert review status is evidence-derived, never cluster-ID-derived. `passed`
-is invalid when a mandatory identity gate is failed or unknown, when a material
-off-parent/boundary/background/mixed flag is present, when a material evidence
-gap remains, or when a marker/UMAP conflict is unresolved. The builder must
-reject such contradictions instead of silently downgrading or accepting them.
-
-Keep `identity`, `identity_resolution`, `boundary_status`, `review_status`, and
-`downstream_eligible` as separate decisions. A parent-level fallback is allowed
-only when the specific identity gate fails or is unknown; UMAP adjacency and
-visual uniformity do not justify a fallback. A conditional specific label may
-remain in the plotting map, but it is not downstream-eligible by default.
-
-For same-parent sibling clusters, consistency constrains the resolution and
-review level rather than forcing biological label equality. A different final
-identity for similar neighboring clusters requires current-case discriminator
-evidence; otherwise retain the same conservative resolution/review level and
-make the unresolved comparison explicit.
+One isolated state marker does not trigger red fill.

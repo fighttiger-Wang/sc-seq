@@ -1,10 +1,10 @@
 ---
 name: skill-writing
-displayName: 10 · skill写作 v0.3.3
+displayName: 10 · skill写作 v0.3.4
 description: 10 · skill写作 v0.3.3：编写可 / 调用的个人 Codex skill 与插件标准流程 Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
 ---
 
-# 10 · skill写作 v0.3.3
+# 10 · skill写作 v0.3.4
 
 ## Operating Rule
 
@@ -26,7 +26,7 @@ For Antigravity, skills are called by their Chinese workflow name (e.g. `/04-单
   ```yaml
   ---
   name: NN-中文名
-  displayName: 10 · skill写作 v0.3.3
+  displayName: 10 · skill写作 v0.3.4
   description: NN · 中文名 vX.Y.Z：<shortDescription> <existing_description>
   ---
 
@@ -38,6 +38,23 @@ For Antigravity, skills are called by their Chinese workflow name (e.g. `/04-单
 - **Single Source of Truth**: The Git checkout of the shared marketplace is the sole authoritative implementation.
 - **Synchronous Delivery**: When any Skill is modified, tested, and published via `personal-skill-marketplace-setup`, the release pipeline automatically updates both Codex (`workspace-local` cache) and Antigravity (`~/.gemini/config/skills`), ensuring zero lag, zero duplicates, or version discrepancy between platforms.
 - **Never Single-Sided Patch**: Never patch `~/.gemini/config/skills` without updating the authoritative Git repository and pushing through the validated release pipeline.
+- **Antigravity Local Sync Protocol & Zero-Manual-Copy Redline (Antigravity 本地同步绝对禁令与唯一通道)**:
+  - **【严禁手工拷贝覆盖 (Zero-Manual-Copy Redline)】**：严禁使用 `cp`、`shutil.copy`、PowerShell 或任何手写脚本直接将 Git 仓库中的 `SKILL.md`、`references/` 复制覆盖到 `~/.gemini/config/skills/<NN-中文名>/`！直接拷贝会导致 YAML frontmatter 的 `name` 沦为英文插件 ID（如 `sc-major-celltype-annotation-auto`），直接破坏 Antigravity 的 `/` 斜杠菜单索引并使中文技能从菜单中彻底消失！
+  - **【本地同步唯一合法通道 (Single Authorized Channel)】**：在进行任何技能的代码、文档或版本更新后，如需在 Antigravity 本地环境中即时生效测试或交付，**必须且仅允许**调用官方映射构建命令：
+    ```bash
+    python plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup/scripts/setup.py sync-antigravity
+    ```
+    该命令会自动执行完整的双平台映射流水线：
+    1. 读取 `ANTIGRAVITY_SKILLS_MAP` 字典，精准映射 17 个专业技能的目录与编号；
+    2. 将 Git 源码中的英文插件代码自动转译为 Antigravity 专用的 `name: NN-中文名`；
+    3. 自动同步 `displayName` 并重新装配标准的 Antigravity Frontmatter；
+    4. 自动修复相对引用路径为 `references/...`；
+    5. 自动刷新并原子写出 `~/.gemini/config/skills.json` 索引配置文件；
+    6. 同步至便携式备份归档 `E:\Desktop\检索调用文件\skill`。
+  - **【发布前菜单冒烟自检 (Menu Smoke-Test Checklist)】**：在宣布技能更新完成前，必须验证：
+    1. 目标技能的 `~/.gemini/config/skills/<NN-中文名>/SKILL.md` 顶层 `name` 与目录中文名 100% 相同；
+    2. `displayName` 与 `plugin.json` 中的新版本号 100% 对齐；
+    3. 运行 `tools/test_personal_skill_marketplace.py`，确认 `antigravity slash menu integrity` 测试项 100% 通过。
 - **Pre-publish Gate 0: Baseline & Semantic Versioning Integrity**:
   1. Before proposing or executing any version bump, run `python tools/test_personal_skill_marketplace.py` and `python scripts/setup.py audit` to verify existing baseline integrity.
   2. For version increments, never edit versions manually across fragmented files. Always execute `python tools/bump_skill_version.py <skill-id> <semver>` to perform atomic 4-point metadata synchronization across:

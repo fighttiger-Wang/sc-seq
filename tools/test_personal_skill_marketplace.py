@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -158,6 +160,7 @@ class Doctor:
             self.add(f"platform entrypoint {relative}", (self.root / relative).is_file(), relative)
         self.check_annotation()
         self.check_forbidden_files()
+        self.check_antigravity_parity()
         for runtime in ("git", "codex", "python3", "python", "Rscript", "pwsh"):
             found = shutil.which(runtime)
             if found and "WindowsApps" in found:
@@ -273,6 +276,61 @@ class Doctor:
                 absolute_hits.append(str(path))
         self.add("secret-like files", not forbidden, "; ".join(forbidden[:10]))
         self.add("machine-specific absolute paths", not absolute_hits, "; ".join(absolute_hits[:10]), "warning")
+
+    def check_antigravity_parity(self) -> None:
+        antigravity_home = Path(
+            os.environ.get("ANTIGRAVITY_HOME")
+            or os.environ.get("GEMINI_HOME")
+            or (Path.home() / ".gemini")
+        )
+        skills_dir = antigravity_home / "config" / "skills"
+        if not skills_dir.is_dir():
+            return
+
+        setup_script = self.root / "plugins" / "personal-skill-marketplace-setup" / "skills" / "personal-skill-marketplace-setup" / "scripts" / "setup.py"
+        if not setup_script.is_file():
+            return
+
+        setup_text = setup_script.read_text(encoding="utf-8")
+        start_idx = setup_text.find("ANTIGRAVITY_SKILLS_MAP")
+        if start_idx == -1:
+            return
+        dict_start = setup_text.find("{", start_idx)
+        dict_end = setup_text.find("}\n", dict_start)
+        if dict_start == -1 or dict_end == -1:
+            dict_end = setup_text.find("}", dict_start)
+        dict_text = setup_text[dict_start:dict_end+1]
+
+        import ast
+        try:
+            skills_map = ast.literal_eval(dict_text)
+        except Exception:
+            return
+
+        all_ok = True
+        failed_skills = []
+        for plugin_id, (order, chinese_cmd_name) in skills_map.items():
+            dest_skill_dir = skills_dir / chinese_cmd_name
+            if not dest_skill_dir.is_dir():
+                all_ok = False
+                failed_skills.append(f"{chinese_cmd_name}(dir_missing)")
+                continue
+            skill_md = dest_skill_dir / "SKILL.md"
+            if not skill_md.is_file():
+                all_ok = False
+                failed_skills.append(f"{chinese_cmd_name}(SKILL.md_missing)")
+                continue
+            text = skill_md.read_text(encoding="utf-8")
+            front = re.match(r"\A---\s*\n(.*?)\n---", text, re.S)
+            body = front.group(1) if front else ""
+            name_match = re.search(r"(?m)^name:\s*(.+)$", body)
+            actual_name = name_match.group(1).strip() if name_match else ""
+            if actual_name != chinese_cmd_name:
+                all_ok = False
+                failed_skills.append(f"{chinese_cmd_name}(name='{actual_name}')")
+
+        detail = f"Discrepancies found: {', '.join(failed_skills)}" if failed_skills else "All 17 Antigravity skills verified with valid Chinese slash command names"
+        self.add("antigravity slash menu integrity", all_ok, detail)
 
 
 def main() -> None:
