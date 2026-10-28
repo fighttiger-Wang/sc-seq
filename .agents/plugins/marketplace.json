@@ -207,6 +207,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Education & Research"
+    },
+    {
+      "name": "lucky-note-workbench-iteration",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lucky-note-workbench-iteration"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
