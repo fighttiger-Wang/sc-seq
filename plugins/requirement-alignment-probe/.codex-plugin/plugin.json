@@ -1,0 +1,25 @@
+{
+  "name": "requirement-alignment-probe",
+  "version": "1.0.0+codex.20261116153000",
+  "description": "借鉴小米AI设计链路第一阶段事前需求追问机制。在进行任何代码编写或原型生成前，强制拦截用户的粗粒度输入，通过多轮结构化深度反问产出标准 Design Spec。",
+  "author": {
+    "name": "Antigravity AI Design Team / Personal Shared"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "C03 · 需求对齐追问 v1.0.0",
+    "shortDescription": "事前需求结构化深度反问与设计契约收敛",
+    "longDescription": "消灭假设与脑补，从目标用户、核心路径、首屏排版、空状态与异常流 5 个维度向用户提出高信噪比选择题，输出标准化《设计需求规范 (Design Spec)》。",
+    "developerName": "反问对齐协议",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "我有一个新点子，帮我做需求对齐",
+      "帮我理一下这个桌面 App 的需求",
+      "/C03-需求对齐追问"
+    ]
+  }
+}

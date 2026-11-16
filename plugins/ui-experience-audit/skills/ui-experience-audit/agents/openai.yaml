@@ -1,0 +1,7 @@
+interface:
+  display_name: "C04 · 独立体验走查 v1.0.0"
+  short_description: "独立冷酷的第三方 UI/UX 体验走查与质检审计官"
+  default_prompt: "使用 $ui-experience-audit，对界面截图与设计需求进行独立客观审查，输出严重程度分级的体验缺陷清单。"
+
+policy:
+  allow_implicit_invocation: true

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 17,
+  "expectedPluginCount": 21,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -71,6 +71,22 @@
     {
       "id": "sc-group-gene-bubble-stats",
       "version": "0.1.0+codex.20261008120000"
+    },
+    {
+      "id": "requirement-alignment-probe",
+      "version": "1.0.0+codex.20261116153000"
+    },
+    {
+      "id": "ui-experience-audit",
+      "version": "1.0.0+codex.20261116153000"
+    },
+    {
+      "id": "desktop-app-packaging",
+      "version": "1.0.0+codex.20261116153000"
+    },
+    {
+      "id": "ai-design-pipeline",
+      "version": "1.0.0+codex.20261116153000"
     }
   ],
   "sharedPaths": [

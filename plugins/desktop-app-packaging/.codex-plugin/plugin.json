@@ -1,0 +1,25 @@
+{
+  "name": "desktop-app-packaging",
+  "version": "1.0.0+codex.20261116153000",
+  "description": "基于 Pake (Rust + Tauri) 与现代 Webview 体系，为不懂复杂底层代码的创作者提供电脑端桌面应用（Windows .exe / macOS .dmg）极简打包方案。",
+  "author": {
+    "name": "Antigravity AI Design Team / Personal Shared"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "C05 · 桌面应用打包 v1.0.0",
+    "shortDescription": "基于 Pake 的轻量化桌面应用打包与发布工具",
+    "longDescription": "将任何 Web 链接或本地 HTML 产物一键打包为仅数兆体积的独立桌面客户端，支持沉浸式无边框顶栏配置与 GitHub Actions 在线打包。",
+    "developerName": "Pake 轻量桌面化适配",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "帮我把这个网页打包成 Windows 软件",
+      "用 Pake 打包电脑端 App",
+      "/C05-桌面应用打包"
+    ]
+  }
+}

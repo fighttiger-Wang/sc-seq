@@ -1,0 +1,7 @@
+interface:
+  display_name: "C03 · 需求对齐追问 v1.0.0"
+  short_description: "事前需求结构化深度反问与设计契约收敛"
+  default_prompt: "使用 $requirement-alignment-probe，针对我的初步想法进行深度反问，输出标准化的设计需求规格书。"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "C05 · 桌面应用打包 v1.0.0"
+  short_description: "基于 Pake 的轻量化电脑端桌面 App 打包工具"
+  default_prompt: "使用 $desktop-app-packaging，将我的网页或产物打包为独立的 Windows (.exe) 或 macOS (.dmg) 桌面客户端。"
+
+policy:
+  allow_implicit_invocation: true

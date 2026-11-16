@@ -1,0 +1,7 @@
+interface:
+  display_name: "C06 · AI设计流水线 v1.0.0"
+  short_description: "端到端多Agent工业级桌面应用生产与客观走查总控中枢"
+  default_prompt: "启动 $ai-design-pipeline，根据我提供的想法或草图，执行需求对齐、代码生成、独立走查与桌面应用打包全流程。"
+
+policy:
+  allow_implicit_invocation: true

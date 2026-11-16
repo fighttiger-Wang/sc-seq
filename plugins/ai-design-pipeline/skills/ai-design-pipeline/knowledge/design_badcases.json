@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-11-16T14:36:30.000Z",
+  "badcases": [
+    {
+      "id": "CASE-001",
+      "category": "排版与长文本",
+      "title": "单行文本过长撑破侧边栏或卡片容器",
+      "badcase": "直接使用普通 <span> 或 <div> 渲染用户输入的标题，未设置溢出截断策略。",
+      "solution": "必须增加 CSS 截断：overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 并设置 title 属性承载完整 Tooltip。",
+      "rule": "所有用户输入或动态内容展示区，严禁无限制横向撑开，必须标配单行截断或多行 clamp。",
+      "created_at": "2026-11-16T14:36:30.000Z"
+    },
+    {
+      "id": "CASE-002",
+      "category": "色彩与可读性",
+      "title": "次级辅助文本对比度过低 (违反 WCAG AA 4.5:1)",
+      "badcase": "浅色背景使用 text-gray-300 (#d1d5db) 或深色背景使用 text-gray-600 (#4b5563)，导致视力受损用户或在阳光下无法阅读。",
+      "solution": "浅色底文字加深至 #4b5563 以上；深色底文字亮度提升至 #94a3b8 以上，确保对比度高于 4.5:1。",
+      "rule": "严禁使用非语义低对比度灰色假装极简高级，正文与标签必须通过 WCAG AA 标准对比度核验。",
+      "created_at": "2026-11-16T14:36:30.000Z"
+    },
+    {
+      "id": "CASE-003",
+      "category": "桌面特化交互",
+      "title": "无边框透明顶栏丢失拖拽手柄与按钮点击穿透",
+      "badcase": "使用 Pake --transparent 打包后，顶部没有定义 -webkit-app-region: drag，导致整个软件窗口卡死无法拖动；或顶部按钮未加 no-drag 导致无法点击。",
+      "solution": "顶栏容器设置 -webkit-app-region: drag; 内部所有按钮、输入框设置 -webkit-app-region: no-drag。",
+      "rule": "桌面端无标题栏窗口，必须显式区分拖拽死区 (Drag) 与交互热区 (No-drag)。",
+      "created_at": "2026-11-16T14:36:30.000Z"
+    },
+    {
+      "id": "CASE-004",
+      "category": "状态完整性",
+      "title": "空数据状态（Empty State）白屏无引导",
+      "badcase": "新建页面或无数据时，工作区显示一片空白，用户不知道接下来该做什么。",
+      "solution": "居中展示温和轻量插图/图标、简明引导文案以及 1 个高亮主行动按钮（如：[立即创建第一项任务]）。",
+      "rule": "凡有列表或看板，必须强制设计 0 数据空状态与明确的下一步行动指引。",
+      "created_at": "2026-11-16T14:36:30.000Z"
+    },
+    {
+      "id": "CASE-005",
+      "category": "微动效与手感",
+      "title": "按钮与卡片缺少鼠标 Hover 态反馈",
+      "badcase": "鼠标移动到按钮上，指针虽变成小手，但按钮背景色无任何变化，缺乏物理确定感。",
+      "solution": "所有可点击元素必须添加 hover:bg-opacity / hover:border-color 微调与 active:scale(0.97) 物理按压反馈。",
+      "rule": "电脑端软件区别于手机端的核心是光标交互，所有可交互对象必须具备明确的 Hover 微反馈。",
+      "created_at": "2026-11-16T14:36:30.000Z"
+    }
+  ]
+}

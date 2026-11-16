@@ -1,0 +1,25 @@
+{
+  "name": "ui-experience-audit",
+  "version": "1.0.0+codex.20261116153000",
+  "description": "借鉴小米AI设计链路第二/三阶段事后独立体验走查与红蓝对抗机制。作为严苛冷酷的第三方独立审计者，按照 16 项工业标准客观挑刺找茬。",
+  "author": {
+    "name": "Antigravity AI Design Team / Personal Shared"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "C04 · 独立体验走查 v1.0.0",
+    "shortDescription": "独立冷酷的第三方 UI/UX 体验走查与质检审计官",
+    "longDescription": "物理隔离上下文，只接收界面截图与初始需求 Spec，对照视觉层次、桌面交互特性、状态完整性等 16 项工业标准逐项审查，输出结构化 Punchlist。",
+    "developerName": "红蓝对抗客观走查",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "帮我以客观走查官视角审查这个界面截图",
+      "用小米事后走查机制给这个产品挑刺",
+      "/C04-独立体验走查"
+    ]
+  }
+}

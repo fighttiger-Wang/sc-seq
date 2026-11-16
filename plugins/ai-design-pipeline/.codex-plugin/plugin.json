@@ -1,0 +1,25 @@
+{
+  "name": "ai-design-pipeline",
+  "version": "1.0.0+codex.20261116153000",
+  "description": "端到端 1:1 复刻小米 AI 设计系统演进经验的工业级总控流水线。集成需求反问、代码生成、无头截屏、独立子智能体走查与 Pake 桌面打包。",
+  "author": {
+    "name": "Antigravity AI Design Team / Personal Shared"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "C06 · AI设计流水线 v1.0.0",
+    "shortDescription": "多Agent工业级桌面应用生产与客观走查总控中枢",
+    "longDescription": "端到端串联需求对齐、历史Badcase注入、无头截屏走查、红蓝对抗独立质检、自进化蒸馏与Pake一键桌面客户端打包，内置快捷键HUD。",
+    "developerName": "小米 AI 设计演进开源实战",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "我要做一个新桌面软件，启动 /C06-AI设计流水线",
+      "启动 AI 设计流水线",
+      "帮我全自动跑一遍需求对齐、代码生成、独立走查和打包"
+    ]
+  }
+}
