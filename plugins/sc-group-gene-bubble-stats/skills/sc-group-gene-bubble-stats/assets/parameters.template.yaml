@@ -1,0 +1,24 @@
+# ==============================================================================
+# 17 · 单细胞分组基因表达气泡图与统计分析 - 参数配置文件模板
+# ==============================================================================
+
+# 输入数据路径 (支持 .zip 压缩包、解压后的包含 Celltype_Sample/Group 的目录、或单文件长表)
+input: "path/to/Microglia-02.zip"
+
+# 分析基因列表 (单个基因或逗号分隔的多个基因，例如 Cxcl13 或 "Cxcl13, P2ry12, Tmem119")
+genes: "Cxcl13"
+
+# 输出结果目录
+output: "./output_bubble_stats"
+
+# 对比分组设置 (参考组/对照组在前，比较组/处理组在后；若为 NULL 且只有两组则自动识别)
+groups: "Middle_aged_Con, Middle_aged_Fru"
+
+# 细胞亚群展示顺序 (以逗号分隔；若为 NULL 则自动获取所有非 other 亚群)
+celltypes: "Spp1_Mic, Ifit3_Mic, Active_Mic, Adap2os_Mic, Gadd45b_Mic, Polr2a_Mic, Pnisr_Mic"
+
+# 分组配色 Hex 编码 (依次对应 groups 中的各组，默认为经典学术蓝与学术红)
+colors: "#4B87B9, #E15759"
+
+# 自定义图表标题 (可选，默认为目的基因名称)
+title: null

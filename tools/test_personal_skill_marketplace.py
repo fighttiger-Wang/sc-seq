@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DISPLAY_RE = re.compile(r"^\d{2} · .+$")
+DISPLAY_RE = re.compile(r"^([A-Z]\d{2}|\d{2}) · .+$")
 TEXT_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".ps1", ".sh", ".py", ".r", ".txt"}
 IGNORED_PARTS = {".git", "logs", "outputs", "tmp", "__pycache__"}
 SECRET_RE = re.compile(r"(^\.env($|\.)|\.pem$|\.key$|credentials|secrets?|\.sqlite3(?:-wal|-shm)?$)", re.I)

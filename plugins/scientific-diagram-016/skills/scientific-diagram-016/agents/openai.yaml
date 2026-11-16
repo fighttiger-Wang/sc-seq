@@ -1,0 +1,8 @@
+interface:
+  display_name: "16 · 科研流程图与概念图 v0.1.0"
+  short_description: "以 Typst 固定模板稳定生成桌面、移动和打印科研图"
+  brand_color: "#8B0000"
+  default_prompt: "Use $scientific-diagram-016 to create a concise, publication-ready scientific conceptual figure with editable source and validated SVG."
+
+policy:
+  allow_implicit_invocation: true

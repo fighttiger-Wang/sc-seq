@@ -1,0 +1,27 @@
+{
+  "name": "scientific-diagram-016",
+  "version": "0.1.0+codex.20260907002131",
+  "description": "Create stable publication-ready scientific study designs, workflows, qualitative hypothesis matrices, and concise conceptual SVG diagrams.",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "16 · 科研流程图与概念图 v0.1.0",
+    "shortDescription": "以 Typst 固定模板稳定生成科研流程图与概念图",
+    "longDescription": "使用固定版本 Typst 0.13.1 与 vendored CeTZ 0.3.4，为三组科研设计生成独立桌面、390 px 移动端和 A4 打印 SVG；定性假设矩阵和简单示意采用确定性本地渲染，失败时降级为简洁表格或直接框线图。",
+    "developerName": "fight",
+    "category": "Education & Research",
+    "capabilities": [
+      "Scientific visualization",
+      "Responsive SVG generation",
+      "Print-ready diagrams"
+    ],
+    "defaultPrompt": [
+      "绘制一张简洁、稳定、适合科研报告的研究流程图并保留可编辑源文件。",
+      "把三组定性结果预期整理为不暗示数值大小的假设矩阵。",
+      "根据研究设计绘制证据链或简单机制示意图，并完成 SVG 质检。"
+    ],
+    "brandColor": "#8B0000"
+  }
+}

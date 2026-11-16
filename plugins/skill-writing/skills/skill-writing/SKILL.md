@@ -18,32 +18,69 @@ Normalize every internal skill/plugin id to lowercase ASCII hyphen-case. Keep th
 Every maintained skill display name must use exactly this format:
 
 ```text
-NN · Name
+[A-Z]\d{2} · Name
 ```
 
-- `NN` is the fixed two-digit workflow order, including a leading zero for 01–09.
+- `[A-Z]\d{2}` is the category letter followed by a two-digit group workflow order (e.g., A01–A07, B01–B07, C01–C02, D01–D02, E01–E04).
 - The separator is the Unicode middle dot `·` (`U+00B7`) with exactly one ASCII space on each side.
-- Example: `03 · 单细胞大类注释（主要谱系）`.
+- Example: `A02 · 大类谱系注释 v0.9.1`.
 - Do not omit the separator or replace it with `路`, `.`, `•`, `-`, `:`, a full-width dot, or another visually similar character.
 - Set the identical full display name in `plugin.json` `interface.displayName` and `agents/openai.yaml` `interface.display_name`.
 
-## Fixed Workflow Order
+### Skill Naming Conciseness Standard (命名精炼度与抗噪准则)
 
-1. `single-cell-qc-extract`
-2. `single-cell-qc-image-display`
-3. `sc-major-celltype-annotation-auto`
-4. `sc-marker-cluster-annotation-auto`
-5. `feature-gene-heatmap-violin`
-6. `kegg-flow-bubble-plot`
-7. `workflow-script-structure`
-8. `workbench`
-9. `task-handoff`
-10. `skill-writing`
-11. `bioinformatics-results-report`
-12. `annotation-knowledge-release`
-13. `personal-skill-marketplace-setup`
+为了在 `/` 斜杠菜单、狭窄侧边栏以及自动补全列表中实现最佳的视觉扫视体验，杜绝中文字符溢出截断（`...`），所有维护的 Skill 必须严格遵循以下精炼命名法则：
 
-Assign later maintained skills the next unused two-digit number, currently `14`. Do not renumber existing skills unless the user explicitly changes the workflow.
+1. **长度控制红线**：
+   - 除去编号前缀（如 `A01-`）后，中文名称核心体必须严格控制在 **4 ~ 8 个汉字**以内（极简动宾或核心对象词），严禁超过 10 个汉字。
+2. **大类内去冗余原则（No Redundant Namespace）**：
+   - 既然大类字母已代表特定业务空间（如 `A` 代表单细胞分析、`B` 代表绘图可视化），**严禁在技能中文名中重复出现“单细胞”、“生信”等同义定语**。例如：采用 `A01-质控过滤提取`，严禁写成 `A01-单细胞数据分析质控过滤提取`。
+3. **剔除连词与多动作强行并列**：
+   - 严禁在名字中使用“及”、“与”、“和”、“以及”强行缝合两个图表或步骤。例如：采用 `B02-Marker表达图`，严禁写成 `B02-特征基因热图及选定基因小提琴图`。
+4. **副标题与细节修饰语全面下沉至 Description**：
+   - 名字仅用于**人类快速击键索引与视觉定位**；具体的算法细节、适用场景、图表变体（如“主要谱系”、“经典文档版”、“红蓝绿对抗”），一律放入 YAML Frontmatter 的 `description` 字段。
+   - LLM 语义路由 90% 依赖 `description` 向量匹配，精简名字丝毫不影响智能体的调用准确率。
+
+### Core Categorization Architecture (A-E)
+
+1. **A 类：单细胞数据分析与综合生信工作流 (A01~A07)**
+   - `A01-质控过滤提取`
+   - `A02-大类谱系注释`
+   - `A03-亚群精细注释`
+   - `A04-知识库发布`
+   - `A05-交互解读报告`
+   - `A06-文档解读报告`
+   - `A07-流程脚本工程`
+
+2. **B 类：单细胞与生信绘图可视化 (B01~B07)**
+   - `B01-质控分布图`
+   - `B02-Marker表达图`
+   - `B03-功能模块热图`
+   - `B04-分组表达气泡图`
+   - `B05-细胞比例统计图`
+   - `B06-KEGG流泡图`
+   - `B07-机制流程概念图`
+
+3. **C 类：UI设计与工作台 (C01~C02)**
+   - `C01-工作台`
+   - `C02-UI视觉设计`
+
+4. **D 类：服务器与HPC算力运维 (D01~D02)**
+   - `D01-HPC超算指南`
+   - `D02-服务器任务投递`
+
+5. **E 类：Skill工程治理与决策规范 (E01~E04)**
+   - `E01-任务交接`
+   - `E02-三方专家评审`
+   - `E03-Skill规范写作`
+   - `E04-Skill市场安装`
+
+### Mandatory Inquiry Gate for Uncategorized Skills (未归类强制中断发问门禁)
+
+凡在后续任务中起草、编写或重构全新 Skill 时，必须遵循以下规则：
+1. **自动归类优先**：首先评估新技能的技术领域是否能明确归入现有的 A~E 五大类。若能明确归入，分配该分类下紧接着的下一个两位流水号。
+2. **【绝对红线禁令】严禁擅自推断大类**：如果新技能的技术方向或业务边界无法确定归入现有的 A~E 五大类，**智能体绝对严禁自行臆断指派大类字母（如擅自创建 F 类），亦严禁随意强行塞入现有大类**。
+3. **【强制挂起发问】**：智能体必须**立即暂停执行，主动向用户提问**，列出该技能的核心功能特征，并明确询问：“*该新技能的方向无法在现有 A-E 架构中明确归类，请指示其应归属的大类字母及组内编号。*” 只有在获得用户的明确回复指令后，方可继续推进编号与目录创建。
 
 ## Direct Workflow
 
@@ -62,8 +99,8 @@ Assign later maintained skills the next unused two-digit number, currently `14`.
    - `skills/<id>/SKILL.md`
    - `skills/<id>/agents/openai.yaml`
    - optional `references/`, `scripts/`, or `assets/` only when they directly support execution
-9. Set the same `NN · Name` display name in both `plugin.json` and `agents/openai.yaml`.
-10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^\d{2} · .+$`; reject `路` or a missing/wrong separator.
+9. Set the same `[A-Z]\d{2} · Name` display name in both `plugin.json` and `agents/openai.yaml`.
+10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^[A-Z]\d{2} · .+$`; reject `路` or a missing/wrong separator.
 11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
 12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan; for an unregistered new plugin, finish the three registries before proceeding.
 13. Ask the user for explicit publication confirmation. Only then invoke confirmed publish, which updates cachebusters, synchronizes `skill-pack.json`, tests, commits, and pushes a `codex/*` branch. Create a PR when GitHub CLI/API access is available; otherwise return the compare URL.
