@@ -1,15 +1,139 @@
 ---
 name: skill-writing
-description: Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
+displayName: E03 · Skill规范写作 v0.3.5
+description: E03 · Skill规范写作 v0.3.5：编写可 / 调用的个人 Codex skill 与插件标准流程。Create, register, validate, and prepare shared Codex skills for GitHub publication so they remain callable across Windows and macOS computers and after switching Codex/OpenAI accounts. Use when the user asks to write or update a skill, package a slash-callable plugin, maintain the shared marketplace, fix duplicate entries, assign workflow ordering, or make a skill cross-platform.
 ---
 
-# Skill Writing
+# E03 · Skill规范写作 v0.3.5
 
 ## Operating Rule
 
 Build user-facing callable skills as plugins in the shared local marketplace, not as `@personal` plugins and not as bare skills. Resolve its root from `CODEX_SHARED_MARKETPLACE_ROOT`; when working in a checked-out source package, use the nearest ancestor containing `skill-pack.json`. Its configured name is `workspace-local`, and its source plugin directory is `<shared-marketplace-root>\plugins`.
 
 Before editing, invoke `personal-skill-marketplace-setup` in `preflight` mode once for the task. If it installs an update, stop and ask the user to restart Codex and open a new task before continuing. Never edit an installed plugin cache as source.
+
+## Dual-Platform Architecture and Antigravity Parity
+
+Our skills operate under an integrated **Dual-Platform Architecture**:
+1. **Codex Platform**: Registered as marketplace plugins in `<shared-marketplace-root>/plugins/<id>`, declared in `skill-pack.json`, installed into `~/.codex/plugins/cache/workspace-local/<id>/<version>`.
+2. **Antigravity Platform**: Registered as slash-callable skills in `~/.gemini/config/skills/<NN-中文名>`, configured via `~/.gemini/config/skills.json` (avoid duplicating into `plugins/` which causes duplicate slash menu items).
+3. **Desktop Portable Archive**: Maintained in `E:\Desktop\检索调用文件\skill` containing standalone directories, ZIP archives, and `EXPORT-MANIFEST.json`.
+
+### Antigravity Naming and Frontmatter Standard
+For Antigravity, skills are called by their Chinese workflow name (e.g. `/A03-亚群精细注释`, `/E03-Skill规范写作`, `/E04-Skill市场安装`). The directory and `SKILL.md` must follow the two-dimensional categorized naming standard `[A-Z]\d{2}-中文名`:
+- **Folder name**: `[A-Z]\d{2}-中文名` (e.g. `A03-亚群精细注释`, `E03-Skill规范写作`, `E04-Skill市场安装`).
+- **SKILL.md Frontmatter**:
+  ```yaml
+  ---
+  name: [A-Z]\d{2}-中文名
+  displayName: [A-Z]\d{2} · 中文名 vX.Y.Z
+  description: [A-Z]\d{2} · 中文名 vX.Y.Z：<shortDescription> <existing_description>
+  ---
+
+  # [A-Z]\d{2} · 中文名 vX.Y.Z
+  ```
+- **Top Heading**: `# [A-Z]\d{2} · 中文名 vX.Y.Z` matching the `displayName`.
+
+### Dual-Platform Parity & Anti-Regression Rule
+- **Single Source of Truth**: The Git checkout of the shared marketplace is the sole authoritative implementation.
+- **Synchronous Delivery**: When any Skill is modified, tested, and published via `personal-skill-marketplace-setup`, the release pipeline automatically updates both Codex (`workspace-local` cache) and Antigravity (`~/.gemini/config/skills`), ensuring zero lag, zero duplicates, or version discrepancy between platforms.
+- **Never Single-Sided Patch**: Never patch `~/.gemini/config/skills` without updating the authoritative Git repository and pushing through the validated release pipeline.
+- **Antigravity Local Sync Protocol & Zero-Manual-Copy Redline (Antigravity 本地同步绝对禁令与唯一通道)**:
+  - **【严禁手工拷贝覆盖 (Zero-Manual-Copy Redline)】**：严禁使用 `cp`、`shutil.copy`、PowerShell 或任何手写脚本直接将 Git 仓库中的 `SKILL.md`、`references/` 复制覆盖到 `~/.gemini/config/skills/<NN-中文名>/`！直接拷贝会导致 YAML frontmatter 的 `name` 沦为英文插件 ID（如 `sc-major-celltype-annotation-auto`），直接破坏 Antigravity 的 `/` 斜杠菜单索引并使中文技能从菜单中彻底消失！
+  - **【本地同步唯一合法通道 (Single Authorized Channel)】**：在进行任何技能的代码、文档或版本更新后，如需在 Antigravity 本地环境中即时生效测试或交付，**必须且仅允许**调用官方映射构建命令：
+    ```bash
+    python plugins/personal-skill-marketplace-setup/skills/personal-skill-marketplace-setup/scripts/setup.py sync-antigravity
+    ```
+    该命令会自动执行完整的双平台映射流水线：
+    1. 读取 `ANTIGRAVITY_SKILLS_MAP` 字典，精准映射 17 个专业技能的目录与编号；
+    2. 将 Git 源码中的英文插件代码自动转译为 Antigravity 专用的 `name: NN-中文名`；
+    3. 自动同步 `displayName` 并重新装配标准的 Antigravity Frontmatter；
+    4. 自动修复相对引用路径为 `references/...`；
+    5. 自动刷新并原子写出 `~/.gemini/config/skills.json` 索引配置文件；
+    6. 同步至便携式备份归档 `E:\Desktop\检索调用文件\skill`。
+  - **【发布前菜单冒烟自检 (Menu Smoke-Test Checklist)】**：在宣布技能更新完成前，必须验证：
+    1. 目标技能的 `~/.gemini/config/skills/<NN-中文名>/SKILL.md` 顶层 `name` 与目录中文名 100% 相同；
+    2. `displayName` 与 `plugin.json` 中的新版本号 100% 对齐；
+    3. 运行 `tools/test_personal_skill_marketplace.py`，确认 `antigravity slash menu integrity` 测试项 100% 通过。
+- **Pre-publish Gate 0: Baseline & Semantic Versioning Integrity (发布门禁 0：代码变更必升版与原子级双端同步)**:
+  1. **【动代码必升版红线 (Code-Touch Bump Mandate)】**：凡是在任务中修改了 `plugins/<id>/scripts/`、`shared/` 等核心业务逻辑或算法代码，**在宣布任务完成或交付前，必须执行版本号递增**。严禁仅修改代码而不升级版本号（否则导致交付物与开源版本脱节、结果不可复现的“幽灵版本”事故）。
+  2. **【一体化自动算号与全平台级联同步 (Unified Auto-Bump & Chain Sync)】**：
+     - 版本号自增一律使用 `python tools/bump_skill_version.py <skill-id> auto`（自动识别当前版本并递增 Patch，如 `v0.11.8` -> `v0.11.9`；亦支持指定 `minor`/`major` 或特定 `X.Y.Z`）。
+     - 该命令已深度集成级联流水线：一次执行自动完成 4 点元数据更新（`plugin.json`, `openai.yaml`, `SKILL.md`, `skill-pack.json`），并在底层**自动级联触发 `setup.py sync-antigravity`**，实现 Codex 市场缓存、Antigravity 平台技能定义（`~/.gemini/config/skills/`）与桌面便携归档（`E:\Desktop\检索调用文件\skill`）的 100% 物理同步，无需人工分步调用。
+  3. **【交付物自证明版本指纹 (Artifact Self-Verifying Fingerprint)】**：具备正式结果输出能力的 Skill，必须在交付大表（如 Sheet 4 `说明与数据来源`）或报告中显式固化记录执行技能版本号，确保数据可溯源。
+  4. **【任务交接版本对齐门禁 (Handoff Alignment Gate)】**：执行 `E01-任务交接` 提交前，必须审计本轮所改技能的版本变迁；代码改动必须在交接记录中体现版本递增，否则视为未完工。
+- **Shared Core Knowledge Base Boundary**:
+  - `shared/sc-annotation-evidence-core` is the immutable single source of truth for marker knowledge databases (`evidence_markers.json`, `lineage_ontology.json`, etc.).
+  - Domain skills (such as `A02-大类谱系注释` and `A03-亚群精细注释`) consume verified snapshot files. Never modify local snapshot files directly within a domain skill plugin without synchronizing shared core, as `test_personal_skill_marketplace.py` verifies snapshot SHA-256 integrity against the shared core. Knowledge updates must follow `/A04-知识库发布`.
+
+## Existing-rule baseline and anti-regression gate
+
+When modifying an existing Skill or any of its shared evidence, policy, schema,
+or builder resources, first read the current authoritative Skill instructions
+and every directly loaded rule resource that can affect the requested workflow.
+Do not rely on the user's issue description to enumerate the existing rules.
+The maintainer is responsible for discovering and preserving them.
+
+This is a semantic maintenance task, not a mechanical rewrite task. Do not
+rewrite an entire `SKILL.md`, reference, schema, or policy from the latest
+request alone. First inspect the existing implementation, its callers, its
+generated outputs, and its tests; then make the smallest change that satisfies
+the requested behavior while preserving unrelated behavior. A local incident
+may justify a narrowly scoped guard or regression test, but it does not by
+itself authorize replacing the Skill's general workflow, deleting an existing
+decision layer, or generalizing one domain's terminology into another domain.
+
+For every requested change, record the impact boundary: target files, direct
+callers, output fields, affected gates, and explicitly unaffected behavior.
+If the requested wording conflicts with an existing executable rule, stop and
+resolve the conflict from the implementation and tests before editing. Keep
+the old rule when the conflict is only apparent; change it only when the user
+has clearly authorized a semantic change.
+
+Before editing, create a compact rule baseline that records, at minimum:
+
+- required inputs, parent scope, and output schema;
+- biological identity, exclusion, hierarchy, state, off-parent, doublet, and
+  low-quality rules;
+- UMAP/topology and research/retrieval gates;
+- naming dictionary, approved abbreviations, display-label restrictions, and
+  expert-review requirements;
+- workbook, QA, hash, provenance, delivery, and no-auto-modification rules;
+- existing regression tests and known failure cases.
+
+Every proposed change must be classified as `add`, `clarify`, `strengthen`,
+or `replace`. `replace` is allowed only when the user explicitly authorizes
+retiring or changing the prior rule. Otherwise, preserve the prior rule and
+layer the new requirement on top of it. A shorter or more general rewrite is
+not evidence that an old rule is obsolete.
+
+After editing, run a rule-diff review against the baseline. The review must
+identify each removed, weakened, renamed, or behaviorally changed rule and
+prove that it was either preserved or explicitly authorized. Add a regression
+test for every incident that motivated the change, including a test that the
+previously protected behavior still blocks the original failure. Do not
+promote a candidate when this rule-diff is missing, when a directly loaded
+resource was not inspected, or when a test result is unavailable.
+
+## Candidate, release, and callable states
+
+Keep the stable marketplace checkout and its `main`-derived working tree clean while a Skill is being drafted. Perform unapproved edits in a session-local isolated worktree or staging copy. A candidate may be tested through an explicit file/path handoff in the current task, but it must not be registered, installed, or exposed through `/`.
+
+Each Skill owns its own release sequence. Keep the fixed workflow number (`03`, `04`, etc.) separate from the visible semantic release version (`vX.Y.Z`). The visible name may be `AB01 · Name v0.7.0`; the plugin package's cache-busting suffix remains a separate technical field. Every release record must also contain the Git commit and content SHA-256.
+
+### Version and source lifecycle
+
+Treat each source or artifact as exactly one of these states: `stable`,
+`candidate`, `rollback`, or `quarantine`. Only `stable` may be registered,
+installed, or exposed through `/`. A `rollback` copy is recoverable but never
+active; a `quarantine` copy is an invalid, dirty, stale, or mixed candidate
+and must be rejected by source discovery. Never convert an old version into a
+new cachebuster without proving that its semantic version advances the remote
+stable version.
+
+After the user has finished testing, summarize the candidate and ask once for a single end-to-end release authorization covering version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, local cache refresh, restart notice, and new-task pickup. Without consent, do not copy or merge the candidate into the stable source, update registries, change cachebusters, write a published audit record, or install it. One affirmative reply authorizes the complete one-step sequence; delegate it to `personal-skill-marketplace-setup` with `publish --one-step` and do not ask separate PR, merge, installation, restart, or cache questions. Restart/new-task pickup is an operational gate, not another approval request. If the user explicitly requests publication only, PR only, no merge, or no install, honor that narrower scope and stop at the requested boundary. A partial promotion is a failure: keep the previous callable release and report the failed gate.
+
+The two annotation Skills `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto` are independent release units. Never alter, rebuild, synchronize, or publish either one merely because the other one was edited. Never treat shared annotation evidence or knowledge-base files as permission to change either Skill; their scope must be explicitly named.
 
 Codex/OpenAI accounts can be switched and the package can be cloned to Windows or macOS. The plugin source remains in the configured shared marketplace while account-specific Codex registration can change. Keep exactly one active source for every maintained skill: `workspace-local`. Do not use `~/.codex/plugins/cache` as a source because it is only an installed cache.
 
@@ -20,6 +144,8 @@ Every maintained skill display name must use exactly this format:
 ```text
 [A-Z]\d{2} · Name
 ```
+
+`Name` must end with the current technical package version in the form `vX.Y.Z`, derived from that plugin's `.codex-plugin/plugin.json` version before any `+codex...` cachebuster suffix. For example: `A02 · 单细胞大类注释（主要谱系） v0.9.1`. The same complete display name must be used in both metadata files; do not infer or manually type a different version.
 
 - `[A-Z]\d{2}` is the category letter followed by a two-digit group workflow order (e.g., A01–A07, B01–B07, C01–C02, D01–D02, E01–E04).
 - The separator is the Unicode middle dot `·` (`U+00B7`) with exactly one ASCII space on each side.
@@ -87,8 +213,9 @@ Every maintained skill display name must use exactly this format:
 1. Read the current `skill-creator` and `plugin-creator` instructions if available.
 2. Pick one normalized internal id for both plugin and skill.
 3. Check the shared marketplace source and existing `workspace-local` plugin before writing.
-4. Update an existing shared plugin in place. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched as a recovery copy.
-5. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
+4. For an existing Skill, read the authoritative `SKILL.md`, directly loaded references, executable scripts, schemas, and relevant tests; write the rule baseline before changing any of them.
+5. Update an existing shared plugin in an isolated main-derived candidate worktree. If a legacy personal plugin exists, migrate its source content into the shared marketplace and leave the old cache untouched only as an explicitly marked rollback copy.
+6. Create new plugins under `<shared-marketplace-root>\plugins\<id>` and append the same plugin, in the same workflow position, to all authoritative registries:
    - `skill-pack.json`, including its manifest version and the incremented `expectedPluginCount`;
    - `.agents/plugins/marketplace.json`;
    - `.codex-plugin/marketplace.json`.
@@ -102,10 +229,16 @@ Every maintained skill display name must use exactly this format:
 9. Set the same `[A-Z]\d{2} · Name` display name in both `plugin.json` and `agents/openai.yaml`.
 10. Read both metadata files back as UTF-8 and verify that the two display names are identical and match `^[A-Z]\d{2} · .+$`; reject `路` or a missing/wrong separator.
 11. Run the skill validator, plugin validator, marketplace doctor, and relevant behavioral tests.
-12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan; for an unregistered new plugin, finish the three registries before proceeding.
-13. Ask the user for explicit publication confirmation. Only then invoke confirmed publish, which updates cachebusters, synchronizes `skill-pack.json`, tests, commits, and pushes a `codex/*` branch. Create a PR when GitHub CLI/API access is available; otherwise return the compare URL.
-14. Treat the PR as the release gate. `main` is the stable source used by other computers; do not merge automatically or report a merge without remote evidence.
-15. After the PR is merged, other computers receive it through `preflight`. If plugins are installed or changed, tell the user to restart Codex and open a new task before testing `/`.
+12. Invoke `personal-skill-marketplace-setup` in `publish` mode without confirmation. It must return a read-only plan containing changed paths, affected Skills, proposed semantic patch versions, tests, branch impact, and installation impact; for an unregistered new plugin, finish the three registries before proceeding.
+   The plan must also prove that the candidate contains the latest `origin/main`,
+   has no mixed staged/unstaged paths, and advances every affected plugin's
+   semantic version beyond the stable manifest. Any legacy version in active
+   metadata or any source path marked backup/quarantine is a hard failure.
+13. Ask once for a single end-to-end release authorization. The default question must explicitly include publish, PR, CI-gated merge, stable verification, local installation, restart, and new-task pickup. After one affirmative reply, invoke the setup Skill with `publish --one-step` and do not ask again. Use narrower controls only when the user explicitly narrows the request to publication only, PR only, no merge, or no install.
+14. Delegate the complete release mechanics to `personal-skill-marketplace-setup`: version increment, display-name and manifest synchronization, tests, `codex/*` branch, commit, push, PR creation/reuse, CI waiting, SHA-pinned merge, stable-main verification, and local stable-cache refresh. Do not reproduce these GitHub steps separately in each domain Skill.
+15. Treat the setup Skill's verified remote and cache results as separate release gates. Never report a merge from a push or open PR alone, and never infer cache correctness from CLI text alone. After a changed cache refresh, report `installed-and-verified`, require a Codex restart and new task, then compare the selected Skill's actual path with the expected versioned cache path before reporting `loaded-path-verified`.
+
+Before any `/` invocation after a release or account/computer switch, require a preflight result proving that the local source commit, installed plugin package version, visible release version, cached manifest, and source-to-cache file hashes match the remote stable release. The registered runtime source must be a clean stable checkout; preserve dirty or development checkouts separately rather than registering them. If the remote cannot be checked, mark freshness as unverified and do not claim the entry is latest.
 
 Read [shared-git-lifecycle.md](references/shared-git-lifecycle.md) when creating, updating, publishing, merging, or synchronizing a maintained Skill.
 
@@ -131,7 +264,7 @@ Use `agents/openai.yaml` for the slash-menu display:
 
 ```yaml
 interface:
-  display_name: "10 · skill写作"
+  display_name: "E03 · skill写作"
   short_description: "编写可 / 调用的个人 Codex skill 与插件标准流程"
   default_prompt: "Use $skill-writing to create or update a personal callable Codex skill."
 
@@ -154,7 +287,7 @@ python3 <shared-marketplace-root>/tools/test_personal_skill_marketplace.py --mar
 python3 <personal-skill-marketplace-setup>/scripts/setup.py publish
 ```
 
-The first `publish` call is read-only. Do not update cachebusters, commit, push, create a PR, or merge until the user explicitly confirms publication. After a merged update is synchronized, verify every maintained plugin is enabled under `workspace-local`. On macOS, rerun the marketplace installer after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
+The first `publish` call is read-only. Do not update cachebusters, commit, push, create a PR, merge, or install until the user explicitly gives the single combined release authorization. After that authorization, `publish --one-step` owns the complete closeout and must not ask for another approval. After a merged update is synchronized, verify every maintained plugin is enabled under `workspace-local`. On macOS, rerun the marketplace installer after switching accounts; the source path is retained in `~/.codex/workspace-local.json`.
 
 ## Cross-platform requirements
 
@@ -182,4 +315,4 @@ Do not delete the backup unless the user explicitly asks. After cleanup, remind 
 
 ## Update Existing Plugins
 
-When modifying an already installed shared plugin, run task-level preflight, update the authoritative shared source, validate it, and request a read-only publish plan. After explicit confirmation, publish through a `codex/*` branch and PR. Do not update another computer from the development branch; merge the reviewed PR into `main`, run preflight on that computer, and test in a new session.
+When modifying an already installed shared plugin, run task-level preflight, update the authoritative shared source, validate it, and request a read-only publish plan. Ask once for the full publish, merge, verification, and installation authorization, then use the setup Skill's automatic closeout with both confirmation flags. Only use the PR-only route when the user explicitly limits the requested outcome. Other computers still update only from verified stable `main` through preflight. Installation completion still requires restart/new-task pickup and observed versioned Skill-path verification; this is an execution gate, not another human review.

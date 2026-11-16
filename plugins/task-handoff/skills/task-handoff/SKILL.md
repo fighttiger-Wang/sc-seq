@@ -1,9 +1,10 @@
 ---
 name: task-handoff
-description: Maintain centralized, cross-session continuity records for named projects, software, codebases, and skills. Use when the user says continue, iterate, resume, found another problem, pick up previous work, pause, hand off, checkpoint, or asks to list, inspect, alias, merge, migrate, audit, or roll back handoff records; also use before the final response after substantive work on a stable named object so its record is created or updated automatically. Supports Chinese triggers such as “继续迭代”“接着上次”“又发现问题”“先停下”“写交接”。
+displayName: E01 · 任务交接 v0.2.1
+description: E01 · 任务交接 v0.2.1：自动续接并维护中央交接记录 Maintain centralized, cross-session continuity records for named projects, software, codebases, and skills. Use when the user says continue, iterate, resume, found another problem, pick up previous work, pause, hand off, checkpoint, or asks to list, inspect, alias, merge, migrate, audit, or roll back handoff records; also use before the final response after substantive work on a stable named object so its record is created or updated automatically. Supports Chinese triggers such as “继续迭代”“接着上次”“又发现问题”“先停下”“写交接”。
 ---
 
-# Task Handoff
+# E01 · 任务交接 v0.2.1
 
 Maintain the centralized store at `<shared-workspace-root>\.codex-handoff`. Resolve the workspace from `CODEX_SHARED_WORKSPACE_ROOT`; when running from the source marketplace, it is the parent directory of the marketplace. Do not create new project-root `HANDOFF.md` files.
 

@@ -1,0 +1,29 @@
+{
+  "name": "sc-cell-proportion-stats",
+  "version": "0.1.0+codex.20261116120000",
+  "description": "单细胞细胞比例统计、云雨图与显著性分析",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "sc-cell-proportion-stats",
+    "细胞比例统计图"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "B05 · 细胞比例统计图 v0.1.0",
+    "shortDescription": "单细胞细胞比例统计、云雨图与显著性分析",
+    "developerName": "fight",
+    "category": "Education & Research",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $sc-cell-proportion-stats to 单细胞细胞比例统计、云雨图与显著性分析"
+    ]
+  }
+}

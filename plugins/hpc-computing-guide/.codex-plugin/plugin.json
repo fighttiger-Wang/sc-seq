@@ -1,0 +1,29 @@
+{
+  "name": "hpc-computing-guide",
+  "version": "1.0.0+codex.20261116120000",
+  "description": "HPC 集群 Slurm 任务调度与生信计算避坑指南",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "hpc-computing-guide",
+    "HPC超算指南"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "D01 · HPC超算指南 v1.0.0",
+    "shortDescription": "HPC 集群 Slurm 任务调度与生信计算避坑指南",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $hpc-computing-guide to HPC 集群 Slurm 任务调度与生信计算避坑指南"
+    ]
+  }
+}

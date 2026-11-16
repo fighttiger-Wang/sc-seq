@@ -1,9 +1,10 @@
 ---
 name: kegg-flow-bubble-plot
-description: Create publication-ready KEGG gene-pathway flow-bubble plots from enrichment result tables containing pathway names, hit genes, DEG counts, background counts, and FDR/Q values. Use when users request KEGG流泡图、基因-通路流线气泡图、桑基式富集气泡图、论文图4e/f样式重绘，或要求基因节点、通路节点、透明带状连接和富集气泡组合展示。
+displayName: B06 · KEGG流泡图 v0.1.0
+description: B06 · KEGG流泡图 v0.1.0：绘制基因-通路带状连接与KEGG富集气泡组合图 Create publication-ready KEGG gene-pathway flow-bubble plots from enrichment result tables containing pathway names, hit genes, DEG counts, background counts, and FDR/Q values. Use when users request KEGG流泡图、基因-通路流线气泡图、桑基式富集气泡图、论文图4e/f样式重绘，或要求基因节点、通路节点、透明带状连接和富集气泡组合展示。
 ---
 
-# KEGG Flow-Bubble Plot
+# B06 · KEGG流泡图 v0.1.0
 
 Generate the fixed final style with `scripts/plot_kegg_flow_bubble.R`. Do not reconstruct the plot from earlier experimental scripts.
 

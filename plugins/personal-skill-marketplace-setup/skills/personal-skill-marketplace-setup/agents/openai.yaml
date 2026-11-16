@@ -1,7 +1,7 @@
 interface:
-  display_name: "13 · 共享 Skill 下载安装"
+  display_name: "E04 · Skill市场安装 v0.3.3"
   short_description: "新电脑部署、按需同步并发布共享 Codex skills"
-  default_prompt: "Use $personal-skill-marketplace-setup to bootstrap this computer or preflight and publish the shared personal Codex skill marketplace."
+  default_prompt: "Use $personal-skill-marketplace-setup to 新电脑部署、按需同步并发布共享 Codex skills"
 
 policy:
   allow_implicit_invocation: true

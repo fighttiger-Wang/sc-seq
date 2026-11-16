@@ -1,9 +1,10 @@
 ---
 name: feature-gene-heatmap-violin
-description: Create the finalized single-cell full-marker feature-gene heatmap and selected-gene violin panel from a Seurat object and marker table. Use when users ask for 特征基因热图, marker热图, 全marker热图, 指定基因小提琴图, violin plots, or want the fixed publication-style heatmap/violin workflow developed for bone-marrow B-cell data.
+displayName: B02 · Marker表达图 v0.1.0
+description: B02 · Marker表达图 v0.1.0：固定生成全marker热图和指定基因小提琴图 Create the finalized single-cell full-marker feature-gene heatmap and selected-gene violin panel from a Seurat object and marker table. Use when users ask for 特征基因热图, marker热图, 全marker热图, 指定基因小提琴图, violin plots, or want the fixed publication-style heatmap/violin workflow developed for bone-marrow B-cell data.
 ---
 
-# 1_特征基因热图及选定基因小提琴图
+# B02 · Marker表达图 v0.1.0
 
 Use the bundled script to generate exactly one final heatmap and one final violin panel. Do not create iterative `v1`, `v2`, or exploratory figure variants unless the user explicitly requests them.
 

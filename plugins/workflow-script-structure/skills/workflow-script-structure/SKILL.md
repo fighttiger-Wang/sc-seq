@@ -1,9 +1,10 @@
 ---
 name: workflow-script-structure
-description: Standardize and audit runnable workflow code packages by separating callable implementation code, editable parameters, and job submission scripts, while enforcing Linux/HPC Shell portability. Use when Codex creates, refactors, packages, or verifies bioinformatics/HPC/Singularity/Apptainer workflows; when SIF_PATH and BIND_PATHS must remain user-editable; or when cluster errors indicate CRLF/BOM problems such as invalid pipefail, bad interpreter, or $'\r'.
+displayName: A07 · 流程脚本工程 v0.1.0
+description: A07 · 流程脚本工程 v0.1.0：代码、参数、投递脚本分离；支持 work.sh 和分步投递 Standardize and audit runnable workflow code packages by separating callable implementation code, editable parameters, and job submission scripts, while enforcing Linux/HPC Shell portability. Use when Codex creates, refactors, packages, or verifies bioinformatics/HPC/Singularity/Apptainer workflows; when SIF_PATH and BIND_PATHS must remain user-editable; or when cluster errors indicate CRLF/BOM problems such as invalid pipefail, bad interpreter, or $'\r'.
 ---
 
-# Workflow Script Structure
+# A07 · 流程脚本工程 v0.1.0
 
 Create repeatable workflow packages with one parameter surface, clear submission entrypoints, reusable implementation code, and Linux-safe Shell files.
 

@@ -1,9 +1,10 @@
 ---
 name: bioinformatics-results-report
-description: Interpret completed bioinformatics result folders containing tables, figures, and notes, then generate a literature-grounded, self-contained HTML report. Use only when explicitly invoked for cell proportion/ROE, differential expression, GO/KEGG/GSEA/GSVA, cell communication, or pseudotime results; do not use it to recalculate statistics or analyze Seurat/Scanpy objects.
+displayName: A05 · 交互解读报告 v0.1.0
+description: A05 · 交互解读报告 v0.1.0：解读已有统计结果并生成单文件专业 HTML 报告 Interpret completed bioinformatics result folders containing tables, figures, and notes, then generate a literature-grounded, self-contained HTML report. Use only when explicitly invoked for cell proportion/ROE, differential expression, GO/KEGG/GSEA/GSVA, cell communication, or pseudotime results; do not use it to recalculate statistics or analyze Seurat/Scanpy objects.
 ---
 
-# Bioinformatics Results Report
+# A05 · 交互解读报告 v0.1.0
 
 Turn an existing result folder into a professional Chinese HTML report while preserving the statistical claims actually present in the supplied results.
 

@@ -1,0 +1,7 @@
+interface:
+  display_name: "D01 · HPC超算指南 v1.0.0"
+  short_description: "HPC 集群 Slurm 任务调度与生信计算避坑指南"
+  default_prompt: "Use $hpc-computing-guide to HPC 集群 Slurm 任务调度与生信计算避坑指南"
+
+policy:
+  allow_implicit_invocation: true

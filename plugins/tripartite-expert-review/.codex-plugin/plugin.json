@@ -1,0 +1,29 @@
+{
+  "name": "tripartite-expert-review",
+  "version": "0.1.0+codex.20261116120000",
+  "description": "红蓝绿三方专家对抗性深度评审与收敛停机准则",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "tripartite-expert-review",
+    "三方专家评审"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "E02 · 三方专家评审 v0.1.0",
+    "shortDescription": "红蓝绿三方专家对抗性深度评审与收敛停机准则",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $tripartite-expert-review to 红蓝绿三方专家对抗性深度评审与收敛停机准则"
+    ]
+  }
+}

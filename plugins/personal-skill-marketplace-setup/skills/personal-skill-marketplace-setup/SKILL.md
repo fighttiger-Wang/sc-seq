@@ -1,19 +1,77 @@
 ---
 name: personal-skill-marketplace-setup
-description: Bootstrap, audit, preflight, install, update, publish, repair, or relocate the user's shared workspace-local Codex skill marketplace on Windows or macOS. Use for deploying personal skills on a new computer, checking for stable updates before using a shared skill, publishing confirmed skill edits through a Git branch and pull request, repairing stale installations, or diagnosing cross-account and duplicate-source problems.
+displayName: E04 · Skill市场安装 v0.3.3
+description: E04 · Skill市场安装 v0.3.3：新电脑部署、按需同步并发布共享 Codex skills Bootstrap, audit, preflight, install, update, publish, repair, or relocate the user's shared workspace-local Codex skill marketplace on Windows or macOS. Use for deploying personal skills on a new computer, checking for stable updates before using a shared skill, publishing confirmed skill edits through a Git branch and pull request, repairing stale installations, or diagnosing cross-account and duplicate-source problems.
 ---
 
-# Personal Skill Marketplace Setup
+# E04 · Skill市场安装 v0.3.3
 
 Use `scripts/setup.py` as the cross-platform manager. The Git checkout is authoritative; never edit an installed plugin cache as source.
+
+## Release identity and promotion boundary
+
+The remote Git repository's stable `main` ref is the cross-computer release authority. A local clone is only a working copy of that authority; a Codex plugin cache, a bare skill directory, an account-specific registration, a downloaded archive, or an annotation database is never an authority.
+
+Every maintained Skill has two independent identities:
+
+- a fixed workflow id such as `03` or `04`, used for lookup and ordering;
+- an independent user-facing semantic release version such as `v0.7.0`, used only after the user explicitly approves publication.
+
+The immutable release identity is the tuple `skill id + release version + Git commit + content SHA-256`. A version string without the commit and hash is insufficient evidence of equality.
+
+## Source and candidate isolation
+
+Before editing any maintained Skill, resolve exactly one authoritative
+marketplace root from the workspace configuration and record it as the active
+stable source. Candidate worktrees and staging copies must be explicitly
+classified and must not be discoverable as additional active marketplace
+roots. When more than one marketplace root is present, stop and report the
+roots; do not guess which one is authoritative and do not publish from the
+newest-looking directory.
+
+All candidate validation and read-only publish planning must receive the
+candidate root explicitly. A candidate may be tested by path, but it must not
+change the active location configuration, installed cache, plugin registry, or
+callable `/` entry. Only a clean candidate proven to contain the latest
+remote stable ref may proceed to release planning.
+
+## Old-version handling and transactional installation
+
+Classify every source and artifact as `stable`, `candidate`, `rollback`, or
+`quarantine`. Only a clean, remote-verified `stable` checkout may be registered
+or callable. `rollback` copies remain recoverable but inactive. Dirty, stale,
+divergent, mixed-history, or superseded candidates must be moved to a clearly
+named quarantine location and excluded from source discovery.
+
+For every affected plugin, the publish plan must fetch `origin/main`, compare
+the candidate semantic version with the remote stable manifest, and reject a
+candidate that is lower than or equal to stable. A cachebuster is not a version
+upgrade. Active `skill-pack.json`, plugin manifests, and UI metadata must agree
+and must not contain a retired legacy version.
+
+Installation and relocation are transactional: preserve the current
+registration as a rollback point, stage the new marketplace and cache, verify
+enabled versions and source-to-cache hashes, then switch the location config.
+If registration or installation fails, restore the previous registration only
+when it is a clean stable checkout; never restore a dirty or quarantined source.
+Retain the current and last-known-good stable versions until the new version
+has passed all verification gates.
+
+Unpublished edits are session-local or isolated-worktree candidates. They must not update the stable checkout, any marketplace registry, any Codex cache, any database record marked published, or the `/` callable entry. A test result is not publication consent.
+
+After testing, report the changed files, affected Skill ids, proposed release versions, commit/hash evidence, and risks, then ask once for a single end-to-end release decision. The default approval request must explicitly bundle version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, local cache refresh, restart notice, and new-task pickup. One affirmative reply authorizes the complete one-step closeout; invoke `publish --one-step` (equivalent to `--confirm-publish --confirm-merge`) and do not ask a second PR, merge, installation, restart, or cache question. A restart/new-task instruction is an operational gate, not another approval request. If the user explicitly limits the request to publication only, PR only, no merge, or no install, honor that narrower scope and stop at the requested boundary. If any synchronization or hash check fails, stop and leave the old callable version intact.
+
+When a local machine or account cannot reach the remote stable ref, report that freshness is unverified; do not infer that a local cache is current. After a successful install or changed preflight, report `installed-and-verified` only after the real cache directories, cached manifests, and source-to-cache file hashes pass. Then require a Codex restart and a new task. The release becomes `loaded-path-verified` only after that new task shows the expected versioned `SKILL.md` cache path; installation alone is never proof that the current task is using it.
 
 ```bash
 python scripts/setup.py bootstrap --destination <approved-clone-path> --workspace-root <approved-workspace>
 python scripts/setup.py preflight
 python scripts/setup.py publish
-python scripts/setup.py publish --confirm-publish [--create-pr]
+python scripts/setup.py publish --one-step --workspace-root <approved-workspace>
+python scripts/setup.py publish --confirm-publish --create-pr  # only for an explicitly limited PR-only request
 python scripts/setup.py audit
 python scripts/setup.py repair
+python scripts/setup.py sync-antigravity
 ```
 
 Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `python` is unavailable. On macOS, prefer `python3`. Pass `--codex-cli <full-path>` when `codex` is not in `PATH`.
@@ -22,12 +80,37 @@ Use Python 3.10 or newer. On Windows, use the actual workspace runtime when `pyt
 
 - `bootstrap`: first deployment after a temporary copy of this Skill exists. Require exact user-approved clone and workspace paths; clone, validate, install all plugins, register `workspace-local`, and add the managed synchronization block to the selected workspace `AGENTS.md` without replacing existing content.
 - `preflight`: run once per task before first using or editing another `workspace-local` Skill. Fetch the stable ref and compare commits. Do nothing when current; fast-forward and reinstall affected plugins when behind; stop on dirty, detached, unexpected, ahead, or divergent state. If plugins changed, require a Codex restart and new task.
-- `publish`: first run without `--confirm-publish` to report changed paths, affected plugins, unregistered new-plugin directories, and tests. A new plugin must first be registered by `skill-writing` in `skill-pack.json` and both marketplace manifests. Ask the user for explicit confirmation. After confirmation, create or reuse a `codex/*` branch, update affected plugin cachebusters and `skill-pack.json`, test, commit, push, and optionally create a PR with authenticated GitHub CLI. Never push directly to `main`.
+- `publish`: reject mixed staged/unstaged paths, stale or quarantined source roots, active legacy metadata, and any candidate semantic version that does not advance the remote stable manifest.
+- `publish`: first run without confirmation to report changed paths, affected plugins, proposed semantic patch versions, unregistered new-plugin directories, tests, and the default one-review authorization scope. A new plugin must first be registered by `skill-writing` in `skill-pack.json` and both marketplace manifests. By default, ask once for explicit authorization covering the complete one-step publish, merge, verification, installation, restart, and new-task sequence; do not split this into separate questions. Never push directly to `main`.
+- `publish --one-step`: use after that single combined authorization. It sets the complete publish/merge controls, creates or reuses the PR, waits for every observed GitHub check/status to succeed, requires the PR to be open, non-draft, and cleanly mergeable, merges with the exact head SHA, verifies stable `main`, refreshes the complete local callable cache from verified stable content, automatically synchronizes Antigravity active skill directory (~/.gemini/config/skills) and Desktop portable packages, and reports the required restart/new-task gate without asking again. A clean stable registered source may be fast-forwarded and retained. A dirty, divergent, detached, development, or non-Git registered source must never be restored as the runtime registration; preserve it as a work copy and register a persistent clean stable clone instead. Use the narrower flags only when the user explicitly limits the requested scope.
 - `audit`: read-only source/config/install diagnosis; no fetch, pull, registration, or writes.
+- `audit`: also report the release version, Git commit, content hash, source/cache classification, and whether the installed callable entry exactly matches the remote stable release. Never repair by choosing the newest-looking local copy.
 - `install`: install an existing verified checkout, or clone to an exact approved destination. It does not add managed workspace guidance.
 - `update`: legacy explicit full update; require a clean worktree, use `git pull --ff-only`, then validate and reinstall all plugins. Prefer `preflight` for routine use.
 - `repair`: do not fetch or pull. Validate and reinstall the exact local versions.
+- `sync-antigravity`: synchronize all marketplace skills into Antigravity (`~/.gemini/config/skills` and `plugins/personal-bio-skills/skills`) and Desktop portable packages with Chinese workflow names and dual-platform frontmatter metadata. This operation is decoupled from Git/network prerequisites and can run offline or in local non-Git directories.
 - relocation is an explicit install/update option, not an automatic recovery path.
+
+## GitHub transport and merge closeout
+
+Publication uses two separate network paths: Git Smart HTTP for `fetch`/`push`, and the GitHub API for PR creation, status checks, and merge. Diagnose them independently.
+
+When Git cannot reach `github.com` but browser, API, or raw-content requests work:
+
+1. Confirm the remote URL with `git remote -v` and check DNS/HTTPS reachability.
+2. On Windows, inspect the user proxy and local listener with `netsh winhttp show proxy`, the Internet Settings proxy values, and a loopback port test. Do not assume WinHTTP and user-level proxy settings are the same.
+3. If a verified local proxy is available, set `http.proxy` only in the candidate repository's local Git config, for example `git config --local http.proxy http://127.0.0.1:<port>`. Re-test `git ls-remote origin main` before rerunning publish.
+4. Never put credentials in Git config, source files, logs, command output, or handoff records. Reuse the configured credential helper only in memory.
+
+If `gh` is unavailable, use the authenticated GitHub REST API as the fallback. Obtain the GitHub credential through the configured credential helper without printing it, and send API requests through the verified proxy when needed. Use this sequence:
+
+1. `GET /repos/<owner>/<repo>/pulls/<number>` to confirm the PR is open, not draft, and `mergeable_state` is `clean`.
+2. `POST /repos/<owner>/<repo>/pulls` to create the PR when no PR exists for the pushed `codex/*` branch; capture only its number and URL.
+3. Merge only when the current user request explicitly authorizes merge. That authorization may be combined with publication in one request. Use `PUT /repos/<owner>/<repo>/pulls/<number>/merge` with the exact PR head SHA, then require `merged=true` and record the returned merge commit SHA.
+4. Verify the remote stable channel after merging. Prefer `git fetch origin main` through the verified proxy and confirm the release commit is an ancestor of `origin/main`. If Git transport is flaky but the API works, query the PR's `merged`, `merged_at`, `merge_commit_sha`, and the repository `main` commit through the API; never rely on a stale local `origin/main` ref.
+5. Only after stable verification tell the user the release is merged. If the PR is merely open, provide the PR URL and state that stable `main` is unchanged.
+
+Record these as separate facts: branch pushed, PR created, PR merged, merge commit, stable `main` verification, and local installation sync. A successful push or merge API response alone does not prove that the local callable cache is updated.
 
 ## Clean-computer bootstrap boundary
 
@@ -48,10 +131,16 @@ The bootstrap cannot log the user into GitHub, install Git/Python with an OS pac
 1. Resolve the source from an explicit path, `CODEX_SHARED_MARKETPLACE_ROOT`, or `$CODEX_HOME/workspace-local.json`. Reject installed cache paths as source.
 2. Keep the authoritative clone and shared workspace outside `CODEX_HOME`; reject overlapping locations, filesystem roots, home directories, nonempty unrelated destinations, remote mismatches, detached heads, unexpected refs, and conflicting location markers.
 3. Never use force push, reset, checkout-overwrite, recursive cleanup, `sudo`, Homebrew, Chocolatey, or another package manager without separate authorization.
-4. A publish confirmation authorizes creating a development branch, commit, and push only for the reported marketplace changes. It does not authorize merging `main`, changing repository rules, deleting branches, or bypassing failed checks.
+4. `--one-step` is the single execution control for the complete reported release scope after one explicit current authorization. It is equivalent to `--confirm-publish --confirm-merge` plus PR creation and must not trigger another human approval request. A request explicitly limited to publication only, PR only, no merge, or no install supplies only the corresponding narrower flags. Neither scope authorizes changing repository rules, deleting branches, force operations, or bypassing failed checks.
 5. A pull request is a candidate release, not a synchronization result. Treat it as merged only when remote GitHub evidence reports the merge and the remote stable ref contains it. Other computers update from the stable ref, not from an open PR branch.
 6. A passing doctor, unit test, or GitHub Actions run proves only those checks. It does not prove scientific interpretation, customer-facing output, R/Python packages, WPS, fonts, containers, credentials, or remote runtimes.
-7. After install, update, repair, bootstrap, or a preflight that changed installed plugins, tell the user to restart Codex and open a new task.
+7. After install, update, repair, bootstrap, or a preflight that changed installed plugins, distinguish four states: remote merge verified; cache installed and hash-verified; restart/new task required; expected versioned Skill path loaded in the new task. Tell the user to restart until the third state is cleared, and never claim the fourth state without observing that path.
+8. Never batch-update or infer a coupled release for `sc-major-celltype-annotation-auto` and `sc-marker-cluster-annotation-auto`. They are independent Skills; update and publish only the explicitly named Skill(s). Do not invoke annotation knowledge-base publication as a side effect unless the user explicitly includes that scope.
+9. Every maintained plugin's `plugin.json.interface.displayName` and `agents/openai.yaml.interface.display_name` must end with the same technical package version, rendered as `vX.Y.Z` before any `+codex...` cachebuster suffix. Audit must report a mismatch as a release failure; do not silently repair it from a cache.
+10. The full release closeout order is fixed: semantic version increment, metadata synchronization, local tests, branch/commit/push, PR creation or reuse, CI success, clean mergeability, SHA-pinned merge, stable-main verification, stable preflight/doctor, safe final registration, real cache directory/manifest/hash verification, restart notice, and new-task Skill-path verification. Stop at the first failed gate and never report later stages as complete. Safe final registration means retaining a clean stable source or switching to a persistent clean stable clone; it never means restoring an unsafe old source.
+11. Retired versions may remain only as explicitly labeled rollback copies or verified cache history. They must never remain in active registries, active source discovery, or enabled plugin entries. Delete or quarantine old candidates only after the new stable release and its rollback point have been verified.
+12. Smart Git Auto-Discovery: `setup.py` automatically detects Git from standard locations (including `E:\A001-软件安装\Git\cmd\git.exe` and default Program Files paths) and injects it into `PATH` if not active in the current process environment, preventing runtime execution failures across varied deployment environments.
+13. Session Cache Invalidation: Antigravity and Codex IDE cache skill metadata, system prompts, and slash commands upon session initialization. Any file-level updates on disk or via `sync-antigravity` do not hot-reload into existing active chat conversations. Always instruct users to open a new chat session or restart the IDE to see updated versions in `/` slash auto-completions.
 
 ## Managed synchronization guidance
 

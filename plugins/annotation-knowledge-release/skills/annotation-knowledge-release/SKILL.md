@@ -1,9 +1,10 @@
 ---
 name: annotation-knowledge-release
-description: Release and push the approved shared single-cell annotation knowledge base, synchronizing the major-celltype and subcluster annotation plugins with validation, regression tests, packaging, and cross-platform installation. Use when the user asks to 更新/发布/同步注释知识库、修复大类与亚类数据库错配、重新打包安装或推送这些知识更新到 GitHub.
+displayName: A04 · 知识库发布 v0.1.0
+description: A04 · 知识库发布 v0.1.0：更新、验证并推送大类/亚类注释知识库 Release and push the approved shared single-cell annotation knowledge base, synchronizing the major-celltype and subcluster annotation plugins with validation, regression tests, packaging, and cross-platform installation. Use when the user asks to 更新/发布/同步注释知识库、修复大类与亚类数据库错配、重新打包安装或推送这些知识更新到 GitHub.
 ---
 
-# Annotation Knowledge Release
+# A04 · 知识库发布 v0.1.0
 
 Operate on the source marketplace, never on an installed plugin cache. Locate it with the bundled helper:
 
