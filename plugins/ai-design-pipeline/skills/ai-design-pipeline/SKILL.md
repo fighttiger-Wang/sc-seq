@@ -1,10 +1,10 @@
 ---
 name: C06-AI设计流水线
-displayName: C06 · AI设计流水线 v1.0.0
-description: C06 · AI设计流水线 v1.0.0：端到端 1:1 复刻小米 AI 设计系统演进经验的工业级总控流水线。集成“事前需求反问对齐 + 知识库注入生成 + 无头脚本自动截屏 + 独立子智能体物理隔离走查(invoke_subagent) + 踩坑经验自进化蒸馏 + Pake 极简桌面打包”。内置智能状态推断与单字符快捷导航系统（输入 [?] 查看全景进度与快捷键列表，输入 [n] 自动推进下一步），彻底终结“AI既当运动员又当裁判员”的自证偏见。Use when building a complete desktop app from scratch, orchestrating multi-agent design pipelines, performing automated UI visual audits with headless screenshots, and distilling project feedback into reusable knowledge assets.
+displayName: C06 · AI设计流水线 v1.1.0
+description: C06 · AI设计流水线 v1.1.0：端到端 1:1 复刻小米 AI 设计系统演进经验的工业级总控流水线。集成“事前需求渐进式密集表格向导 (72项全景设计与微动效库) + 知识库注入生成 + 无头脚本自动截屏 + 独立子智能体物理隔离走查(invoke_subagent) + 踩坑经验自进化蒸馏 + Pake 极简桌面打包”。内置智能状态推断与单字符快捷导航系统（输入 [?] 查看全景进度与快捷键列表，输入 [n] 自动推进下一步），彻底终结“AI既当运动员又当裁判员”的自证偏见。Use when building a complete desktop app from scratch, orchestrating multi-agent design pipelines, performing automated UI visual audits with headless screenshots, and distilling project feedback into reusable knowledge assets.
 ---
 
-# C06 · AI设计流水线 v1.0.0
+# C06 · AI设计流水线 v1.1.0
 
 专为**“零代码或追求极致效能的创作者”**打造的工业级端到端桌面软件生产与走查总控中枢。
 
@@ -114,12 +114,27 @@ sequenceDiagram
 
 ## 二、 流水线执行 5 大核心阶段
 
-### 阶段 1：事前需求对齐与草图解析（拦截防跑偏）
-* **协议动作**：主 Agent 严禁在第一轮直接生成代码。
-* **执行步骤**：
-  1. 若用户拖入草图，利用多模态视觉提取布局拓扑；
-  2. 针对目标受众、MVP 三大核心路径、首屏排版倾向、空状态设计向用户提出 3~4 个选择题；
-  3. 用户确认后，格式化产出《设计需求规格契约 (Design Spec)》（参考 `references/spec_template.md`）。
+### 阶段 1：事前需求对齐与草图解析（拦截防跑偏 · 渐进式密集表格向导）
+* **协议动作**：主 Agent 严禁在第一轮直接生成代码，必须启动**渐进式高密表格问答向导（Progressive Dense-Table Probe Protocol）**。
+* **核心禁令（最高铁律）**：
+  1. **严禁一次性倾倒问题**：严禁把所有维度的表格一次性全抛给用户！必须严格**单步推进、一步一确认**；
+  2. **严禁吃项缩水**：向用户展示选项时，必须直接从 `references/dense_catalog.md` 提取完整可选项，**绝不擅自压缩或删减**；
+  3. **表格极度紧凑（Ultra-Dense 单屏尽览）**：排版必须精简冗余文字，控制在 3~4 列，确保每一个维度的完整备选项表格**能在用户一个视口屏内一览无余，无需上下疯狂滚轮翻页**；
+  4. **明确推荐标注**：每张表格中必须显式标出 `[首选推荐]` 项，方便用户快速盲选。
+* **标准 4 步渐进推进流程**：
+  1. **步 1 · 页面骨架与主布局密集表**：
+     - 若用户拖入草图，利用多模态视觉提取拓扑；若仅有文字，基于业务场景分析；
+     - 输出 `dense_catalog.md` 中的【维度 A：页面骨架与主视窗布局全景表】（L01~L06）；
+     - 标注推荐项，向用户提问并**立即停下等待用户回复**（如用户选择 `L01`）。
+  2. **步 2 · 交互按钮与控件排布密集表**：
+     - 接收到用户确认的布局后，输出【维度 B：交互按钮与控制排布全景表】（B01~B07）；
+     - 说明各按钮类型、放置位置与排布方式（左对齐/右对齐/吸底/浮动），向用户提问并**停下等待用户确认**。
+  3. **步 3 · 微动效与过渡全景密集表**：
+     - 接收到按钮清单后，结合页面元素，从【维度 C：微动效与过渡全景资产库】（M01~M22 完整 22 种动效，覆盖 Roll, Count, Collapse, States, Shimmer, Beam, Spotlight, Magnetic, Tilt3D, Stagger 等）中，整理出与当前业务最匹配的高密动效菜单；
+     - 明确动效触发机制（悬停/点击/初次渲染/更新）与体验价值，向用户提问并**停下等待用户点选**。
+  4. **步 4 · 弹窗容器与品牌真理源密集表 (awesome-design-md)**：
+     - 接收到动效选择后，输出【维度 D：弹窗与容器形态表】（O01~O07）与【维度 E：设计系统品牌真理源】（D01~D06，如 Linear 极客暗黑、Stripe 现代SaaS、Notion 人文米白）；
+     - 用户确认后，信息完全闭环，立即调用 `references/spec_template.md` 格式化产出《设计需求规格契约 (Design Spec)》，并将状态机流转至 **状态 1 (SPEC_LOCKED)**。
 
 ### 阶段 2：经验知识库检索与高保真代码生成
 * **协议动作**：在编写代码前，优先读取 `knowledge/design_badcases.json`。
