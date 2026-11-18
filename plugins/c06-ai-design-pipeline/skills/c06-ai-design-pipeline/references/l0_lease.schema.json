@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C06L0Lease",
+  "type": "object",
+  "required": [
+    "domain",
+    "lease_id",
+    "task_id",
+    "holder_actor",
+    "file_path",
+    "base_sha",
+    "allowed_mode",
+    "nonce",
+    "granted_at",
+    "expires_at",
+    "key_id",
+    "signature"
+  ],
+  "properties": {
+    "domain": {
+      "const": "c06/l0-lease/v1"
+    },
+    "lease_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "holder_actor": {
+      "type": "string"
+    },
+    "file_path": {
+      "type": "string"
+    },
+    "base_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "allowed_mode": {
+      "const": "static_style"
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+    },
+    "granted_at": {
+      "type": "integer"
+    },
+    "expires_at": {
+      "type": "integer"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:commander(:v[0-9]+)?$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+    }
+  },
+  "additionalProperties": false
+}

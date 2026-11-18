@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 18,
+  "expectedPluginCount": 19,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -14,7 +14,7 @@
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.8.1+codex.20261027021309"
+      "version": "0.9.1+codex.20261109104039"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
@@ -75,6 +75,11 @@
     {
       "id": "lucky-note-workbench-iteration",
       "version": "0.1.0+codex.20261028103000"
+    },
+    {
+      "id": "c06-ai-design-pipeline",
+      "version": "4.0.0+codex.20261118173000",
+      "displayName": "19 · C06-AI设计流水线 v4.0.0-Industrial-Release"
     }
   ],
   "sharedPaths": [

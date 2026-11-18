@@ -371,7 +371,14 @@ def enrich_evidence(
 
         boundary_audit = _myeloid_boundary_audit(config, cluster, values, full_ratio, cell_evidence.get(cluster, {}))
         resolved_parent = str(config.get("resolved_parent_id", ""))
-        if resolved_parent in {"Myeloid", "Myeloid_cell"} or "Myeloid" in parent_population:
+        primary_parent_path = primary.get("parent_path", [])
+        is_myeloid = (
+            resolved_parent in {"Myeloid", "Myeloid_cell"}
+            or "Myeloid" in parent_population
+            or any("Myeloid" in str(p) for p in primary_parent_path)
+            or primary.get("label") in {"Monocyte", "Macrophage", "Neutrophil", "cDC1", "cDC2", "DC3"}
+        )
+        if is_myeloid:
             boundary_primary, boundary_reason = _apply_myeloid_boundary_precedence(primary, candidates, boundary_audit)
             if boundary_reason:
                 selection_trace.append({"candidate": boundary_primary["label"], "replace": boundary_primary is not primary, "biological_precedence": boundary_reason})

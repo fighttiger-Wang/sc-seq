@@ -1,0 +1,1192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C06WizardStateV2TaskMatrix",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "state_version",
+    "catalog_hash",
+    "ledger_head",
+    "project_root",
+    "active_task_id",
+    "tasks",
+    "key_id",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "state_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "catalog_hash": {
+      "type": "string"
+    },
+    "ledger_head": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "project_root": {
+      "type": "string"
+    },
+    "active_task_id": {
+      "type": "string"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:commander(:v[0-9]+)?$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+    },
+    "tasks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "branch_name",
+          "worktree_path",
+          "base_sha",
+          "task_binding_sha_before",
+          "lane",
+          "phase",
+          "review_round",
+          "gates"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "branch_name": {
+            "type": "string"
+          },
+          "worktree_path": {
+            "type": "string"
+          },
+          "base_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "task_binding_sha_before": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "lane": {
+            "enum": [
+              "L0-A",
+              "L0-B",
+              "L1",
+              "L2"
+            ]
+          },
+          "phase": {
+            "enum": [
+              "INIT",
+              "EXPLORED",
+              "SPEC_LOCKED",
+              "IMPLEMENTED",
+              "CLEARANCE_PENDING",
+              "REVIEW_PENDING",
+              "REVIEWED",
+              "MERGED",
+              "DONE",
+              "QUARANTINED",
+              "TIMED_OUT",
+              "FAILED",
+              "ESCALATION_PENDING",
+              "ESCALATED"
+            ]
+          },
+          "review_round": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "escalation": {
+            "type": "object",
+            "properties": {
+              "escalated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "review_round": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "user_decision": {
+                "enum": [
+                  "APPROVE",
+                  "REJECT"
+                ]
+              },
+              "user_decision_auth": {
+                "type": "object",
+                "required": [
+                  "domain",
+                  "task_id",
+                  "action",
+                  "subject_sha",
+                  "turn",
+                  "nonce",
+                  "iat",
+                  "exp",
+                  "key_id",
+                  "signature"
+                ],
+                "properties": {
+                  "domain": {
+                    "const": "c06/user-auth/v1"
+                  },
+                  "task_id": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "enum": [
+                      "ESCALATED_APPROVE",
+                      "ESCALATED_REJECT"
+                    ]
+                  },
+                  "subject_sha": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "turn": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "nonce": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f-]{36}$"
+                  },
+                  "iat": {
+                    "type": "integer"
+                  },
+                  "exp": {
+                    "type": "integer"
+                  },
+                  "key_id": {
+                    "type": "string",
+                    "pattern": "^ed25519:user(:v[0-9]+)?$"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "resolved_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          },
+          "gates": {
+            "type": "object",
+            "properties": {
+              "clearance": {
+                "$ref": "#/definitions/ClearanceGateReceipt"
+              },
+              "pre_review": {
+                "$ref": "#/definitions/PreReviewGateReceipt"
+              },
+              "scope": {
+                "$ref": "#/definitions/ScopeGateReceipt"
+              },
+              "l1_runtime": {
+                "$ref": "#/definitions/L1GateReceipt"
+              },
+              "code_review": {
+                "$ref": "#/definitions/CodeReviewGateReceipt"
+              },
+              "merge": {
+                "$ref": "#/definitions/MergeGateReceipt"
+              },
+              "l0_triage": {
+                "$ref": "#/definitions/L0TriageGateReceipt"
+              }
+            }
+          },
+          "pages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "status",
+                "Q1",
+                "Q2",
+                "Q3",
+                "Q4",
+                "Q5"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "PENDING",
+                    "IN_PROGRESS",
+                    "PASS"
+                  ]
+                },
+                "Q1": {
+                  "$ref": "#/definitions/CellStatus"
+                },
+                "Q2": {
+                  "$ref": "#/definitions/CellStatus"
+                },
+                "Q3": {
+                  "$ref": "#/definitions/CellStatus"
+                },
+                "Q4": {
+                  "$ref": "#/definitions/CellStatus"
+                },
+                "Q5": {
+                  "$ref": "#/definitions/CellStatus"
+                }
+              }
+            }
+          },
+          "commit_oid": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "lane": {
+                  "enum": [
+                    "L1",
+                    "L2"
+                  ]
+                },
+                "phase": {
+                  "enum": [
+                    "REVIEWED",
+                    "MERGED",
+                    "DONE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "gates"
+              ],
+              "properties": {
+                "gates": {
+                  "required": [
+                    "scope",
+                    "code_review"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "properties": {
+                        "pass": {
+                          "const": true
+                        }
+                      }
+                    },
+                    "code_review": {
+                      "properties": {
+                        "pass": {
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "lane": {
+                  "enum": [
+                    "L0-A",
+                    "L0-B"
+                  ]
+                },
+                "phase": {
+                  "enum": [
+                    "REVIEWED",
+                    "MERGED",
+                    "DONE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "gates"
+              ],
+              "properties": {
+                "gates": {
+                  "required": [
+                    "scope",
+                    "l0_triage"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "properties": {
+                        "pass": {
+                          "const": true
+                        }
+                      }
+                    },
+                    "l0_triage": {
+                      "properties": {
+                        "pass": {
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "phase": {
+                  "enum": [
+                    "MERGED",
+                    "DONE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "gates"
+              ],
+              "properties": {
+                "gates": {
+                  "required": [
+                    "merge"
+                  ],
+                  "properties": {
+                    "merge": {
+                      "required": [
+                        "pass",
+                        "merge_base"
+                      ],
+                      "properties": {
+                        "pass": {
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "lane": {
+                  "enum": [
+                    "L1",
+                    "L2"
+                  ]
+                },
+                "phase": {
+                  "enum": [
+                    "SPEC_LOCKED",
+                    "IMPLEMENTED",
+                    "CLEARANCE_PENDING",
+                    "REVIEW_PENDING",
+                    "REVIEWED",
+                    "ESCALATION_PENDING",
+                    "ESCALATED",
+                    "MERGED",
+                    "DONE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pages"
+              ],
+              "properties": {
+                "pages": {
+                  "minProperties": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "phase": {
+                  "const": "ESCALATION_PENDING"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "escalation"
+              ],
+              "properties": {
+                "escalation": {
+                  "required": [
+                    "escalated_at",
+                    "review_round"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "phase": {
+                  "const": "ESCALATED"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "escalation"
+              ],
+              "properties": {
+                "escalation": {
+                  "required": [
+                    "escalated_at",
+                    "review_round",
+                    "user_decision",
+                    "user_decision_auth",
+                    "resolved_at"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "phase": {
+                  "const": "ESCALATED"
+                },
+                "escalation": {
+                  "properties": {
+                    "user_decision": {
+                      "const": "APPROVE"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "escalation": {
+                  "properties": {
+                    "user_decision_auth": {
+                      "properties": {
+                        "action": {
+                          "const": "ESCALATED_APPROVE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "phase": {
+                  "const": "ESCALATED"
+                },
+                "escalation": {
+                  "properties": {
+                    "user_decision": {
+                      "const": "REJECT"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "escalation": {
+                  "properties": {
+                    "user_decision_auth": {
+                      "properties": {
+                        "action": {
+                          "const": "ESCALATED_REJECT"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ClearanceGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/clearance/v1"
+        },
+        "gate_slot": {
+          "const": "clearance"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PreReviewGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/pre-review/v1"
+        },
+        "gate_slot": {
+          "const": "pre_review"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScopeGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "commit_oid",
+        "scope_sha",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/scope/v1"
+        },
+        "gate_slot": {
+          "const": "scope"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "commit_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "scope_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        },
+        "scope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope_sha": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "scope_digest"
+            ]
+          }
+        }
+      ]
+    },
+    "L1GateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "runtime_clean",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/l1-runtime/v1"
+        },
+        "gate_slot": {
+          "const": "l1_runtime"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "runtime_clean": {
+          "type": "boolean"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CodeReviewGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "review_sha256",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/code-review/v1"
+        },
+        "gate_slot": {
+          "const": "code_review"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "review_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MergeGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "merge_base",
+        "target_branch",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature",
+        "commit_oid",
+        "merged_commit_oid",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/merge/v1"
+        },
+        "gate_slot": {
+          "const": "merge"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "merge_base": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "target_branch": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "screenshot_base64": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        },
+        "receipt_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "commit_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "merged_commit_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CellStatus": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PENDING",
+            "PASS",
+            "WAIVED",
+            "NA"
+          ]
+        },
+        "auth": {
+          "$ref": "#/definitions/UserAuthEnvelope"
+        },
+        "legacy": {
+          "type": "boolean"
+        },
+        "migrated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "migration_key_id": {
+          "type": "string"
+        },
+        "migration_signature": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confirmed_by": {
+          "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "approved_by": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "PASS",
+                  "WAIVED",
+                  "NA"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "auth"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "legacy"
+            ],
+            "properties": {
+              "legacy": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "migrated_at",
+              "migration_key_id",
+              "migration_signature"
+            ]
+          }
+        }
+      ]
+    },
+    "UserAuthEnvelope": {
+      "type": "object",
+      "required": [
+        "domain",
+        "task_id",
+        "action",
+        "subject_sha",
+        "turn",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/user-auth/v1"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "SCOPE_CONFIRM",
+            "CELL_PASS",
+            "CELL_WAIVE",
+            "CELL_NA",
+            "WAIVER_GRANT",
+            "ESCALATED_APPROVE",
+            "ESCALATED_REJECT",
+            "GOVERN_APPLY"
+          ]
+        },
+        "subject_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "turn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:user(:v[0-9]+)?$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "L0TriageGateReceipt": {
+      "type": "object",
+      "required": [
+        "domain",
+        "gate_slot",
+        "task_id",
+        "pass",
+        "commit_oid",
+        "lines_added",
+        "lines_deleted",
+        "sensitive_keywords_found",
+        "nonce",
+        "iat",
+        "exp",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "domain": {
+          "const": "c06/gate-receipt/l0-triage/v1"
+        },
+        "gate_slot": {
+          "const": "l0_triage"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "commit_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "lines_added": {
+          "type": "integer"
+        },
+        "lines_deleted": {
+          "type": "integer"
+        },
+        "sensitive_keywords_found": {
+          "type": "integer",
+          "const": 0
+        },
+        "deletion_proof_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f-]{36}$"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:gate(:v[0-9]+)?$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^sig:ed25519:[A-Za-z0-9+/=_-]+$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

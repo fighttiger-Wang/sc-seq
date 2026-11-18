@@ -1,0 +1,25 @@
+{
+  "name": "c06-ai-design-pipeline",
+  "version": "4.0.0+codex.20261118173000",
+  "description": "C06 · AI设计流水线 v4.0.0-Industrial-Release：深度吸收 oil-dev-skills 六大支柱（Explore/Plan/Delegate/Review/Govern/Triage）与工业级软件工程治理的总控流水线。",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "19 · C06-AI设计流水线 v4.0.0-Industrial-Release",
+    "shortDescription": "深度吸收 oil-dev-skills 六大支柱的端到端桌面应用与工程治理总控流水线",
+    "longDescription": "深度吸收 oil-dev-skills 六大支柱（Explore/Plan/Delegate/Review/Govern/Triage）与工业级软件工程治理的总控流水线。包含 codebase_map.json AST 依赖测绘、Spec 物理契约块、三轨最小权限隔离（L0-A/L0-B/L1）、Git 二进制 diff 字节级哈希与邮箱交叉审查、RFC 8785 JCS Unicode 代理项拦截、64KB 单行预检并发原子锁及 Pake 跨平台客户端打包出货。",
+    "developerName": "fight",
+    "category": "Development",
+    "capabilities": [
+      "Codebase AST entity mapping and drift tripwire (Exit 34)",
+      "Physical user signed contract blocks and nonce replay defense",
+      "Three-track minimum privilege parallel delegation (L0-A/L0-B/L1)",
+      "Git binary diff SHA256 and author email cross-auditing",
+      "Zero-disk-write 9-gate idempotent verification",
+      "Pake cross-platform desktop application release"
+    ],
+    "defaultPrompt": "使用 $c06-ai-design-pipeline 启动 C06-AI设计流水线，执行端到端需求规格对齐、分轨委托开发、无头走查与桌面软件打包出货。"
+  }
+}

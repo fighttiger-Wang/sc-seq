@@ -1,0 +1,7 @@
+interface:
+  display_name: "19 · C06-AI设计流水线 v4.0.0-Industrial-Release"
+  short_description: "深度吸收 oil-dev-skills 六大支柱的端到端桌面应用与工程治理总控流水线"
+  default_prompt: "Use $c06-ai-design-pipeline to launch C06 AI Design Pipeline with Explore, Plan, Delegate, Review, Govern, and Triage capabilities."
+
+policy:
+  allow_implicit_invocation: true
