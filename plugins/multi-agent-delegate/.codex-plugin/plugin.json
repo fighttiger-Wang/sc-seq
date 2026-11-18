@@ -1,0 +1,29 @@
+{
+  "name": "multi-agent-delegate",
+  "version": "0.6.0+codex.20261118143000",
+  "description": "多智能体边界委托与主流 CLI Agent 调度",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "multi-agent-delegate",
+    "多智能体委托"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "E05 · 多智能体委托 v0.6.0",
+    "shortDescription": "多智能体边界委托与主流 CLI Agent 调度",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $multi-agent-delegate to 多智能体边界委托与主流 CLI Agent 调度"
+    ]
+  }
+}

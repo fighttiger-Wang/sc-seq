@@ -267,6 +267,30 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "multi-agent-delegate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/multi-agent-delegate"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "local-agent-delegate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/local-agent-delegate"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

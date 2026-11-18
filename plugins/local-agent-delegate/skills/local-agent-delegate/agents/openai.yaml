@@ -1,0 +1,7 @@
+interface:
+  display_name: "E06 · 本机智能体委托 v0.9.3"
+  short_description: "本机智能体异构双脑闭环对抗与审查调度系统"
+  default_prompt: "Use $local-agent-delegate to 本机智能体异构双脑闭环对抗与审查调度系统"
+
+policy:
+  allow_implicit_invocation: true

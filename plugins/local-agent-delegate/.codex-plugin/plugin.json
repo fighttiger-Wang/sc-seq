@@ -1,0 +1,30 @@
+{
+  "name": "local-agent-delegate",
+  "version": "0.9.3+codex.20261118143000",
+  "description": "本机智能体异构双脑闭环对抗与审查调度系统",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "local-agent-delegate",
+    "本机智能体委托",
+    "异构双脑对抗"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "E06 · 本机智能体委托 v0.9.3",
+    "shortDescription": "本机智能体异构双脑闭环对抗与审查调度系统",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $local-agent-delegate to 本机智能体异构双脑闭环对抗与审查调度系统"
+    ]
+  }
+}

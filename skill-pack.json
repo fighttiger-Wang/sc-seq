@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 22,
+  "expectedPluginCount": 24,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
@@ -91,6 +91,14 @@
     {
       "id": "personal-skill-marketplace-setup",
       "version": "0.3.3+codex.20261116120000"
+    },
+    {
+      "id": "multi-agent-delegate",
+      "version": "0.6.0+codex.20261118143000"
+    },
+    {
+      "id": "local-agent-delegate",
+      "version": "0.9.3+codex.20261118143000"
     }
   ],
   "sharedPaths": [
