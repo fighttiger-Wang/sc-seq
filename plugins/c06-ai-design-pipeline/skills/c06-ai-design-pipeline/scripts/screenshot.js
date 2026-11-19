@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * screenshot.js — C06 无头截图与 L1 运行时零异常门禁探针 (v3.9.0-Industrial)
+ * screenshot.js — C06 无头截图与 L1 运行时零异常门禁探针 (v5.0.0 Vibe-Agile)
  *
  * 用法：
  *   node screenshot.js <htmlPath> <outImagePath> [width] [height]

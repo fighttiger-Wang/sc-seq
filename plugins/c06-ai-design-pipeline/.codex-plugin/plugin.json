@@ -1,25 +1,23 @@
 {
   "name": "c06-ai-design-pipeline",
-  "version": "4.0.0+codex.20261118173000",
-  "description": "C06 · AI设计流水线 v4.0.0-Industrial-Release：深度吸收 oil-dev-skills 六大支柱（Explore/Plan/Delegate/Review/Govern/Triage）与工业级软件工程治理的总控流水线。",
+  "version": "5.0.0+codex.20261120003000",
+  "description": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）。提供三轨智能分流（L1 免问卷微创直达 / L2 三问功能模块 / L3 五步向导与打包）、改前真快照防删函数护栏（vibe-guard.js）、正负样本自动沉淀（distill.js）与项目长期体检除草治理（govern.js）。",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "19 · C06-AI设计流水线 v4.0.0-Industrial-Release",
-    "shortDescription": "深度吸收 oil-dev-skills 六大支柱的端到端桌面应用与工程治理总控流水线",
-    "longDescription": "深度吸收 oil-dev-skills 六大支柱（Explore/Plan/Delegate/Review/Govern/Triage）与工业级软件工程治理的总控流水线。包含 codebase_map.json AST 依赖测绘、Spec 物理契约块、三轨最小权限隔离（L0-A/L0-B/L1）、Git 二进制 diff 字节级哈希与邮箱交叉审查、RFC 8785 JCS Unicode 代理项拦截、64KB 单行预检并发原子锁及 Pake 跨平台客户端打包出货。",
+    "displayName": "19 · C06-AI设计流水线 v5.0.0 (Vibe-Agile)",
+    "shortDescription": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）",
+    "longDescription": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）。提供三轨智能分流（L1 免问卷微创直达 / L2 三问功能模块 / L3 五步向导与打包）、改前真快照防删函数护栏（vibe-guard.js）、正负样本自动沉淀（distill.js）与项目长期体检除草治理（govern.js）。",
     "developerName": "fight",
     "category": "Development",
     "capabilities": [
-      "Codebase AST entity mapping and drift tripwire (Exit 34)",
-      "Physical user signed contract blocks and nonce replay defense",
-      "Three-track minimum privilege parallel delegation (L0-A/L0-B/L1)",
-      "Git binary diff SHA256 and author email cross-auditing",
-      "Zero-disk-write 9-gate idempotent verification",
-      "Pake cross-platform desktop application release"
+      "Three-track Vibe-Agile router (L1 zero-quiz micro / L2 3-question feature / L3 5-step wizard)",
+      "True file snapshot time-machine and zero function-deletion guard (vibe-guard.js)",
+      "Positive aesthetic token & negative badcase auto-distillation (distill.js)",
+      "Long-term repository governance and dead-code/bloat scanner (govern.js)"
     ],
-    "defaultPrompt": "使用 $c06-ai-design-pipeline 启动 C06-AI设计流水线，执行端到端需求规格对齐、分轨委托开发、无头走查与桌面软件打包出货。"
+    "defaultPrompt": "使用 $c06-ai-design-pipeline 启动 C06-AI设计流水线 v5.0.0 (Vibe-Agile)，执行敏捷 UI 微调、微创修 Bug、防删快照核验与审美自动沉淀。"
   }
 }

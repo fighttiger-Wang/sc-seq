@@ -221,14 +221,16 @@
       "category": "Productivity"
     },
     {
-      "id": "c06-ai-design-pipeline",
-      "name": "19 · C06-AI设计流水线 v4.0.0-Industrial-Release",
-      "version": "4.0.0+codex.20261118173000",
-      "description": "C06 · AI设计流水线 v4.0.0-Industrial-Release：深度吸收 oil-dev-skills 六大支柱（Explore/Plan/Delegate/Review/Govern/Triage）与工业级软件工程治理的总控流水线。",
-      "category": "Development",
-      "source": "./plugins/c06-ai-design-pipeline",
-      "installMode": "ON_INSTALL",
-      "distribution": "INSTALLED_BY_DEFAULT"
+      "name": "c06-ai-design-pipeline",
+      "source": {
+        "source": "local",
+        "path": "./plugins/c06-ai-design-pipeline"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
     }
   ]
 }
