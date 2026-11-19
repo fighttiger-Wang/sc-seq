@@ -291,6 +291,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "c06-ai-design-pipeline",
+      "source": {
+        "source": "local",
+        "path": "./plugins/c06-ai-design-pipeline"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
     }
   ]
 }

@@ -1,0 +1,7 @@
+interface:
+  display_name: "19 · C06-AI设计流水线 v5.0.0 (Vibe-Agile)"
+  short_description: "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）"
+  default_prompt: "Use $c06-ai-design-pipeline to run C06 v5.0.0 Vibe-Agile UI design, micro bug-fix, snapshot guard, and aesthetic distillation."
+
+policy:
+  allow_implicit_invocation: true

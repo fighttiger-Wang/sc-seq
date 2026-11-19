@@ -1,0 +1,23 @@
+{
+  "name": "c06-ai-design-pipeline",
+  "version": "5.0.0+codex.20261120003000",
+  "description": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）。提供三轨智能分流（L1 免问卷微创直达 / L2 三问功能模块 / L3 五步向导与打包）、改前真快照防删函数护栏（vibe-guard.js）、正负样本自动沉淀（distill.js）与项目长期体检除草治理（govern.js）。",
+  "author": {
+    "name": "fight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "19 · C06-AI设计流水线 v5.0.0 (Vibe-Agile)",
+    "shortDescription": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）",
+    "longDescription": "面向 App Vibe Coding 的敏捷 UI 设计、微创修 Bug、组件复用与审美自动沉淀流水线（C06 v5.0.0）。提供三轨智能分流（L1 免问卷微创直达 / L2 三问功能模块 / L3 五步向导与打包）、改前真快照防删函数护栏（vibe-guard.js）、正负样本自动沉淀（distill.js）与项目长期体检除草治理（govern.js）。",
+    "developerName": "fight",
+    "category": "Development",
+    "capabilities": [
+      "Three-track Vibe-Agile router (L1 zero-quiz micro / L2 3-question feature / L3 5-step wizard)",
+      "True file snapshot time-machine and zero function-deletion guard (vibe-guard.js)",
+      "Positive aesthetic token & negative badcase auto-distillation (distill.js)",
+      "Long-term repository governance and dead-code/bloat scanner (govern.js)"
+    ],
+    "defaultPrompt": "使用 $c06-ai-design-pipeline 启动 C06-AI设计流水线 v5.0.0 (Vibe-Agile)，执行敏捷 UI 微调、微创修 Bug、防删快照核验与审美自动沉淀。"
+  }
+}
