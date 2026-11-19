@@ -1,7 +1,0 @@
-interface:
-  display_name: "E05 · 多智能体委托 v0.6.0"
-  short_description: "多智能体边界委托与主流 CLI Agent 调度"
-  default_prompt: "Use $multi-agent-delegate to 多智能体边界委托与主流 CLI Agent 调度"
-
-policy:
-  allow_implicit_invocation: true

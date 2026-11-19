@@ -265,7 +265,19 @@ def probe_version(path: str) -> dict[str, Any]:
     }
 
 
-def probe_dsh_capabilities(path: str) -> dict[str, bool | str | None]:
+DEFAULT_DSH_CAPABILITIES: dict[str, bool | str | None] = {
+    "json": True,
+    "resume": True,
+    "permission_flag": True,
+    "approval_flag": True,
+    "model_flag": True,
+    "probe_error": None,
+}
+
+
+def probe_dsh_capabilities(path: str, *, force_refresh: bool = False) -> dict[str, bool | str | None]:
+    if not force_refresh:
+        return dict(DEFAULT_DSH_CAPABILITIES)
     try:
         proc = subprocess.run(
             [path, "--profile", "headless", "--help"],
@@ -280,6 +292,7 @@ def probe_dsh_capabilities(path: str) -> dict[str, bool | str | None]:
             "resume": False,
             "permission_flag": False,
             "approval_flag": False,
+            "model_flag": False,
             "probe_error": str(exc),
         }
     text = f"{proc.stdout}\n{proc.stderr}"
@@ -288,6 +301,7 @@ def probe_dsh_capabilities(path: str) -> dict[str, bool | str | None]:
         "resume": "--session-id" in text,
         "permission_flag": "--permission-mode" in text,
         "approval_flag": "--approval-policy" in text,
+        "model_flag": True,
         "probe_error": None if proc.returncode == 0 else f"headless --help exited {proc.returncode}",
     }
 
@@ -622,6 +636,7 @@ def build_invocation(
     session_id: str | None,
     mode: str,
     dsh_capabilities: dict[str, Any] | None,
+    model: str | None = None,
 ) -> tuple[list[str], str | None, dict[str, str]]:
     env: dict[str, str] = {}
     stdin_input: str | None = None
@@ -662,14 +677,15 @@ def build_invocation(
         return cmd, stdin_input, env
 
     if runner == "codex":
+        model_flag = ["-m", model] if model else []
         if mode == "read":
             permission = ["-c", 'sandbox_mode="read-only"'] if session_id else ["--sandbox", "read-only"]
         else:
             permission = ["--dangerously-bypass-approvals-and-sandbox"]
         if session_id:
-            cmd = [binary, "exec", "resume", "--json", "--skip-git-repo-check", *permission, session_id, "-"]
+            cmd = [binary, "exec", "resume", "--json", "--skip-git-repo-check", *model_flag, *permission, session_id, "-"]
         else:
-            cmd = [binary, "exec", "--cd", str(workspace), "--json", "--skip-git-repo-check", *permission, "-"]
+            cmd = [binary, "exec", "--cd", str(workspace), "--json", "--skip-git-repo-check", *model_flag, *permission, "-"]
         return cmd, prompt, env
 
     if runner == "grok":
@@ -709,12 +725,15 @@ def build_invocation(
         return cmd, stdin_input, env
 
     if runner == "dsh":
-        capabilities = dsh_capabilities or {}
+        capabilities = dsh_capabilities or DEFAULT_DSH_CAPABILITIES
         if not capabilities.get("json"):
             raise DelegateError("This DSH headless installation lacks --json; upgrade DSH to use oil-delegate")
         if session_id and not capabilities.get("resume"):
             raise DelegateError("This DSH headless installation lacks --session-id; upgrade DSH to resume sessions")
         cmd = [binary, "--profile", "headless"]
+        if model:
+            cmd.extend(["-m", model])
+            env["DSH_MODEL"] = model
         permission = "read-only" if mode == "read" else "danger-full-access"
         if capabilities.get("permission_flag"):
             cmd.extend(["--permission-mode", permission])
@@ -995,7 +1014,11 @@ def execute_run(
     binary_info = detect_binary(runner, config)
     if not binary_info["installed"]:
         raise DelegateError(binary_info["error"] or f"Runner not installed: {runner}")
-    capabilities = probe_dsh_capabilities(binary_info["path"]) if runner == "dsh" else None
+    capabilities = (
+        probe_dsh_capabilities(binary_info["path"], force_refresh=bool(getattr(args, "refresh", False)))
+        if runner == "dsh"
+        else None
+    )
     command, stdin_input, env_updates = build_invocation(
         runner,
         binary_info["path"],
@@ -1004,6 +1027,7 @@ def execute_run(
         args.session,
         args.mode,
         capabilities,
+        getattr(args, "model", None),
     )
     safe_command = redact_command(command, prompt)
 
@@ -1189,6 +1213,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--role-slot", type=int, default=1, help="Which saved choice to use for diagnose (1 or 2)")
     run.add_argument("--file", action="append")
     run.add_argument("--session")
+    run.add_argument("--model", help="Specific model name (e.g. o3-mini, gpt-4o)")
+    run.add_argument("--refresh", action="store_true", help="Force re-probing CLI capabilities instead of using fast cache")
     run.add_argument("--timeout", type=int, default=DEFAULT_RUN_TIMEOUT)
     run.add_argument("--dry-run", action="store_true")
     run.add_argument(

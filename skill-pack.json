@@ -93,12 +93,12 @@
       "version": "0.3.3+codex.20261116120000"
     },
     {
-      "id": "multi-agent-delegate",
-      "version": "0.6.0+codex.20261118143000"
+      "id": "local-agent-delegate",
+      "version": "1.0.0+codex.20261120010000"
     },
     {
-      "id": "local-agent-delegate",
-      "version": "0.9.3+codex.20261118143000"
+      "id": "e07-dispatch",
+      "version": "1.0.0+codex.20261120010000"
     },
     {
       "id": "c06-ai-design-pipeline",
