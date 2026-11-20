@@ -1,10 +1,10 @@
 ---
 name: local-agent-delegate
-displayName: E06 · 红蓝对抗闭环 v1.2.0
-description: E06 · 红蓝对抗闭环 v1.2.0：【通用软件/App/工程代码专用】专职双脑红蓝对抗闭环器。日常单任务走 E07-派发，生信科研评审走 E02-生信三方评审；仅当软件/工程开发需要【蓝方施工 ⚔ 红方挑刺】多轮交叉审核与两阶段提交闭环时触发。默认 1 号阵容采用双周期异构王牌（9B Codex GPT-6.2 Sol ⚔ 4A Gemini 4 Neon High），Codex Free/耗尽时自动跨客户端三大内置池接力；按量 DeepSeek 永不自动调用；快捷口令 .?（面板）与 .s（状态）。
+displayName: E06 · 红蓝对抗闭环 v1.2.1
+description: E06 · 红蓝对抗闭环 v1.2.1：【通用软件/App/工程代码专用】专职双脑红蓝对抗闭环器。日常单任务走 E07-派发，生信科研评审走 E02-生信三方评审；仅当软件/工程开发需要【蓝方施工 ⚔ 红方挑刺】多轮交叉审核与两阶段提交闭环时触发。默认 1 号阵容采用双周期异构王牌（9B Codex GPT-6.2 Sol ⚔ 4A Gemini 4 Neon High），Codex Free/耗尽时自动跨客户端三大内置池接力；按量 DeepSeek 永不自动调用；快捷口令 .?（面板）与 .s（状态）。
 ---
 
-# E06 · 红蓝对抗闭环 v1.2.0
+# E06 · 红蓝对抗闭环 v1.2.1
 
 > **🎯 三大调度与评审 Skill 职责边界**：
 > - **`E06-红蓝对抗闭环`（本 Skill）**：专用于**通用软件、App Vibe Coding（`C06`）、前后端架构与工程代码**的“蓝方施工 ⚔ 红方挑刺”多轮死磕与两阶段提交落盘。
@@ -22,7 +22,7 @@ description: E06 · 红蓝对抗闭环 v1.2.0：【通用软件/App/工程代码
   - `[2]` 💻 写代码：`2A` Sonnet 5.5 *(Claude)* ➔ `2B` Hydrogen *(Neon)* ➔ `3A` Argon *(Argon周池)*
   - `[3]` 🏗️ 统筹架构：`3A` Argon *(Argon周池)* ➔ `3B` Opus 5.5 *(Claude)* ➔ `3C` Orch(Neon) *(Neon)*
   - `[4]` 🔍 深度挑刺：`4A` Neon High *(Neon)* ➔ `3B` Opus High *(Claude)* ➔ `3A` Argon High *(Argon)*
-- **`[8]` 🥉 Tier 3 · DeepSeek 按量咨询席（永不自动调用）**：`8A` DeepSeek-R1 │ `8B` DeepSeek-V3（仅前两级异常且先询问用户确认后启用，附 `00:30–08:30` 半价提示）
+- **`[8]` 🥉 Tier 3 · DeepSeek 按量咨询席（永不自动调用）**：`8A` DeepSeek-R1 │ `8B` DeepSeek-V3（仅前两级异常且先询问用户确认后启用；空闲半价时段为除工作日周一至周五不含法定节假日 `09:00–12:00`、`14:00–18:00` 外的全部时段及周末/节假日全天）
 
 ## 二、 红蓝对攻阵容速选看板（输入 `.?` 或 `面板` / `lineup` 秒呼出）
 

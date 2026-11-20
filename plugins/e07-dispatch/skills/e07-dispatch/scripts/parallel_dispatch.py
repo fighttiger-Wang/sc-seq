@@ -6,7 +6,7 @@ E07 · 三级阶梯智能派发与跨池额度接力中心 v1.2.0
 1. 三级阶梯架构：
    - Tier 1 (Codex 周期订阅优先池 9A~9D)：独立重型后台任务优先吃满；自动同步 models_cache.json 感知 Free/受限状态并支持冷却熔断
    - Tier 2 (客户端内置三大独立池 1A~4A)：Neon 5h 池 / Claude 5h 池 / Argon 周池，同池共耗尽，跨池自动接力
-   - Tier 3 (DeepSeek 按量付费咨询席 8A/8B)：永不自动调用，仅前两级不可用或降智时先询问并提示 00:30-08:30 半价时段
+   - Tier 3 (DeepSeek 按量付费咨询席 8A/8B)：永不自动调用，仅前两级不可用或降智时先询问并提示半价空闲时段（除工作日 09:00-12:00/14:00-18:00 外及周末/法定节假日全天半价）
 2. 动态扫描 LOCALAPPDATA\\OpenAI\\Codex\\bin\\*\\codex.exe 最新版，防止客户端升级换目录断联
 3. 零外部套娃：内置模型直接秒回 subagent / swarm 调度指令 JSON（耗时 < 0.05s）
 """
@@ -310,7 +310,7 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "slug": "deepseek-reasoner",
         "quota_default": "按量付费API",
         "fallback_chain": ["deepseek-reasoner", "deepseek-chat"],
-        "desc": "即时按量深度推理 · 仅异常时询问用户（含 00:30-08:30 半价提示）",
+        "desc": "即时按量深度推理 · 仅异常时询问用户（含空闲半价时段提示）",
     },
     "8B": {
         "code": "8B",
@@ -322,7 +322,7 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "slug": "deepseek-chat",
         "quota_default": "按量付费API",
         "fallback_chain": ["deepseek-chat"],
-        "desc": "即时按量通用分析 · 仅异常时询问用户（含 00:30-08:30 半价提示）",
+        "desc": "即时按量通用分析 · 仅异常时询问用户（含空闲半价时段提示）",
     },
 }
 
@@ -369,11 +369,13 @@ def expand_exhausted_buckets(raw_exhausted: set[str]) -> set[str]:
 
 
 def is_deepseek_half_price_window(now: datetime | None = None) -> tuple[bool, str]:
-    """判断当前是否处于 DeepSeek 北京时间 00:30-08:30 半价时段。"""
+    """判断当前是否处于 DeepSeek 空闲半价时段。
+    规则：北京时间周一至周五（不含中国法定节假日）09:00-12:00、14:00-18:00 为高峰原价时段；
+    其余时段及周末/中国法定节假日全天均为空闲半价时段。
+    """
     bj_now = now.astimezone(BJ_TZ) if now else datetime.now(BJ_TZ)
-    hm = (bj_now.hour, bj_now.minute)
-    in_window = (0, 30) <= hm < (8, 30)
-    return in_window, bj_now.strftime("%H:%M")
+    is_peak = bj_now.weekday() < 5 and ((9 <= bj_now.hour < 12) or (14 <= bj_now.hour < 18))
+    return (not is_peak), bj_now.strftime("%H:%M")
 
 
 def load_env_config() -> dict[str, Any]:
@@ -665,9 +667,9 @@ def dispatch_task(
     cfg = load_env_config()
     half_price, bj_time = is_deepseek_half_price_window()
     half_price_note = (
-        f"当前处于 DeepSeek 半价时段（北京时间 {bj_time}，00:30–08:30 半价）"
+        f"当前处于 DeepSeek 空闲半价时段（北京时间 {bj_time}；除工作日 09:00–12:00、14:00–18:00 外及周末/中国法定节假日全天均为半价）"
         if half_price
-        else f"当前非半价时段（北京时间 {bj_time}，半价时段为 00:30–08:30）"
+        else f"当前处于工作日高峰原价时段（北京时间 {bj_time}；周一至周五 09:00–12:00、14:00–18:00 为高峰，若当天为中国法定节假日则全天半价）"
     )
 
     # Tier 2: 客户端内置三大独立池
@@ -898,7 +900,11 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
         if codex_ok
         else f"🟡 冷却/受限 ({cd.get('reason', '未就绪')}) ➔ 自动走 Tier 2"
     )
-    ds_window_tag = f"🟢 半价中({bj_time})" if half_price else f"⚪ 原价({bj_time}, 半价 00:30-08:30)"
+    ds_window_tag = (
+        f"🟢 空闲半价中({bj_time}, 工作日非09-12/14-18及周末节假日均半价)"
+        if half_price
+        else f"⚪ 高峰原价({bj_time}, 工作日09-12/14-18高峰, 若法定节假日全天半价)"
+    )
 
     task_lines = []
     if running_tasks:

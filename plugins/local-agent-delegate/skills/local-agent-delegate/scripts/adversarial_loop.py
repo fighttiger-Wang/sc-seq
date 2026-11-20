@@ -53,10 +53,10 @@ def expand_exhausted(raw_set: set[str]) -> set[str]:
     return expanded
 
 
-def is_deepseek_half_price_window() -> tuple[bool, str]:
-    bj_now = datetime.now(BJ_TZ)
-    in_win = (0, 30) <= (bj_now.hour, bj_now.minute) < (8, 30)
-    return in_win, bj_now.strftime("%H:%M")
+def is_deepseek_half_price_window(now: datetime | None = None) -> tuple[bool, str]:
+    bj_now = now.astimezone(BJ_TZ) if now else datetime.now(BJ_TZ)
+    is_peak = bj_now.weekday() < 5 and ((9 <= bj_now.hour < 12) or (14 <= bj_now.hour < 18))
+    return (not is_peak), bj_now.strftime("%H:%M")
 
 
 def get_valid_codex_slugs() -> set[str]:
@@ -262,7 +262,7 @@ def main() -> None:
             "ask_user_required": True,
             "deepseek_half_price_window": half_price,
             "beijing_time": bj_time,
-            "message": "所选阵容包含按量付费 DeepSeek，请先向用户确认（提示 00:30-08:30 半价时段）后加 --user-confirmed 启动。",
+            "message": "所选阵容包含按量付费 DeepSeek，请先向用户确认（提示高峰为工作日 09:00-12:00/14:00-18:00，其余及周末/法定节假日全天半价）后加 --user-confirmed 启动。",
         }, ensure_ascii=False, indent=2))
         sys.exit(0)
 

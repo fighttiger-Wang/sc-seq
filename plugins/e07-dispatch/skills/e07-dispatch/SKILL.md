@@ -1,10 +1,10 @@
 ---
 name: e07-dispatch
-displayName: E07 · 派发 v1.2.0
-description: E07 · 派发 v1.2.0：三级阶梯智能工种派发与跨池额度接力中心。独立重型任务优先吃满周期订阅 OpenAI Codex（9A Astra/9B Sol/9C Terra/9D Luna）；Codex Free/耗尽及本端专属工具任务自动切回客户端三大独立内置池（Neon/Claude/Argon）跨池接力；DeepSeek 按量付费（8A/8B）永不自动调用，仅异常/降智时先征询并提示半价时段；快捷口令 .?（面板/选模）与 .s（状态）。
+displayName: E07 · 派发 v1.2.1
+description: E07 · 派发 v1.2.1：三级阶梯智能工种派发与跨池额度接力中心。独立重型任务优先吃满周期订阅 OpenAI Codex（9A Astra/9B Sol/9C Terra/9D Luna）；Codex Free/耗尽及本端专属工具任务自动切回客户端三大独立内置池（Neon/Claude/Argon）跨池接力；DeepSeek 按量付费（8A/8B）永不自动调用，仅异常/降智时先征询并提示半价时段；快捷口令 .?（面板/选模）与 .s（状态）。
 ---
 
-# E07 · 派发 v1.2.0
+# E07 · 派发 v1.2.1
 
 `SKILL_DIR` = `C:\Users\fight\.gemini\config\skills\E07-派发`  
 `<python>` = `C:\Users\fight\.codex\cache\ngs-analysis-workbench\venvs\0.2.10\Scripts\python.exe`
@@ -26,7 +26,7 @@ description: E07 · 派发 v1.2.0：三级阶梯智能工种派发与跨池额�
      - **`[2]` 💻 写代码**：`2A` Sonnet 5.5 *(Claude)* ➔ `2B` Hydrogen *(Neon)* ➔ `3A` Argon *(Argon)*
      - **`[3]` 🏗️ 统筹架构**：`3A` Argon *(Argon)* ➔ `3B` Opus 5.5 *(Claude)* ➔ `3C` Orch(Neon) *(Neon)*
      - **`[4]` 🔍 深度挑刺**：`4A` Neon High *(Neon)* ➔ `3B` Opus High *(Claude)* ➔ `3A` Argon High *(Argon)*
-   - **🥉 Tier 3 · DeepSeek 按量咨询席 `[8]`（永不自动调用）**：`8A` DeepSeek-R1/Reasoner │ `8B` DeepSeek-V3/Chat。仅在前两级不可用或明显性能下降时，**先向用户确认并提示当前是否处于北京时间 `00:30–08:30` 半价时段**（加 `--user-confirmed` 启动）。
+   - **🥉 Tier 3 · DeepSeek 按量咨询席 `[8]`（永不自动调用）**：`8A` DeepSeek-R1/Reasoner │ `8B` DeepSeek-V3/Chat。仅在前两级不可用或明显性能下降时，**先向用户确认并提示当前是否处于空闲半价时段**（空闲半价时段为除工作日周一至周五不含中国法定节假日 `09:00–12:00`、`14:00–18:00` 高峰期外的全部时段，含周末及法定节假日全天；加 `--user-confirmed` 启动）。
 
 ## 二、 三级阶梯派发 HUD 看板（输入 `.?` 或 `面板`/`选模` 秒呼出）
 
@@ -42,7 +42,7 @@ description: E07 · 派发 v1.2.0：三级阶梯智能工种派发与跨池额�
 │       [2] 💻 写代码池: [2A] Sonnet 5.5(Claude) ➔ [2B] Hydrogen(Neon) ➔ [3A] Argon│
 │       [3] 🏗️ 统筹架构: [3A] Argon(周池) ➔ [3B] Opus 5.5(Claude) ➔ [3C] Orch(Neon)│
 │       [4] 🔍 深度挑刺: [4A] Neon High(Neon) ➔ [3B] Opus High ➔ [3A] Argon High   │
-│ 🥉 Tier 3 · DeepSeek 按量付费咨询席（🔒永不自动调，半价时段 00:30-08:30）: │
+│ 🥉 Tier 3 · DeepSeek 按量付费咨询席（🔒永不自动调，非工作日09-12/14-18均半价）: │
 │       [8A] DeepSeek-R1/Reasoner   │ [8B] DeepSeek-V3/Chat                  │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ⌨️ 快捷口令: [9A~9D]Codex │ [1A~4A]内置 │ [8A/8B]问后按量 │ [.s/状态] │ [.?/面板]│
