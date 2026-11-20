@@ -13,7 +13,7 @@ E03 · Skill规范写作 v0.5.0 — 七大零性能损耗鲁棒性护栏校验�
      - A/B 生信与绘图舱：校验共享知识库快照哈希一致性与生物学规则基线，不强套工程快捷键
      - C 前端设计舱：校验 vibe-guard.js / distill.js / govern.js 核心脚本完备性与防删函数护栏
      - D 算力运维舱：校验无本机个人账户绝对路径硬编码泄漏
-     - E 治理与调度舱：校验快捷口令统一使用 .前缀 (.? / .u / .d / .g / .s)，无裸单字母劫持，无默认调用付费外援 (dsh/codex)
+     - E 治理与调度舱：校验快捷口令统一使用 .前缀 (.? / .u / .d / .g / .s)，无裸单字母劫持，无默认自动调用按量付费外援 (dsh/DeepSeek)
   4. 🗺️ 护栏 4（三端注册表对齐核验）：检查 ~/.gemini/config/skills/、~/.gemini/config/skills.json、ANTIGRAVITY_SKILLS_MAP 与 skill-pack.json 100% 一致，无孤儿或 _archive_*
   5. ⏪ 护栏 5（改前快照与 1 秒回滚）：支持 --snapshot <skill> 与 --rollback <skill>
   6. 🔗 护栏 6（全仓反向引用与死链雷达）：校验 SKILL.md / references/ 下相对链接真实存在，且无旧名残留
@@ -348,7 +348,7 @@ def validate_one_skill(
             for dot_cmd in (".u", ".g"):
                 if dot_cmd not in text:
                     errors.append(f"[G3 治理调度舱] {cn_name} SKILL.md 未声明 '{dot_cmd}' 口令")
-        checks["G3_cabin_specific"] = "PASS (E 治理调度舱 .前缀口令与免费优先合规)" if not any(e.startswith("[G3") for e in errors) else "FAIL"
+        checks["G3_cabin_specific"] = "PASS (E 治理调度舱 .前缀口令与按量外援非默认合规)" if not any(e.startswith("[G3") for e in errors) else "FAIL"
 
     # 护栏 6：全仓反向引用与死链雷达（SKILL.md 与 references/*.md 相对链接真实存在，且无旧名残留）
     mp_skill_dir = mp_dir / "skills" / plugin_id

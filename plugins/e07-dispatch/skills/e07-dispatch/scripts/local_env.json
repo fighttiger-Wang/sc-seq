@@ -1,10 +1,11 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.2.0",
   "python_interpreter": "C:\\Users\\fight\\.codex\\cache\\ngs-analysis-workbench\\venvs\\0.2.10\\Scripts\\python.exe",
   "dsh_binary": "E:\\A001-软件安装\\deepseek\\resources\\runtime\\cli\\bin\\dsh.cmd",
-  "codex_binary": "C:\\Users\\fight\\AppData\\Local\\OpenAI\\Codex\\bin\\9e1da79431da526b\\codex.exe",
-  "default_choice": "1A",
-  "default_runner": "native",
+  "codex_binary": "auto",
+  "default_choice": "9B",
+  "default_runner": "codex_then_native",
   "paid_external_default": false,
+  "payg_ask_first": true,
   "tasks_dir": "C:\\Users\\fight\\.gemini\\antigravity\\scratch\\e07_tasks"
 }

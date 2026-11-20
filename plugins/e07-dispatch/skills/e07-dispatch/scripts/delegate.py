@@ -193,16 +193,25 @@ def is_executable(path: Path) -> bool:
 
 def detect_binary(runner: str, config: dict[str, Any]) -> dict[str, Any]:
     env_key = f"OIL_DELEGATE_{runner.upper()}_BIN"
-    configured = os.environ.get(env_key) or config.get("runner_paths", {}).get(runner)
-    source = "environment" if os.environ.get(env_key) else "config"
-    if configured:
-        path = Path(configured).expanduser().resolve()
+    env_configured = os.environ.get(env_key)
+    if env_configured:
+        path = Path(env_configured).expanduser().resolve()
         return {
             "installed": is_executable(path),
             "path": str(path),
-            "source": source,
-            "error": None if is_executable(path) else f"{env_key} or configured path is not executable",
+            "source": "environment",
+            "error": None if is_executable(path) else f"{env_key} is not executable",
         }
+    cfg_configured = config.get("runner_paths", {}).get(runner)
+    if cfg_configured:
+        path = Path(cfg_configured).expanduser().resolve()
+        if is_executable(path):
+            return {
+                "installed": True,
+                "path": str(path),
+                "source": "config",
+                "error": None,
+            }
 
     for binary in RUNNER_BINARIES[runner]:
         found = shutil.which(binary)
@@ -238,6 +247,24 @@ def detect_binary(runner: str, config: dict[str, Any]) -> dict[str, Any]:
                 "source": "workbuddy-app",
                 "error": None,
             }
+
+    if runner == "codex" and os.name == "nt":
+        local_appdata = Path(os.environ.get("LOCALAPPDATA") or (home / "AppData" / "Local"))
+        codex_bin_root = local_appdata / "OpenAI" / "Codex" / "bin"
+        if codex_bin_root.is_dir():
+            candidates = sorted(
+                codex_bin_root.glob("*/codex.exe"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for candidate in candidates:
+                if is_executable(candidate):
+                    return {
+                        "installed": True,
+                        "path": str(candidate.resolve()),
+                        "source": "codex-localappdata",
+                        "error": None,
+                    }
 
     return {
         "installed": False,

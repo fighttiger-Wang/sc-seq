@@ -1,5 +1,5 @@
 interface:
-  display_name: "E07 · 派发 v1.1.0"
+  display_name: "E07 · 派发 v1.2.0"
   short_description: "日常单轨/多轨智能工种派发与额度接力中心"
   default_prompt: "Use $e07-dispatch to 智能工种派发与额度接力"
 

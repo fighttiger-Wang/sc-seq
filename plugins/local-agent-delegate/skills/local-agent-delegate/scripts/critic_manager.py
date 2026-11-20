@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Critic & Lineup Manager for E06 Adversarial Swarm v1.0.0.
+Critic & Lineup Manager for E06 · 红蓝对抗闭环 v1.2.0
 特性：
-1. 与 E07 100% 共用全局统一模型代号矩阵（1A~4A 为内置免费模型池，8A/8B 为 DeepSeek 付费外援，9A/9B 为 Codex 付费外援）
-2. 默认 1 号王牌对攻阵容为客户端内置 0 额外付费异构组合：[2A] Claude Sonnet 5.5 ⚔ [4A] Gemini 4 Neon High
-3. 读取 <2KB 的 models_fast_cache.json，秒级弹出阵容与审查官 HUD 看板
-4. 支持同工种内置模型额度耗尽自动降级接力链（Quota Fallback Chain）
+1. 与 E07 100% 共用三级阶梯统一模型代号矩阵（9A~9D Codex周期订阅 ➔ 1A~4A 客户端内置三独立池 ➔ 8A/8B DeepSeek按量咨询）
+2. 默认 1 号阵容为双周期异构王牌：[9B] Codex GPT-6.2 Sol ⚔ [4A] Gemini 4 Neon High
+   （Codex 处于 Free 或耗尽时，蓝方自动退回客户端内置 [2A] Claude Sonnet 5.5 ➔ [2B] Gemini 4 Hydrogen）
+3. 支持三大独立内置配额池跨池接力（Neon 5h / Claude 5h / Argon 周池），绝不误触发按量付费 DeepSeek
 """
 
 from __future__ import annotations
@@ -22,187 +22,214 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 FAST_CACHE_FILE = SCRIPT_DIR / "models_fast_cache.json"
 
 UNIFIED_MODELS: dict[str, dict[str, Any]] = {
+    # Tier 1: Codex 周期订阅优先池
+    "9A": {
+        "code": "9A",
+        "pool": "9",
+        "pool_name": "🥇 Codex 周期订阅池 (Tier 1)",
+        "tier": "codex_subscription",
+        "runner": "codex",
+        "name": "Codex GPT-6.2 Astra (旗舰)",
+        "slug": "gpt-6.2-astra",
+        "quota": "周期订阅",
+        "fallback_chain": ["gpt-6.2-astra", "gpt-6.2-sol", "gemini-4-argon-medium", "claude-opus-5-5-medium"],
+        "desc": "复杂工程/架构重构蓝方旗舰",
+    },
+    "9B": {
+        "code": "9B",
+        "pool": "9",
+        "pool_name": "🥇 Codex 周期订阅池 (Tier 1)",
+        "tier": "codex_subscription",
+        "runner": "codex",
+        "name": "Codex GPT-6.2 Sol (主力编码)",
+        "slug": "gpt-6.2-sol",
+        "quota": "周期订阅",
+        "fallback_chain": ["gpt-6.2-sol", "gpt-6.1-sol", "claude-sonnet-5-5-medium", "gemini-4-hydrogen-medium", "gemini-4-argon-medium"],
+        "desc": "双周期异构蓝方首选 · 吃满 Codex 订阅额度",
+    },
+    "9C": {
+        "code": "9C",
+        "pool": "9",
+        "pool_name": "🥇 Codex 周期订阅池 (Tier 1)",
+        "tier": "codex_subscription",
+        "runner": "codex",
+        "name": "Codex GPT-6.1 Terra (视觉UI)",
+        "slug": "gpt-6.1-terra",
+        "quota": "周期订阅",
+        "fallback_chain": ["gpt-6.1-terra", "gpt-6.2-sol", "gemini-4-hydrogen-medium", "claude-sonnet-5-5-medium"],
+        "desc": "前端视觉理解与 UI 截图审查",
+    },
+    "9D": {
+        "code": "9D",
+        "pool": "9",
+        "pool_name": "🥇 Codex 周期订阅池 (Tier 1)",
+        "tier": "codex_subscription",
+        "runner": "codex",
+        "name": "Codex GPT-6 Luna (轻量)",
+        "slug": "gpt-6-luna",
+        "quota": "周期订阅",
+        "fallback_chain": ["gpt-6-luna", "gemini-3.8-flash-medium", "gemini-4-hydrogen-low"],
+        "desc": "轻量高速批量任务",
+    },
+    # Tier 2: 客户端内置三大独立池
     "1A": {
         "code": "1A",
         "pool": "1",
-        "pool_name": "⚡ 极速跑腿池 (内置免费)",
+        "pool_name": "⚡ 极速跑腿池 (Neon池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 3.8 Flash (High/Medium)",
-        "slug": "gemini-3.8-flash-high",
-        "quota": "94%",
-        "fallback_chain": ["gemini-3.8-flash-high", "gemini-4-hydrogen-low", "gpt-oss-120b-medium"],
-        "desc": "极速挑刺与轻量复核",
+        "name": "Gemini 3.8 Flash (Neon池)",
+        "slug": "gemini-3.8-flash-medium",
+        "quota": "Neon 5h池",
+        "fallback_chain": ["gemini-3.8-flash-medium", "gemini-4-hydrogen-low", "claude-sonnet-5-5-low"],
+        "desc": "极速复核与轻量挑刺",
     },
     "1B": {
         "code": "1B",
         "pool": "1",
-        "pool_name": "⚡ 极速跑腿池 (内置免费)",
+        "pool_name": "⚡ 极速跑腿池 (Neon池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen (Low)",
+        "name": "Gemini 4 Hydrogen Low (Neon池)",
         "slug": "gemini-4-hydrogen-low",
-        "quota": "94%",
-        "fallback_chain": ["gemini-4-hydrogen-low", "gemini-3.8-flash-medium", "gpt-oss-120b-medium"],
-        "desc": "极速第一替补",
+        "quota": "Neon 5h池",
+        "fallback_chain": ["gemini-4-hydrogen-low", "gemini-3.8-flash-medium", "claude-sonnet-5-5-low"],
+        "desc": "Neon 池极速替补",
     },
     "1C": {
         "code": "1C",
         "pool": "1",
-        "pool_name": "⚡ 极速跑腿池 (内置免费)",
+        "pool_name": "⚡ 极速跑腿池 (Claude池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "GPT-OSS 120B (Medium)",
-        "slug": "gpt-oss-120b-medium",
-        "quota": "34%",
-        "fallback_chain": ["gpt-oss-120b-medium", "gemini-3.8-flash-medium"],
-        "desc": "开源异构保底",
+        "name": "Claude Sonnet 5.5 Low (Claude池)",
+        "slug": "claude-sonnet-5-5-low",
+        "quota": "Claude 5h池",
+        "fallback_chain": ["claude-sonnet-5-5-low", "gemini-3.8-flash-medium", "gemini-4-hydrogen-low"],
+        "desc": "Claude 池跨池轻量接力",
     },
     "2A": {
         "code": "2A",
         "pool": "2",
-        "pool_name": "💻 写代码工匠池 (内置免费)",
+        "pool_name": "💻 写代码工匠池 (Claude池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Claude Sonnet 5.5 (High)",
-        "slug": "claude-sonnet-5-5-high",
-        "quota": "34%",
-        "fallback_chain": [
-            "claude-sonnet-5-5-high",
-            "claude-sonnet-5-5-medium",
-            "gemini-4-hydrogen-high",
-            "gemini-4-argon-medium",
-            "gpt-oss-120b-medium",
-        ],
-        "desc": "蓝方编码首选主力",
+        "name": "Claude Sonnet 5.5 (Claude池)",
+        "slug": "claude-sonnet-5-5-medium",
+        "quota": "Claude 5h池",
+        "fallback_chain": ["claude-sonnet-5-5-medium", "claude-sonnet-5-5-high", "gemini-4-hydrogen-medium", "gemini-4-argon-medium"],
+        "desc": "内置编码首选（跨 Neon ➔ Argon 周池）",
     },
     "2B": {
         "code": "2B",
         "pool": "2",
-        "pool_name": "💻 写代码工匠池 (内置免费)",
+        "pool_name": "💻 写代码工匠池 (Neon池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen (High/Medium)",
-        "slug": "gemini-4-hydrogen-high",
-        "quota": "94%",
-        "fallback_chain": ["gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gemini-4-argon-medium"],
-        "desc": "蓝方全栈敏捷编码主力",
+        "name": "Gemini 4 Hydrogen (Neon池)",
+        "slug": "gemini-4-hydrogen-medium",
+        "quota": "Neon 5h池",
+        "fallback_chain": ["gemini-4-hydrogen-medium", "gemini-4-hydrogen-high", "claude-sonnet-5-5-medium", "gemini-4-argon-medium"],
+        "desc": "Neon 池敏捷编码主力",
     },
     "3A": {
         "code": "3A",
         "pool": "3",
-        "pool_name": "🏗️ 统筹与架构池 (内置免费)",
+        "pool_name": "🏗️ 统筹与架构池 (Argon周池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Argon (High/Medium)",
-        "slug": "gemini-4-argon-high",
-        "quota": "66% (周池)",
-        "fallback_chain": ["gemini-4-argon-high", "gemini-4-argon-medium", "claude-opus-5-5-high"],
+        "name": "Gemini 4 Argon (Argon周池)",
+        "slug": "gemini-4-argon-medium",
+        "quota": "Argon 周池",
+        "fallback_chain": ["gemini-4-argon-medium", "gemini-4-argon-high", "claude-opus-5-5-medium", "gemini-pro-orchestrator-neon"],
         "desc": "超长上下文宏观架构主力",
     },
     "3B": {
         "code": "3B",
         "pool": "3",
-        "pool_name": "🏗️ 统筹与架构池 (内置免费)",
+        "pool_name": "🏗️ 统筹与架构池 (Claude池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Claude Opus 5.5 (High)",
-        "slug": "claude-opus-5-5-high",
-        "quota": "34%",
-        "fallback_chain": ["claude-opus-5-5-high", "claude-opus-5-5-medium", "gemini-4-argon-high"],
+        "name": "Claude Opus 5.5 (Claude池)",
+        "slug": "claude-opus-5-5-medium",
+        "quota": "Claude 5h池",
+        "fallback_chain": ["claude-opus-5-5-medium", "claude-opus-5-5-high", "gemini-4-neon-high", "gemini-4-argon-medium"],
         "desc": "顶层架构与严苛规范审阅",
+    },
+    "3C": {
+        "code": "3C",
+        "pool": "3",
+        "pool_name": "🏗️ 统筹与架构池 (Neon池)",
+        "tier": "native_free",
+        "runner": "native",
+        "name": "Orchestrator (Neon池)",
+        "slug": "gemini-pro-orchestrator-neon",
+        "quota": "Neon 5h池",
+        "fallback_chain": ["gemini-pro-orchestrator-neon", "gemini-4-argon-medium", "claude-opus-5-5-medium"],
+        "desc": "Neon 池双阶段统筹",
     },
     "4A": {
         "code": "4A",
         "pool": "4",
-        "pool_name": "🔍 深度挑刺推理池 (内置免费)",
+        "pool_name": "🔍 深度挑刺推理池 (Neon池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Neon (High/XHigh)",
+        "name": "Gemini 4 Neon High (Neon池)",
         "slug": "gemini-4-neon-high",
-        "quota": "94%",
+        "quota": "Neon 5h池",
         "fallback_chain": ["gemini-4-neon-high", "gemini-4-neon-xhigh", "claude-opus-5-5-high", "gemini-4-argon-high"],
         "desc": "红方逻辑挑刺与死锁排错首选",
     },
+    # Tier 3: DeepSeek 按量付费咨询席（永不自动调用）
     "8A": {
         "code": "8A",
         "pool": "8",
-        "pool_name": "💰 付费外援 · DeepSeek (非默认)",
-        "tier": "paid_external",
+        "pool_name": "💰 DeepSeek 按量咨询席 (Tier 3)",
+        "tier": "payg_ask_first",
         "runner": "dsh",
         "name": "DeepSeek-R1 / Reasoner",
         "slug": "deepseek-reasoner",
         "quota": "按量付费API",
         "fallback_chain": ["deepseek-reasoner", "deepseek-chat"],
-        "desc": "外部付费深度推理红方外援",
+        "desc": "按量付费红方外援（需先向用户确认）",
     },
     "8B": {
         "code": "8B",
         "pool": "8",
-        "pool_name": "💰 付费外援 · DeepSeek (非默认)",
-        "tier": "paid_external",
+        "pool_name": "💰 DeepSeek 按量咨询席 (Tier 3)",
+        "tier": "payg_ask_first",
         "runner": "dsh",
         "name": "DeepSeek-V3 / Chat",
         "slug": "deepseek-chat",
         "quota": "按量付费API",
         "fallback_chain": ["deepseek-chat"],
-        "desc": "外部付费通用审查外援",
-    },
-    "9A": {
-        "code": "9A",
-        "pool": "9",
-        "pool_name": "💰 付费外援 · OpenAI Codex (非默认)",
-        "tier": "paid_external",
-        "runner": "codex",
-        "name": "Codex 6.2 Sol (旗舰)",
-        "slug": "gpt-6.2-sol",
-        "quota": "外部订阅/API",
-        "fallback_chain": ["gpt-6.2-sol", "gpt-6.1-sol"],
-        "desc": "外部付费旗舰编码蓝方外援",
-    },
-    "9B": {
-        "code": "9B",
-        "pool": "9",
-        "pool_name": "💰 付费外援 · OpenAI Codex (非默认)",
-        "tier": "paid_external",
-        "runner": "codex",
-        "name": "Codex 6.1 Sol (稳健)",
-        "slug": "gpt-6.1-sol",
-        "quota": "外部订阅/API",
-        "fallback_chain": ["gpt-6.1-sol"],
-        "desc": "外部付费稳健编码蓝方外援",
+        "desc": "按量付费通用审查外援（需先向用户确认）",
     },
 }
 
 ROSTERS: dict[str, dict[str, Any]] = {
     "1": {
-        "name": "默认内置王牌异构对攻 (Claude Sonnet 5.5 [2A] ⚔ Gemini 4 Neon High [4A])",
+        "name": "双周期异构王牌 (Codex GPT-6.2 Sol [9B] ⚔ Gemini 4 Neon High [4A])",
+        "tier": "codex_plus_native",
+        "author_code": "9B",
+        "critic_code": "4A",
+    },
+    "2": {
+        "name": "客户端纯内置异构 (Claude Sonnet 5.5 [2A] ⚔ Gemini 4 Neon High [4A])",
         "tier": "native_free",
         "author_code": "2A",
         "critic_code": "4A",
     },
-    "2": {
-        "name": "内置架构统筹对攻 (Gemini 4 Argon [3A] ⚔ Claude Opus 5.5 [3B])",
-        "tier": "native_free",
-        "author_code": "3A",
+    "3": {
+        "name": "顶级架构统筹对攻 (Codex GPT-6.2 Astra [9A] ⚔ Claude Opus 5.5 [3B] / Neon [4A])",
+        "tier": "codex_plus_native",
+        "author_code": "9A",
         "critic_code": "3B",
     },
-    "3": {
-        "name": "内置极速敏捷对攻 (Gemini 4 Hydrogen [2B] ⚔ Gemini 3.8 Flash High [1A])",
-        "tier": "native_free",
-        "author_code": "2B",
-        "critic_code": "1A",
-    },
     "8": {
-        "name": "半托管外援对攻 (内置 Claude Sonnet 5.5 [2A] ⚔ 付费外援 DeepSeek [8A])",
-        "tier": "semi_paid_external",
-        "author_code": "2A",
-        "critic_code": "8A",
-    },
-    "9": {
-        "name": "经典全外援付费对攻 (付费 Codex 6.2 Sol [9A] ⚔ 付费 DeepSeek [8A])",
-        "tier": "full_paid_external",
-        "author_code": "9A",
+        "name": "DeepSeek 按量外援对攻 (Codex/内置 [9B/2A] ⚔ 按量 DeepSeek-R1 [8A] · 需先确认)",
+        "tier": "payg_ask_first",
+        "author_code": "9B",
         "critic_code": "8A",
     },
 }
@@ -213,7 +240,7 @@ POOL_DEFAULT_CODE = {
     "3": "3A",
     "4": "4A",
     "8": "8A",
-    "9": "9A",
+    "9": "9B",
 }
 
 
@@ -225,11 +252,18 @@ def get_config_path(workspace: str | None = None) -> Path:
 
 
 def build_config_from_codes(lineup_id: str, author_code: str, critic_code: str, paused: bool = False) -> dict[str, Any]:
-    a = UNIFIED_MODELS.get(author_code, UNIFIED_MODELS["2A"])
+    a = UNIFIED_MODELS.get(author_code, UNIFIED_MODELS["9B"])
     c = UNIFIED_MODELS.get(critic_code, UNIFIED_MODELS["4A"])
+    payg_used = (a["tier"] == "payg_ask_first" or c["tier"] == "payg_ask_first")
+    if a["tier"] == "native_free" and c["tier"] == "native_free":
+        mode = "native_first"
+    elif payg_used:
+        mode = "payg_ask_first"
+    else:
+        mode = "codex_plus_native"
     return {
-        "schema_version": "2.0",
-        "mode": "native_first" if (a["tier"] == "native_free" and c["tier"] == "native_free") else "paid_external_enabled",
+        "schema_version": "2.1",
+        "mode": mode,
         "active_lineup": lineup_id,
         "author_code": a["code"],
         "author_runner": a["runner"],
@@ -243,7 +277,8 @@ def build_config_from_codes(lineup_id: str, author_code: str, critic_code: str, 
         "active_model_name": c["name"],
         "active_model_slug": c["slug"],
         "critic_fallback_chain": c["fallback_chain"],
-        "external_paid_locked": (a["tier"] == "native_free" and c["tier"] == "native_free"),
+        "payg_ask_first": payg_used,
+        "external_paid_locked": (not payg_used),
         "paused": paused,
     }
 
@@ -253,11 +288,11 @@ def load_config(workspace: str | None = None) -> dict[str, Any]:
     if cfg_file.is_file():
         try:
             data = json.loads(cfg_file.read_text(encoding="utf-8"))
-            if data.get("schema_version") == "2.0":
+            if data.get("schema_version") == "2.1":
                 return data
         except Exception:
             pass
-    default_cfg = build_config_from_codes("1", "2A", "4A", paused=False)
+    default_cfg = build_config_from_codes("1", "9B", "4A", paused=False)
     save_config(default_cfg, workspace)
     return default_cfg
 
@@ -269,25 +304,24 @@ def save_config(cfg: dict[str, Any], workspace: str | None = None) -> None:
 
 def render_lineup_box(cfg: dict[str, Any]) -> str:
     cur_l = cfg.get("active_lineup", "1")
-    a_desc = f"[{cfg.get('author_code', '2A')}] {cfg.get('author_model_name')}"
+    a_desc = f"[{cfg.get('author_code', '9B')}] {cfg.get('author_model_name')}"
     c_desc = f"[{cfg.get('active_code', '4A')}] {cfg.get('active_model_name')}"
     return f"""┌────────────────────────────────────────────────────────────────────────────┐
-│ 📍 流水线全景进度: [E06 · 红蓝对抗闭环 v1.1.0 · 阶段 1/4: 对攻阵容速选]    │
+│ 📍 流水线全景进度: [E06 · 红蓝对抗闭环 v1.2.0 · 阶段 1/4: 对攻阵容速选]    │
 │    [▶ 1.选对攻阵容] ➔ [2.定制/确认任务] ➔ [3.多轮红蓝死磕] ➔ [4.两相提交]  │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ 💡 当前锁定阵容: [{cur_l}] {a_desc} ⚔ {c_desc}
-│    • 【客户端内置 0 额外付费异构对攻席（支持额度耗尽自动顺延接力）】:      │
-│      👉★[1] 默认内置王牌异构对攻 : [2A] Claude Sonnet 5.5 ⚔ [4A] Gemini 4 Neon High │
-│             (额度耗尽自动接力链  : [2B] Gemini 4 Hydrogen ⚔ [3B] Opus 5.5 / [3A] Argon)│
-│         [2] 内置架构统筹对攻     : [3A] Gemini 4 Argon    ⚔ [3B] Claude Opus 5.5    │
-│         [3] 内置极速敏捷对攻     : [2B] Gemini 4 Hydrogen ⚔ [1A] Gemini 3.8 Flash   │
-│    • 【外部付费外援对攻席（🔒非默认！需消耗外部 API，仅手动选 8 或 9 启用）】│
-│         [8] 半托管外援对攻       : [2A] 内置 Sonnet 5.5   ⚔ [8A] 付费 DeepSeek-R1   │
-│         [9] 经典全外援付费对攻   : [9A] 付费 Codex 6.2    ⚔ [8A] 付费 DeepSeek-R1   │
+│    • 【三级阶梯 · 周期免费异构对攻席（自动跨池接力，0 按量扣费）】:        │
+│      👉★[1] 双周期异构王牌   : [9B] Codex GPT-6.2 Sol ⚔ [4A] Gemini 4 Neon High │
+│             (Codex Free/耗尽 : 蓝方自动退回 [2A] Sonnet 5.5 / [2B] Hydrogen)    │
+│         [2] 客户端纯内置异构 : [2A] Claude Sonnet 5.5 ⚔ [4A] Gemini 4 Neon High │
+│         [3] 顶级架构统筹对攻 : [9A] Codex GPT-6.2 Astra ⚔ [3B] Opus / [4A] Neon │
+│    • 【按量付费咨询席（🔒永不自动调！仅前两级异常且询问确认后才启用）】:   │
+│         [8] 按量外援对攻     : [9B/2A] 蓝方施工       ⚔ [8A] DeepSeek-R1 按量   │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ⌨️ 全局 .前缀零撞车快捷口令（释放裸字母 A/B/C/D 给选择题）:                │
-│    • [1] / [2] / [3]  : 一键锁定内置 0 额外付费对攻阵容 [1]/[2]/[3]        │
-│    • [8] / [9]        : 显式解锁半托管外援 [8] 或全外援付费对攻 [9]        │
+│    • [1] / [2] / [3]  : 一键锁定周期/内置免费对攻阵容 [1]/[2]/[3]          │
+│    • [8]              : 需用户确认的按量外援阵容 (DeepSeek 00:30-08:30半价)│
 │    • [.?] / [面板]    : 呼出当前焦点对攻看板（唯一焦点锁，不与 E07 抢答）  │
 │    • [.s] / [状态]    : 查看后台运行进度 + 刷新/查看内置模型剩余额度       │
 └────────────────────────────────────────────────────────────────────────────┘"""
@@ -303,7 +337,7 @@ def resolve_code(raw: str, default_code: str = "4A") -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="E06 双脑红蓝对抗阵容与审查官管理器 v1.0.0")
+    parser = argparse.ArgumentParser(description="E06 双脑红蓝对抗阵容与审查官管理器 v1.2.0")
     parser.add_argument("--workspace", default=os.getcwd(), help="工作区路径")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -312,11 +346,11 @@ def main() -> None:
     sub.add_parser("pause", help="暂停对抗循环")
     sub.add_parser("resume", help="恢复对抗循环")
 
-    lineup_cmd = sub.add_parser("lineup", help="查看或配置对攻阵容 (1/2/3 内置免费, 8/9 付费外援, 或自定义 蓝方代号 红方代号)")
-    lineup_cmd.add_argument("args", nargs="*", help="阵容号 (1/2/3/8/9) 或 蓝方代号 红方代号 (如 2A 4A)")
+    lineup_cmd = sub.add_parser("lineup", help="查看或配置对攻阵容 (1/2/3 周期或内置免费, 8 询问确认按量, 或自定义 蓝方代号 红方代号)")
+    lineup_cmd.add_argument("args", nargs="*", help="阵容号 (1/2/3/8) 或 蓝方代号 红方代号 (如 9B 4A)")
 
-    switch_cmd = sub.add_parser("switch", help="热切红方审查官模型代号 (1A~4A, 8A/8B, 9A/9B)")
-    switch_cmd.add_argument("code", help="模型代号，如 4A, 3B, 8A")
+    switch_cmd = sub.add_parser("switch", help="热切红方审查官模型代号 (1A~4A, 9A~9D, 8A/8B)")
+    switch_cmd.add_argument("code", help="模型代号，如 4A, 3B, 9A, 8A")
 
     args = parser.parse_args()
     cfg = load_config(args.workspace)
@@ -333,7 +367,7 @@ def main() -> None:
             except Exception:
                 pass
         print(json.dumps({
-            "schema_version": "2.0",
+            "schema_version": "2.1",
             "unified_models": UNIFIED_MODELS,
             "rosters": ROSTERS,
             "codex_fast_cache": fast_cache,
@@ -372,12 +406,12 @@ def main() -> None:
                 "critic": f"[{new_cfg['active_code']}] {new_cfg['active_model_name']} ({new_cfg['active_model_slug']})",
                 "author_fallback_chain": new_cfg["author_fallback_chain"],
                 "critic_fallback_chain": new_cfg["critic_fallback_chain"],
-                "paid_external_used": r["tier"] != "native_free",
+                "payg_ask_first": new_cfg["payg_ask_first"],
             }, ensure_ascii=False, indent=2))
             sys.exit(0)
 
         if len(l_args) >= 2:
-            a_code = resolve_code(l_args[0], "2A")
+            a_code = resolve_code(l_args[0], "9B")
             c_code = resolve_code(l_args[1], "4A")
             new_cfg = build_config_from_codes("custom", a_code, c_code, paused=False)
             save_config(new_cfg, args.workspace)
@@ -388,16 +422,16 @@ def main() -> None:
                 "critic": f"[{new_cfg['active_code']}] {new_cfg['active_model_name']} ({new_cfg['active_model_slug']})",
                 "author_fallback_chain": new_cfg["author_fallback_chain"],
                 "critic_fallback_chain": new_cfg["critic_fallback_chain"],
-                "paid_external_used": not new_cfg["external_paid_locked"],
+                "payg_ask_first": new_cfg["payg_ask_first"],
             }, ensure_ascii=False, indent=2))
             sys.exit(0)
 
-        sys.stderr.write("[ERROR] 可选阵容编号: 1, 2, 3 (内置免费) 或 8, 9 (付费外援)，或传入两个代号如: lineup 2A 4A\n")
+        sys.stderr.write("[ERROR] 可选阵容编号: 1, 2, 3 (周期/内置免费) 或 8 (按量询问外援)，或传入两个代号如: lineup 9B 4A\n")
         sys.exit(1)
 
     if args.command == "switch":
         c_code = resolve_code(args.code, "4A")
-        a_code = cfg.get("author_code", "2A")
+        a_code = cfg.get("author_code", "9B")
         lid = cfg.get("active_lineup", "1")
         new_cfg = build_config_from_codes(lid, a_code, c_code, paused=False)
         save_config(new_cfg, args.workspace)
@@ -408,6 +442,7 @@ def main() -> None:
             "active_model_name": new_cfg["active_model_name"],
             "active_model_slug": new_cfg["active_model_slug"],
             "critic_fallback_chain": new_cfg["critic_fallback_chain"],
+            "payg_ask_first": new_cfg["payg_ask_first"],
         }, ensure_ascii=False, indent=2))
         sys.exit(0)
 
