@@ -183,8 +183,10 @@ run_pipeline <- function(params) {
     df_genes_lower <- tolower(df$gene)
     targets_lower <- tolower(target_genes)
     df_matched <- df %>% filter(df_genes_lower %in% targets_lower)
-    matched_map <- setNames(target_genes, targets_lower)
-    df_matched$gene <- matched_map[tolower(df_matched$gene)]
+    if (nrow(df_matched) == 0) return(df_matched)
+    actual_names <- unique(df$gene[df_genes_lower %in% targets_lower])
+    name_map <- setNames(actual_names, tolower(actual_names))
+    df_matched$gene <- name_map[tolower(df_matched$gene)]
     return(df_matched)
   }
   
@@ -238,6 +240,17 @@ run_pipeline <- function(params) {
         expr_ratio = mean(expr_ratio),
         .groups = "drop"
       )
+  }
+  
+  matched_in_data <- unique(c(if (!is.null(df_sample_parsed)) df_sample_parsed$gene,
+                              if (!is.null(df_group_parsed)) df_group_parsed$gene))
+  if (length(matched_in_data) > 0) {
+    ordered_genes <- unlist(lapply(gene_list, function(g) {
+      m <- matched_in_data[tolower(matched_in_data) == tolower(g)]
+      if (length(m) > 0) m[1] else character(0)
+    }))
+    gene_list <- unique(c(ordered_genes, matched_in_data[matched_in_data %in% ordered_genes]))
+    cat("Matched genes in data (", length(gene_list), "):", paste(gene_list, collapse = ", "), "\n")
   }
   
   # Determine groups
@@ -441,6 +454,10 @@ run_pipeline <- function(params) {
   tsv_file <- file.path(out_dir, "group_gene_statistical_summary.tsv")
   write.table(stats_summary_table, tsv_file, sep = "\t", row.names = FALSE, quote = FALSE)
   
+  gene_label <- paste(gene_list, collapse = "_")
+  excel_alias <- file.path(out_dir, paste0(gene_label, "_小胶亚群组间表达统计分析表.xlsx"))
+  saveWorkbook(wb, excel_alias, overwrite = TRUE)
+
   # ============================================================================
   # Publication-Ready Visualizations
   # ============================================================================
@@ -459,19 +476,22 @@ run_pipeline <- function(params) {
     )
   
   single_gene <- length(gene_list) == 1
-  cur_gene <- gene_list[1]
   
   # -------------------------------------------------------------
-  # PLOT 1: Group Split DotPlot (组间分面/并列气泡图)
+  # PLOT 1: Group Split DotPlot (组间分面/并列气泡图 - 全部基因)
   # -------------------------------------------------------------
   max_expr <- max(df_group_final$norm_expr, na.rm = TRUE)
   max_pct <- max(df_group_final$expr_percent, na.rm = TRUE)
+  
+  dot_title <- ifelse(!is.null(params$title), params$title,
+                      ifelse(single_gene, paste0(gene_list[1], " DotPlot Across Subclusters by Group"),
+                             paste0(paste(gene_list, collapse = ", "), " DotPlot Across Subclusters by Group")))
   
   p_dotplot <- ggplot(df_group_final, aes(x = celltype, y = group_name)) +
     geom_point(aes(size = expr_percent, color = norm_expr)) +
     scale_size_continuous(
       name = "Percent Expressed (%)",
-      range = c(2.5, 10),
+      range = c(2.5, 9.5),
       limits = c(0, max(max_pct * 1.1, 10))
     ) +
     scale_color_gradientn(
@@ -480,7 +500,7 @@ run_pipeline <- function(params) {
       limits = c(0, max(max_expr * 1.05, 1.0))
     ) +
     labs(
-      title = ifelse(!is.null(params$title), params$title, paste0(cur_gene, " DotPlot Across Subclusters by Group")),
+      title = dot_title,
       x = "Cell Subcluster",
       y = "Group"
     ) +
@@ -500,209 +520,285 @@ run_pipeline <- function(params) {
     p_dotplot <- p_dotplot + facet_wrap(~gene, ncol = 1)
   }
   
-  ggsave(file.path(out_dir, "01_group_split_dotplot.pdf"), p_dotplot, width = 8.5, height = ifelse(single_gene, 4.2, 3.5 * length(gene_list)))
-  ggsave(file.path(out_dir, "01_group_split_dotplot.png"), p_dotplot, width = 8.5, height = ifelse(single_gene, 4.2, 3.5 * length(gene_list)), dpi = 300)
+  dot_h <- ifelse(single_gene, 4.2, 3.2 * length(gene_list) + 0.8)
+  ggsave(file.path(out_dir, "01_group_split_dotplot.pdf"), p_dotplot, width = 8.5, height = dot_h)
+  ggsave(file.path(out_dir, "01_group_split_dotplot.png"), p_dotplot, width = 8.5, height = dot_h, dpi = 300)
   
+  if (!single_gene) {
+    ggsave(file.path(out_dir, paste0(gene_label, "_小胶亚群表达气泡图_组间分面比较.pdf")), p_dotplot, width = 8.5, height = dot_h)
+    ggsave(file.path(out_dir, paste0(gene_label, "_小胶亚群表达气泡图_组间分面比较.png")), p_dotplot, width = 8.5, height = dot_h, dpi = 300)
+  }
+
   # -------------------------------------------------------------
-  # PLOT 2 & 3: Expression & Ratio Bar Plots (if sample data available)
+  # PLOTS PER GENE: Single DotPlot, Barplots, and Comprehensive Overviews
   # -------------------------------------------------------------
-  if (!is.null(df_sample_final)) {
-    cur_sum <- summary_stats %>% filter(gene == cur_gene)
-    cur_pts <- df_sample_final %>% filter(gene == cur_gene)
+  for (idx in seq_along(gene_list)) {
+    cur_gene <- gene_list[idx]
+    is_first <- (idx == 1)
     
-    max_y_expr <- max(cur_sum$mean_norm + cur_sum$sem_norm, cur_pts$norm_expr, na.rm = TRUE) * 1.25
-    max_y_ratio <- max(cur_sum$mean_ratio_pct + cur_sum$sem_ratio_pct, cur_pts$expr_percent, na.rm = TRUE) * 1.25
+    # 1. Individual DotPlot for cur_gene (calibrated to gene's own max expression)
+    cur_df_grp <- df_group_final %>% filter(gene == cur_gene)
+    cur_max_expr <- max(cur_df_grp$norm_expr, na.rm = TRUE)
+    cur_max_pct <- max(cur_df_grp$expr_percent, na.rm = TRUE)
     
-    # 2. Expression Bar Plot
-    p_bar_expr <- ggplot() +
-      geom_bar(
-        data = cur_sum,
-        aes(x = celltype, y = mean_norm, fill = group_name),
-        stat = "identity",
-        position = position_dodge(0.8),
-        width = 0.72,
-        alpha = 0.88,
-        color = "black",
-        linewidth = 0.5
+    p_dotplot_cur <- ggplot(cur_df_grp, aes(x = celltype, y = group_name)) +
+      geom_point(aes(size = expr_percent, color = norm_expr)) +
+      scale_size_continuous(
+        name = "Percent Expressed (%)",
+        range = c(2.5, 9.5),
+        limits = c(0, max(cur_max_pct * 1.1, 10))
       ) +
-      geom_errorbar(
-        data = cur_sum,
-        aes(x = celltype, ymin = mean_norm, ymax = mean_norm + sem_norm, group = group_name),
-        position = position_dodge(0.8),
-        width = 0.22,
-        linewidth = 0.6
+      scale_color_gradientn(
+        name = "Average Expression",
+        colors = c("#3B4CC0", "#8CBDFF", "#F2F2F2", "#F49A7B", "#B40426"),
+        limits = c(0, max(cur_max_expr * 1.05, 1.0))
       ) +
-      geom_point(
-        data = cur_pts,
-        aes(x = celltype, y = norm_expr, group = group_name, fill = group_name),
-        position = position_jitterdodge(jitter.width = 0.12, dodge.width = 0.8, seed = 42),
-        size = 2.4,
-        shape = 21,
-        color = "black",
-        stroke = 0.6,
-        alpha = 0.95
-      ) +
-      scale_fill_manual(name = "Group:", values = color_vec) +
       labs(
-        title = paste0(cur_gene, " Expression in Subclusters"),
-        subtitle = "Normalized Average Expression (Mean ± SEM)",
+        title = paste0(cur_gene, " DotPlot Across Subclusters by Group"),
         x = "Cell Subcluster",
-        y = paste0(cur_gene, " Normalized Expression")
+        y = "Group"
       ) +
-      scale_y_continuous(limits = c(0, max_y_expr), expand = c(0, 0)) +
-      theme_pub +
-      theme(legend.position = "top")
-    
-    # Auto-add significance stars
-    if (exists("stats_summary_table") && "Significance_Expr" %in% colnames(stats_summary_table)) {
-      sig_rows <- stats_summary_table %>% filter(Gene == cur_gene, Significance_Expr != "ns")
-      if (nrow(sig_rows) > 0) {
-        for (ri in 1:nrow(sig_rows)) {
-          c_name <- sig_rows$CellType[ri]
-          c_idx <- which(celltype_vec == c_name)
-          if (length(c_idx) > 0) {
-            y_base <- cur_sum %>% filter(celltype == c_name) %>% summarize(m = max(mean_norm + sem_norm)) %>% pull(m)
-            y_line <- y_base * 1.15 + 0.05
-            p_val_txt <- paste0(sig_rows$Significance_Expr[ri], " (p = ", formatC(sig_rows$P_val_t_test_equal[ri], digits = 3, format = "f"), ")")
-            p_bar_expr <- p_bar_expr +
-              annotate("segment", x = c_idx - 0.2, xend = c_idx + 0.2, y = y_line, yend = y_line, linewidth = 0.6) +
-              annotate("text", x = c_idx, y = y_line * 1.06, label = p_val_txt, size = 3.5, fontface = "bold")
-          }
-        }
-      }
-    }
-    
-    ggsave(file.path(out_dir, "02_group_expression_barplot.pdf"), p_bar_expr, width = 8.5, height = 5.2)
-    ggsave(file.path(out_dir, "02_group_expression_barplot.png"), p_bar_expr, width = 8.5, height = 5.2, dpi = 300)
-    
-    # 3. Ratio Bar Plot
-    p_bar_ratio <- ggplot() +
-      geom_bar(
-        data = cur_sum,
-        aes(x = celltype, y = mean_ratio_pct, fill = group_name),
-        stat = "identity",
-        position = position_dodge(0.8),
-        width = 0.72,
-        alpha = 0.88,
-        color = "black",
-        linewidth = 0.5
-      ) +
-      geom_errorbar(
-        data = cur_sum,
-        aes(x = celltype, ymin = mean_ratio_pct, ymax = mean_ratio_pct + sem_ratio_pct, group = group_name),
-        position = position_dodge(0.8),
-        width = 0.22,
-        linewidth = 0.6
-      ) +
-      geom_point(
-        data = cur_pts,
-        aes(x = celltype, y = expr_percent, group = group_name, fill = group_name),
-        position = position_jitterdodge(jitter.width = 0.12, dodge.width = 0.8, seed = 42),
-        size = 2.4,
-        shape = 21,
-        color = "black",
-        stroke = 0.6,
-        alpha = 0.95
-      ) +
-      scale_fill_manual(name = "Group:", values = color_vec) +
-      labs(
-        title = paste0(cur_gene, " Expressing Cell Proportion (%)"),
-        subtitle = "Percentage of Positive Expressing Cells (Mean ± SEM)",
-        x = "Cell Subcluster",
-        y = paste0(cur_gene, "+ Cells (%)")
-      ) +
-      scale_y_continuous(limits = c(0, max_y_ratio), expand = c(0, 0)) +
-      theme_pub +
-      theme(legend.position = "top")
-    
-    if (exists("stats_summary_table") && "Significance_Ratio" %in% colnames(stats_summary_table)) {
-      sig_r_rows <- stats_summary_table %>% filter(Gene == cur_gene, Significance_Ratio != "ns")
-      if (nrow(sig_r_rows) > 0) {
-        for (ri in 1:nrow(sig_r_rows)) {
-          c_name <- sig_r_rows$CellType[ri]
-          c_idx <- which(celltype_vec == c_name)
-          if (length(c_idx) > 0) {
-            y_base <- cur_sum %>% filter(celltype == c_name) %>% summarize(m = max(mean_ratio_pct + sem_ratio_pct)) %>% pull(m)
-            y_line <- y_base * 1.15 + 0.1
-            p_val_txt <- paste0(sig_r_rows$Significance_Ratio[ri], " (p = ", formatC(sig_r_rows$P_val_ratio_t_test[ri], digits = 3, format = "f"), ")")
-            p_bar_ratio <- p_bar_ratio +
-              annotate("segment", x = c_idx - 0.2, xend = c_idx + 0.2, y = y_line, yend = y_line, linewidth = 0.6) +
-              annotate("text", x = c_idx, y = y_line * 1.06, label = p_val_txt, size = 3.5, fontface = "bold")
-          }
-        }
-      }
-    }
-    
-    ggsave(file.path(out_dir, "03_group_ratio_barplot.pdf"), p_bar_ratio, width = 8.5, height = 5.2)
-    ggsave(file.path(out_dir, "03_group_ratio_barplot.png"), p_bar_ratio, width = 8.5, height = 5.2, dpi = 300)
-    
-    # 4. Combined 2-in-1 Stacked Plot
-    p_2in1 <- (
-      p_bar_expr + theme(axis.title.x = element_blank(), axis.text.x = element_blank(), legend.position = "top")
-    ) / (
-      p_bar_ratio + theme(legend.position = "none")
-    ) +
-    plot_annotation(tag_levels = 'A') &
-    theme(plot.tag = element_text(face = "bold", size = 15))
-    
-    ggsave(file.path(out_dir, "04_combined_twopanel_plot.pdf"), p_2in1, width = 8.5, height = 8.8)
-    ggsave(file.path(out_dir, "04_combined_twopanel_plot.png"), p_2in1, width = 8.5, height = 8.8, dpi = 300)
-    
-    # 5. Faceted Free-Y Scale Plot
-    p_facet <- ggplot() +
-      geom_bar(data = cur_sum, aes(x = group_name, y = mean_norm, fill = group_name),
-               stat = "identity", width = 0.65, alpha = 0.85, color = "black", linewidth = 0.4) +
-      geom_errorbar(data = cur_sum, aes(x = group_name, ymin = mean_norm, ymax = mean_norm + sem_norm),
-                    width = 0.25, linewidth = 0.5) +
-      geom_point(data = cur_pts, aes(x = group_name, y = norm_expr, fill = group_name),
-                 position = position_jitter(width = 0.1, seed = 42),
-                 size = 2.2, shape = 21, color = "black", stroke = 0.5, alpha = 0.95) +
-      facet_wrap(~celltype, scales = "free_y", ncol = min(4, length(celltype_vec))) +
-      scale_fill_manual(values = color_vec) +
-      labs(
-        title = paste0(cur_gene, " Expression in Each Subcluster (Individual Scales)"),
-        subtitle = "Normalized Average Expression (Mean ± SEM)",
-        x = NULL,
-        y = paste0(cur_gene, " Normalized Expression")
-      ) +
-      theme_bw(base_size = 11.5) +
+      theme_bw(base_size = 12) +
       theme(
-        strip.background = element_rect(fill = "#E8EEF5", color = "grey50"),
-        strip.text = element_text(face = "bold", size = 11, color = "#1F4E79"),
-        axis.text = element_text(color = "black", size = 10.5),
-        axis.title = element_text(face = "bold", color = "black", size = 11.5),
+        axis.text = element_text(color = "black", size = 11),
+        axis.text.x = element_text(angle = 35, hjust = 1, face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
         plot.title = element_text(face = "bold", hjust = 0.5, size = 13.5),
-        plot.subtitle = element_text(hjust = 0.5, size = 10.5, color = "grey35"),
-        legend.position = "none",
-        panel.grid.minor = element_blank()
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.4),
+        legend.box = "horizontal",
+        legend.position = "right"
       )
     
-    ggsave(file.path(out_dir, "05_facet_subclusters_barplot.pdf"), p_facet, width = 9.5, height = 6.2)
-    ggsave(file.path(out_dir, "05_facet_subclusters_barplot.png"), p_facet, width = 9.5, height = 6.2, dpi = 300)
+    if (!single_gene) {
+      ggsave(file.path(out_dir, paste0(cur_gene, "_01_group_split_dotplot.pdf")), p_dotplot_cur, width = 8.5, height = 4.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_01_group_split_dotplot.png")), p_dotplot_cur, width = 8.5, height = 4.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达气泡图_组间比较.pdf")), p_dotplot_cur, width = 8.5, height = 4.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达气泡图_组间比较.png")), p_dotplot_cur, width = 8.5, height = 4.2, dpi = 300)
+    }
     
-    # 6. Combined 3-in-1 Comprehensive Overview
-    p_bar_expr_clean <- p_bar_expr +
-      labs(title = paste0(cur_gene, " Normalized Expression"), subtitle = "Mean ± SEM") +
-      theme(legend.position = "top", plot.title = element_text(size = 12.5), plot.subtitle = element_text(size = 10))
-    p_bar_ratio_clean <- p_bar_ratio +
-      labs(title = paste0(cur_gene, " Positive Proportion (%)"), subtitle = "Mean ± SEM") +
-      theme(legend.position = "top", plot.title = element_text(size = 12.5), plot.subtitle = element_text(size = 10))
-    
-    p_3in1 <- (
-      (p_bar_expr_clean | p_bar_ratio_clean)
-    ) / (
-      p_dotplot + theme(plot.margin = margin(t = 6, r = 12, b = 6, l = 12))
-    ) +
-    plot_layout(heights = c(1.35, 0.85)) +
-    plot_annotation(
-      tag_levels = 'A',
-      title = paste0(cur_gene, " Expression and Cellular Distribution Across Subclusters"),
-      theme = theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 15, margin = margin(b = 8)))
-    ) &
-    theme(plot.tag = element_text(face = "bold", size = 14))
-    
-    ggsave(file.path(out_dir, "06_combined_threeinone_overview.pdf"), p_3in1, width = 12.5, height = 9.2)
-    ggsave(file.path(out_dir, "06_combined_threeinone_overview.png"), p_3in1, width = 12.5, height = 9.2, dpi = 300)
+    if (!is.null(df_sample_final)) {
+      cur_sum <- summary_stats %>% filter(gene == cur_gene)
+      cur_pts <- df_sample_final %>% filter(gene == cur_gene)
+      
+      max_y_expr <- max(cur_sum$mean_norm + cur_sum$sem_norm, cur_pts$norm_expr, na.rm = TRUE) * 1.25
+      max_y_ratio <- max(cur_sum$mean_ratio_pct + cur_sum$sem_ratio_pct, cur_pts$expr_percent, na.rm = TRUE) * 1.25
+      
+      # 2. Expression Bar Plot
+      p_bar_expr <- ggplot() +
+        geom_bar(
+          data = cur_sum,
+          aes(x = celltype, y = mean_norm, fill = group_name),
+          stat = "identity",
+          position = position_dodge(0.8),
+          width = 0.72,
+          alpha = 0.88,
+          color = "black",
+          linewidth = 0.5
+        ) +
+        geom_errorbar(
+          data = cur_sum,
+          aes(x = celltype, ymin = mean_norm, ymax = mean_norm + sem_norm, group = group_name),
+          position = position_dodge(0.8),
+          width = 0.22,
+          linewidth = 0.6
+        ) +
+        geom_point(
+          data = cur_pts,
+          aes(x = celltype, y = norm_expr, group = group_name, fill = group_name),
+          position = position_jitterdodge(jitter.width = 0.12, dodge.width = 0.8, seed = 42),
+          size = 2.4,
+          shape = 21,
+          color = "black",
+          stroke = 0.6,
+          alpha = 0.95
+        ) +
+        scale_fill_manual(name = "Group:", values = color_vec) +
+        labs(
+          title = paste0(cur_gene, " Expression in Subclusters"),
+          subtitle = "Normalized Average Expression (Mean ± SEM)",
+          x = "Cell Subcluster",
+          y = paste0(cur_gene, " Normalized Expression")
+        ) +
+        scale_y_continuous(limits = c(0, max_y_expr), expand = c(0, 0)) +
+        theme_pub +
+        theme(legend.position = "top")
+      
+      # Auto-add significance stars
+      if (exists("stats_summary_table") && "Significance_Expr" %in% colnames(stats_summary_table)) {
+        sig_rows <- stats_summary_table %>% filter(Gene == cur_gene, Significance_Expr != "ns")
+        if (nrow(sig_rows) > 0) {
+          for (ri in 1:nrow(sig_rows)) {
+            c_name <- sig_rows$CellType[ri]
+            c_idx <- which(celltype_vec == c_name)
+            if (length(c_idx) > 0) {
+              y_base <- cur_sum %>% filter(celltype == c_name) %>% summarize(m = max(mean_norm + sem_norm)) %>% pull(m)
+              y_line <- y_base * 1.15 + 0.05
+              p_val_txt <- paste0(sig_rows$Significance_Expr[ri], " (p = ", formatC(sig_rows$P_val_t_test_equal[ri], digits = 3, format = "f"), ")")
+              p_bar_expr <- p_bar_expr +
+                annotate("segment", x = c_idx - 0.2, xend = c_idx + 0.2, y = y_line, yend = y_line, linewidth = 0.6) +
+                annotate("text", x = c_idx, y = y_line * 1.06, label = p_val_txt, size = 3.5, fontface = "bold")
+            }
+          }
+        }
+      }
+      
+      # 3. Ratio Bar Plot
+      p_bar_ratio <- ggplot() +
+        geom_bar(
+          data = cur_sum,
+          aes(x = celltype, y = mean_ratio_pct, fill = group_name),
+          stat = "identity",
+          position = position_dodge(0.8),
+          width = 0.72,
+          alpha = 0.88,
+          color = "black",
+          linewidth = 0.5
+        ) +
+        geom_errorbar(
+          data = cur_sum,
+          aes(x = celltype, ymin = mean_ratio_pct, ymax = mean_ratio_pct + sem_ratio_pct, group = group_name),
+          position = position_dodge(0.8),
+          width = 0.22,
+          linewidth = 0.6
+        ) +
+        geom_point(
+          data = cur_pts,
+          aes(x = celltype, y = expr_percent, group = group_name, fill = group_name),
+          position = position_jitterdodge(jitter.width = 0.12, dodge.width = 0.8, seed = 42),
+          size = 2.4,
+          shape = 21,
+          color = "black",
+          stroke = 0.6,
+          alpha = 0.95
+        ) +
+        scale_fill_manual(name = "Group:", values = color_vec) +
+        labs(
+          title = paste0(cur_gene, " Expressing Cell Proportion (%)"),
+          subtitle = "Percentage of Positive Expressing Cells (Mean ± SEM)",
+          x = "Cell Subcluster",
+          y = paste0(cur_gene, "+ Cells (%)")
+        ) +
+        scale_y_continuous(limits = c(0, max_y_ratio), expand = c(0, 0)) +
+        theme_pub +
+        theme(legend.position = "top")
+      
+      if (exists("stats_summary_table") && "Significance_Ratio" %in% colnames(stats_summary_table)) {
+        sig_r_rows <- stats_summary_table %>% filter(Gene == cur_gene, Significance_Ratio != "ns")
+        if (nrow(sig_r_rows) > 0) {
+          for (ri in 1:nrow(sig_r_rows)) {
+            c_name <- sig_r_rows$CellType[ri]
+            c_idx <- which(celltype_vec == c_name)
+            if (length(c_idx) > 0) {
+              y_base <- cur_sum %>% filter(celltype == c_name) %>% summarize(m = max(mean_ratio_pct + sem_ratio_pct)) %>% pull(m)
+              y_line <- y_base * 1.15 + 0.1
+              p_val_txt <- paste0(sig_r_rows$Significance_Ratio[ri], " (p = ", formatC(sig_r_rows$P_val_ratio_t_test[ri], digits = 3, format = "f"), ")")
+              p_bar_ratio <- p_bar_ratio +
+                annotate("segment", x = c_idx - 0.2, xend = c_idx + 0.2, y = y_line, yend = y_line, linewidth = 0.6) +
+                annotate("text", x = c_idx, y = y_line * 1.06, label = p_val_txt, size = 3.5, fontface = "bold")
+            }
+          }
+        }
+      }
+      
+      # 4. Combined 2-in-1 Stacked Plot
+      p_2in1 <- (
+        p_bar_expr + theme(axis.title.x = element_blank(), axis.text.x = element_blank(), legend.position = "top")
+      ) / (
+        p_bar_ratio + theme(legend.position = "none")
+      ) +
+      plot_annotation(tag_levels = 'A') &
+      theme(plot.tag = element_text(face = "bold", size = 15))
+      
+      # 5. Faceted Free-Y Scale Plot
+      p_facet <- ggplot() +
+        geom_bar(data = cur_sum, aes(x = group_name, y = mean_norm, fill = group_name),
+                 stat = "identity", width = 0.65, alpha = 0.85, color = "black", linewidth = 0.4) +
+        geom_errorbar(data = cur_sum, aes(x = group_name, ymin = mean_norm, ymax = mean_norm + sem_norm),
+                      width = 0.25, linewidth = 0.5) +
+        geom_point(data = cur_pts, aes(x = group_name, y = norm_expr, fill = group_name),
+                   position = position_jitter(width = 0.1, seed = 42),
+                   size = 2.2, shape = 21, color = "black", stroke = 0.5, alpha = 0.95) +
+        facet_wrap(~celltype, scales = "free_y", ncol = min(4, length(celltype_vec))) +
+        scale_fill_manual(values = color_vec) +
+        labs(
+          title = paste0(cur_gene, " Expression in Each Subcluster (Individual Scales)"),
+          subtitle = "Normalized Average Expression (Mean ± SEM)",
+          x = NULL,
+          y = paste0(cur_gene, " Normalized Expression")
+        ) +
+        theme_bw(base_size = 11.5) +
+        theme(
+          strip.background = element_rect(fill = "#E8EEF5", color = "grey50"),
+          strip.text = element_text(face = "bold", size = 11, color = "#1F4E79"),
+          axis.text = element_text(color = "black", size = 10.5),
+          axis.title = element_text(face = "bold", color = "black", size = 11.5),
+          plot.title = element_text(face = "bold", hjust = 0.5, size = 13.5),
+          plot.subtitle = element_text(hjust = 0.5, size = 10.5, color = "grey35"),
+          legend.position = "none",
+          panel.grid.minor = element_blank()
+        )
+      
+      # 6. Combined 3-in-1 Comprehensive Overview
+      p_bar_expr_clean <- p_bar_expr +
+        labs(title = paste0(cur_gene, " Normalized Expression"), subtitle = "Mean ± SEM") +
+        theme(legend.position = "top", plot.title = element_text(size = 12.5), plot.subtitle = element_text(size = 10))
+      p_bar_ratio_clean <- p_bar_ratio +
+        labs(title = paste0(cur_gene, " Positive Proportion (%)"), subtitle = "Mean ± SEM") +
+        theme(legend.position = "top", plot.title = element_text(size = 12.5), plot.subtitle = element_text(size = 10))
+      
+      p_3in1 <- (
+        (p_bar_expr_clean | p_bar_ratio_clean)
+      ) / (
+        p_dotplot_cur + theme(plot.margin = margin(t = 6, r = 12, b = 6, l = 12))
+      ) +
+      plot_layout(heights = c(1.35, 0.85)) +
+      plot_annotation(
+        tag_levels = 'A',
+        title = paste0(cur_gene, " Expression and Cellular Distribution Across Subclusters"),
+        theme = theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 15, margin = margin(b = 8)))
+      ) &
+      theme(plot.tag = element_text(face = "bold", size = 14))
+      
+      # Save files
+      # A. Single-gene default / first-gene fallback
+      if (single_gene || is_first) {
+        ggsave(file.path(out_dir, "02_group_expression_barplot.pdf"), p_bar_expr, width = 8.5, height = 5.2)
+        ggsave(file.path(out_dir, "02_group_expression_barplot.png"), p_bar_expr, width = 8.5, height = 5.2, dpi = 300)
+        ggsave(file.path(out_dir, "03_group_ratio_barplot.pdf"), p_bar_ratio, width = 8.5, height = 5.2)
+        ggsave(file.path(out_dir, "03_group_ratio_barplot.png"), p_bar_ratio, width = 8.5, height = 5.2, dpi = 300)
+        ggsave(file.path(out_dir, "04_combined_twopanel_plot.pdf"), p_2in1, width = 8.5, height = 8.8)
+        ggsave(file.path(out_dir, "04_combined_twopanel_plot.png"), p_2in1, width = 8.5, height = 8.8, dpi = 300)
+        ggsave(file.path(out_dir, "05_facet_subclusters_barplot.pdf"), p_facet, width = 9.5, height = 6.2)
+        ggsave(file.path(out_dir, "05_facet_subclusters_barplot.png"), p_facet, width = 9.5, height = 6.2, dpi = 300)
+        ggsave(file.path(out_dir, "06_combined_threeinone_overview.pdf"), p_3in1, width = 12.5, height = 9.2)
+        ggsave(file.path(out_dir, "06_combined_threeinone_overview.png"), p_3in1, width = 12.5, height = 9.2, dpi = 300)
+      }
+      
+      # B. Gene-prefixed files
+      ggsave(file.path(out_dir, paste0(cur_gene, "_02_group_expression_barplot.pdf")), p_bar_expr, width = 8.5, height = 5.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_02_group_expression_barplot.png")), p_bar_expr, width = 8.5, height = 5.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_03_group_ratio_barplot.pdf")), p_bar_ratio, width = 8.5, height = 5.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_03_group_ratio_barplot.png")), p_bar_ratio, width = 8.5, height = 5.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_04_combined_twopanel_plot.pdf")), p_2in1, width = 8.5, height = 8.8)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_04_combined_twopanel_plot.png")), p_2in1, width = 8.5, height = 8.8, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_05_facet_subclusters_barplot.pdf")), p_facet, width = 9.5, height = 6.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_05_facet_subclusters_barplot.png")), p_facet, width = 9.5, height = 6.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_06_combined_threeinone_overview.pdf")), p_3in1, width = 12.5, height = 9.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_06_combined_threeinone_overview.png")), p_3in1, width = 12.5, height = 9.2, dpi = 300)
+      
+      # C. Chinese descriptive aliases
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达量组间比较_柱状散点图.pdf")), p_bar_expr, width = 8.5, height = 5.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达量组间比较_柱状散点图.png")), p_bar_expr, width = 8.5, height = 5.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群阳性细胞比例组间比较_柱状图.pdf")), p_bar_ratio, width = 8.5, height = 5.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群阳性细胞比例组间比较_柱状图.png")), p_bar_ratio, width = 8.5, height = 5.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达与比例综合图_双面板.pdf")), p_2in1, width = 8.5, height = 8.8)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群表达与比例综合图_双面板.png")), p_2in1, width = 8.5, height = 8.8, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶各亚群独立刻度组间表达柱状图_分面图.pdf")), p_facet, width = 9.5, height = 6.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶各亚群独立刻度组间表达柱状图_分面图.png")), p_facet, width = 9.5, height = 6.2, dpi = 300)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群组间比较三合一综合图_大图.pdf")), p_3in1, width = 12.5, height = 9.2)
+      ggsave(file.path(out_dir, paste0(cur_gene, "_小胶亚群组间比较三合一综合图_大图.png")), p_3in1, width = 12.5, height = 9.2, dpi = 300)
+    }
   }
   
   summary_txt <- file.path(out_dir, "run_summary.txt")

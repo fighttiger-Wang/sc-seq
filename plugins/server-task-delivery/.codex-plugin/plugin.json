@@ -1,0 +1,29 @@
+{
+  "name": "server-task-delivery",
+  "version": "1.1.0+codex.20261116120000",
+  "description": "生信服务器 SSH 连接管理与后台任务投递",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "server-task-delivery",
+    "服务器任务投递"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "D02 · 服务器任务投递 v1.1.0",
+    "shortDescription": "生信服务器 SSH 连接管理与后台任务投递",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $server-task-delivery to 生信服务器 SSH 连接管理与后台任务投递"
+    ]
+  }
+}

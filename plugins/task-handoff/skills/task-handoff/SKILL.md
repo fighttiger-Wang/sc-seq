@@ -1,56 +1,49 @@
 ---
 name: task-handoff
-description: Maintain centralized, cross-session continuity records for named projects, software, codebases, and skills. Use when the user says continue, iterate, resume, found another problem, pick up previous work, pause, hand off, checkpoint, or asks to list, inspect, alias, merge, migrate, audit, or roll back handoff records; also use before the final response after substantive work on a stable named object so its record is created or updated automatically. Supports Chinese triggers such as “继续迭代”“接着上次”“又发现问题”“先停下”“写交接”。
+displayName: E01 · 任务交接 v0.3.0
+description: E01 · 任务交接 v0.3.0：自动续接并维护中央交接记录 Maintain centralized, cross-session continuity records for named projects, software, codebases, and skills. Trigger updates ONLY upon major milestone completion, explicit task blocking/pausing, or explicit user request ("写交接"/"先停下"/"接着上次"); skip automatic handoff script calls during routine single-step micro-adjustments to keep responses fast.
 ---
 
-# Task Handoff
+# E01 · 任务交接 v0.3.0
 
-Maintain the centralized store at `<shared-workspace-root>\.codex-handoff`. Resolve the workspace from `CODEX_SHARED_WORKSPACE_ROOT`; when running from the source marketplace, it is the parent directory of the marketplace. Do not create new project-root `HANDOFF.md` files.
+维护位于 `<shared-workspace-root>\.codex-handoff` 的唯一中央交接库（通过 `CODEX_SHARED_WORKSPACE_ROOT` 或 `~/.codex/workspace-local.json` 解析，严禁在项目根目录散落新建 `HANDOFF.md` 或在插件缓存目录分裂建库）。
 
-Use the bundled Python script on Windows, macOS, and Linux:
+跨平台统一入口（Windows / macOS / Linux）：
 
 ```bash
 python scripts/handoff_store.py <command> <arguments>
 ```
 
-On Windows, the existing `handoff-store.ps1` remains a compatibility entrypoint. Prefer Python for new automation so the same commands work after cloning to macOS. Use the actual directory containing this selected `SKILL.md`; never reconstruct a user-profile cache path or assume a fixed drive layout. The installer writes `~/.codex/workspace-local.json`, which the Python entrypoint uses when environment variables are unavailable.
+进阶迁移、合并与存储结构说明按需查阅 [store-format.md](references/store-format.md)。
 
-Read [store-format.md](references/store-format.md) before migration, merge, rollback, repair, or direct store editing.
+## 一、 续接与启动规程 (Start or Resume)
 
-## Start or Resume
+1. **识别稳定实体**：仅针对具名项目（Project）、软件产品（Software）、代码库（Codebase）或技能（Skill）建立交接，忽略一次性匿名问答。
+2. **精准解析实体**：当用户表达“接着上次”、“继续迭代”、“又发现问题”时，依次按显式名称、别名、Skill ID 与绝对路径锚点检索：
+   ```bash
+   python scripts/handoff_store.py resolve --query '<name-or-path>'
+   ```
+3. **防串台铁律**：若返回多个候选或无精确匹配，**必须暂停询问用户**，严禁盲猜或将测试草稿工程（如 `L_app`）串台混入正式生产工程（如 `Lucky Note`）。
+4. **以真实文件为准**：匹配唯一实体后运行 `show` 读取 `CURRENT.md` 并记录 `currentRevision`（提交时作为 `--expected-revision`），同时必须核对真实代码库现状，不盲信过期记录。
 
-1. Decide whether the task has a stable identity: named project, software product, codebase, or skill. Do not register anonymous one-off work.
-2. Detect continuation intent such as continue, resume, iterate, another problem, or pick up previous work.
-3. Resolve the object using its explicit name first, then aliases, skill ID, and absolute path anchors:
+## 二、 交接更新触发边界（告别单步微调拖慢收尾）
 
-```bash
-python scripts/handoff_store.py resolve --query '<name-or-path>'
-```
+> **核心提速铁律**：**日常单步微调、普通问答、局部样式小修、轻量状态查询或讨论规划，严禁自动跑交接脚本拖慢对话收尾！**
 
-4. If resolution returns multiple candidates or no candidate while similar objects exist, stop and ask the user. Never guess.
-5. For one unique match, run `show`, read `CURRENT.md`, and verify relevant repository/filesystem reality before relying on it. Treat the record as potentially stale evidence.
-6. Record the loaded revision. It is required as `-ExpectedRevision` during the final update.
+**仅在满足以下 3 类条件之一时，才在最终回复前执行 1 次交接更新**：
+1. 🏆 **重大阶段完工（Major Milestone Completed）**：完成完整功能模块交付、正式版本发布、全流程生信注释交付或大型架构重构；
+2. 🛑 **任务明确阻塞或暂停（Explicitly Blocked / Paused）**：遇到需外部依赖/数据的硬阻塞，或测试失败留有高价值排障证据；
+3. 🗣️ **用户主动指令（Explicit User Trigger）**：用户明确提及“写交接”、“保存进度”、“先停下”、“做个快照/checkpoint”或“接着上次”。
 
-For a new stable object, continue the task without creating a record immediately. Register and create the first record only after substantive work has produced useful facts.
+## 三、 标准交接记录格式与提交
 
-## Update Before the Final Response
-
-Update once, immediately before the final response, when any of these is true:
-
-- substantive work completed;
-- testing failed with reusable evidence;
-- work is explicitly blocked;
-- the user says to pause or stop.
-
-Do not update for ordinary discussion, clarification, planning without implementation, or intermediate progress messages. A forced process termination, crash, or power loss cannot be recorded.
-
-Write a concise UTF-8 Markdown file with exactly these sections:
+更新时编写精炼的 UTF-8（无 BOM）Markdown 草稿，严格包含以下 5 个二级标题：
 
 ```markdown
 # <canonical name> continuity
 
 > Status: completed | failed | blocked | paused | in-progress
-> Updated: <absolute local timestamp with timezone>
+> Updated: <YYYY-MM-DD HH:MM:SS +08:00>
 > Revision basis: <loaded revision or new>
 
 ## Goal
@@ -60,60 +53,17 @@ Write a concise UTF-8 Markdown file with exactly these sections:
 ## Pitfalls
 ```
 
-Only include goals, material changes, verification evidence, unresolved issues, and actionable pitfalls. Do not paste chat transcripts, long diffs, secrets, credentials, customer data, or irrelevant command logs.
+- **已注册实体提交**：
+  ```bash
+  python scripts/handoff_store.py commit --id '<id>' --content-path '<draft.md>' --expected-revision <loaded-revision> --status '<status>'
+  ```
+- **新实体首次提交**：先执行 `register --id '<id>' --name '<name>' --type '<type>' --anchor '<abs-path>'`，再以 `--expected-revision 0` 提交。
+- **并发防覆盖**：若 `--expected-revision` 不匹配，说明其他会话已更新该实体，必须停止并询问用户，严禁强行覆盖。每个实体最多自动保留最近 30 条历史版本。
 
-For an existing object:
+## 四、 常用管理命令与质量门禁
 
-```bash
-python scripts/handoff_store.py commit --id '<id>' --content-path '<draft.md>' --expected-revision <loaded-revision> --status '<status>'
-```
-
-For a new object, register first with canonical name, type, aliases, and absolute anchors, then commit with expected revision `0`.
-
-If the expected revision no longer matches, another task updated the same object. Stop and ask the user; never overwrite or auto-merge.
-
-After committing, run `show` and verify that the reported revision, current content, and strongest remaining issue agree. The store retains at most 30 history entries per object.
-
-## Evidence Rules
-
-- Prefer repository and filesystem evidence over conversation claims or old records.
-- Never claim a change, test, commit, push, or delivery without evidence.
-- Mark uncertainty explicitly as `未验证`; mark external dependencies as `阻塞`.
-- Preserve relevant uncommitted/untracked user work and distinguish it from the current task.
-- Record failed approaches with observed evidence, cause when known, and the safer alternative.
-- Do not commit, push, deploy, clean up, or delete merely to make a handoff tidy.
-
-## Migration
-
-Scan only the user-approved E-drive root. Ignore plugin/skill files whose path merely contains `handoff`; candidate legacy records are documentation files such as `HANDOFF.md` or `CODEX_HANDOFF.md`.
-
-For every legacy file:
-
-1. Identify the owning stable object and resolve or register it.
-2. Compare all records for that object. If completion state, validation state, requirements, or next action conflict, stop for user adjudication.
-3. Import each original file as an exact SHA-256-verified snapshot with `import-legacy`.
-4. Commit one structured current record that retains still-valid facts from all sources.
-5. Run `audit` and read the current record back.
-6. Only after successful verification, run `finalize-legacy` for each exact source/snapshot pair. This deletes the old source but keeps its verified central snapshot subject to the 30-entry retention limit.
-
-## Management
-
-- `list`: list all registered objects and revisions.
-- `resolve -Query <text>`: return a unique match or candidate list.
-- `show -Id <id>`: print manifest and current record.
-- `add-alias -Id <id> -Aliases <names>`: add non-conflicting aliases.
-- `merge -SourceId <id> -TargetId <id> -ConfirmMerge`: merge duplicate identities only after explicit user confirmation.
-- `rollback -Id <id> -Revision <n> -ExpectedRevision <n>`: create a new revision from an older history entry; never rewrite history.
-- `audit`: verify registry, manifests, current files, hashes, locks, and the 30-entry limit.
-- `unlock -Id <id> -ConfirmUnlock`: remove a stale lock only after confirming no other task is writing.
-
-## Quality Gate
-
-Do not finish until:
-
-- the stable object is uniquely identified;
-- the current state is verified against relevant files;
-- the update status is truthful;
-- current and history agree on the new revision;
-- no concurrency mismatch or unresolved migration conflict was bypassed;
-- no secrets or unnecessary personal/customer data were stored.
+- `list`：列出全部注册实体与最新版本号。
+- `show --id <id>`：查看实体 Manifest 与 `CURRENT.md`。
+- `add-alias --id <id> --alias <name>`：追加无冲突别名。
+- `rollback --id <id> --revision <n> --expected-revision <cur>`：从历史版本生成新修订版（绝不篡改历史）。
+- `audit`：校验注册表、Manifest、无 BOM UTF-8 编码、SHA-256 哈希一致性与 30 条历史上限（返回 `"ok": true` 且 Exit Code `0`）。

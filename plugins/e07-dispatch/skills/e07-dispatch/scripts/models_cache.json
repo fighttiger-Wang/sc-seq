@@ -1,0 +1,38 @@
+{
+  "probed_at": "2026-11-19T18:09:00+08:00",
+  "status": "READY",
+  "default_engine": "subagent",
+  "engines": {
+    "subagent": {
+      "name": "Gemini 原生后台子 Agent (invoke_subagent)",
+      "type": "native",
+      "ready": true,
+      "desc": "默认极速后台分流，零排队、拥有原生工具能力"
+    },
+    "dsh": {
+      "name": "DeepSeek Harness (dsh.cmd)",
+      "type": "cli",
+      "binary": "E:\\A001-软件安装\\deepseek\\resources\\runtime\\cli\\bin\\dsh.cmd",
+      "ready": true,
+      "models": [
+        "deepseek-reasoner (V4-Pro)",
+        "deepseek-chat (V4.1-Flash)"
+      ],
+      "desc": "极速逻辑拆解、单点脚本与差异分析"
+    },
+    "codex": {
+      "name": "OpenAI Codex (codex.exe)",
+      "type": "cli",
+      "binary": "C:\\Users\\fight\\AppData\\Local\\OpenAI\\Codex\\bin\\9e1da79431da526b\\codex.exe",
+      "ready": true,
+      "models": [
+        "GPT-6.2-Sol",
+        "GPT-6.2-Astra",
+        "GPT-6.1 Terra",
+        "GPT-6.1-Sol",
+        "GPT-6-Astra"
+      ],
+      "desc": "深度工程改造、架构重构与多文件施工"
+    }
+  }
+}

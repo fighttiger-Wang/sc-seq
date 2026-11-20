@@ -6,7 +6,7 @@
  *   1. scan [dir]                : 二开检索、现有组件提取、重复逻辑/硬编码扫描、单文件>300行超长预警
  *   2. snapshot <files...>       : 改前毫秒级物理文件快照（存入 .c06/snapshots/）+ 提取函数与事件符号表
  *   3. verify [--dir <dir>]      : 改后符号表防删比对（发现误删函数报错拦截，支持 --auto-undo）+ 语法基础校验 + 分层评估报告
- *   4. undo [--dir <dir>]        : (对应口令 u) 100% 物理字节级还原最近一次快照，杜绝假回滚
+ *   4. undo [--dir <dir>]        : (对应口令 .u / 撤回) 100% 物理字节级还原最近一次快照，杜绝假回滚
  *   5. anchor [dir]              : 读取或自动初始化项目专属身份证 PROJECT_ANCHOR.md
  */
 
@@ -610,7 +610,7 @@ function cmdVerify(args) {
       console.log(`[AUTO-UNDO] 正在自动触发 vibe-guard.js undo 一键物理回滚...`);
       cmdUndo(explicitDir ? ['--dir', explicitDir] : []);
     } else {
-      console.error(`👉 请立即运行: node vibe-guard.js undo (或输入快捷键 u) 100% 物理恢复原状！`);
+      console.error(`👉 请立即运行: node vibe-guard.js undo (或输入快捷口令 .u / 撤回) 100% 物理恢复原状！`);
     }
     process.exit(2);
   }
@@ -636,6 +636,7 @@ if (require.main === module) {
       process.exit(cmdVerify(rest));
       break;
     case 'undo':
+    case '.u':
     case 'u':
       process.exit(cmdUndo(rest));
       break;

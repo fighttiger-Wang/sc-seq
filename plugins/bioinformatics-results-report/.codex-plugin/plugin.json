@@ -1,26 +1,23 @@
 {
   "name": "bioinformatics-results-report",
-  "version": "0.1.0+codex.20260902152211",
-  "description": "Interpret completed bioinformatics result folders and generate a literature-grounded, self-contained HTML report.",
+  "version": "0.1.0+codex.20261116120000",
+  "description": "自动化解读生信统计结果并生成单文件专业 HTML 报告",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "11 · 生信结果智能解读报告 v0.1.0",
-    "shortDescription": "解读已有统计结果并生成单文件专业 HTML 报告",
+    "displayName": "A05 · 交互解读报告 v0.1.0",
+    "shortDescription": "自动化解读生信统计结果并生成单文件专业 HTML 报告",
     "longDescription": "读取生信结果文件夹中的统计表、科研图片和既有说明，经分组与文件用途确认后完成独立生物学判读、可核查文献检索、科学主线组织和自包含 HTML 报告生成。第一版支持细胞比例/ROE、差异表达、GO/KEGG/GSEA/GSVA、细胞通讯和拟时序。",
     "developerName": "fight",
     "category": "Education & Research",
     "capabilities": [
       "Interactive",
-      "Read",
       "Write"
     ],
     "defaultPrompt": [
-      "解读这个结果文件夹并生成专业 HTML 报告。",
-      "整理已有生信统计表和图片，形成可转发的单文件报告。",
-      "结合可核查文献解读这些单细胞分析结果。"
+      "Use $bioinformatics-results-report to 自动化解读生信统计结果并生成单文件专业 HTML 报告"
     ],
     "brandColor": "#17365D"
   }

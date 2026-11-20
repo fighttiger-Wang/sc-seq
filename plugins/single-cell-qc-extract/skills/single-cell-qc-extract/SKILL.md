@@ -1,9 +1,10 @@
 ---
 name: single-cell-qc-extract
-description: Extract structured single-cell RNA-seq project QC information from Chinese project descriptions and screenshots/images of Cell Ranger, Seurat QC, clustering, and cell-type annotation reports. Use when the user provides project text containing contract/project metadata such as LC project IDs, customer names, species/sample counts, tissue, sequencing volume, expected captured cells, QC status, service scope, plus images containing Sample-level metrics like Estimated number of cells, Mean reads per cell, Mean genes per cell, Reads mapped to genome, Sequencing saturation, and Cell type annotations.
+displayName: A01 · 质控过滤提取 v0.1.0
+description: A01 · 质控过滤提取 v0.1.0：从项目描述和截图中提取单细胞 QC 与细胞注释表。 Extract structured single-cell RNA-seq project QC information from Chinese project descriptions and screenshots/images of Cell Ranger, Seurat QC, clustering, and cell-type annotation reports. Use when the user provides project text containing contract/project metadata such as LC project IDs, customer names, species/sample counts, tissue, sequencing volume, expected captured cells, QC status, service scope, plus images containing Sample-level metrics like Estimated number of cells, Mean reads per cell, Mean genes per cell, Reads mapped to genome, Sequencing saturation, and Cell type annotations.
 ---
 
-# Single Cell QC Extract
+# A01 · 质控过滤提取 v0.1.0
 
 ## Workflow
 
@@ -44,4 +45,3 @@ Prefer Chinese table headers for user-facing responses unless the user asks for 
 - If local image files are available but the embedded preview is unclear, use image viewing/OCR tools to zoom or inspect them.
 - Keep commas and percent signs exactly as shown.
 - For sample identifiers, preserve case and underscores exactly, for example `D807_D811_CCM`.
-

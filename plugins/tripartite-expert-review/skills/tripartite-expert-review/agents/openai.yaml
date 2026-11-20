@@ -1,0 +1,7 @@
+interface:
+  display_name: "E02 · 生信三方评审 v0.2.0"
+  short_description: "【生信科研与注释专用】红蓝绿三方专家深度对抗评审与三阶收敛准则"
+  default_prompt: "Use $tripartite-expert-review to 启动生信科研与单细胞注释红蓝绿三方专家深度评审"
+
+policy:
+  allow_implicit_invocation: true

@@ -17,18 +17,6 @@
       "category": "Productivity"
     },
     {
-      "name": "single-cell-qc-image-display",
-      "source": {
-        "source": "local",
-        "path": "./plugins/single-cell-qc-image-display"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "sc-major-celltype-annotation-auto",
       "source": {
         "source": "local",
@@ -38,97 +26,13 @@
         "installation": "INSTALLED_BY_DEFAULT",
         "authentication": "ON_INSTALL"
       },
-      "category": "Productivity"
+      "category": "Education & Research"
     },
     {
       "name": "sc-marker-cluster-annotation-auto",
       "source": {
         "source": "local",
         "path": "./plugins/sc-marker-cluster-annotation-auto"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "feature-gene-heatmap-violin",
-      "source": {
-        "source": "local",
-        "path": "./plugins/feature-gene-heatmap-violin"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Education & Research"
-    },
-    {
-      "name": "kegg-flow-bubble-plot",
-      "source": {
-        "source": "local",
-        "path": "./plugins/kegg-flow-bubble-plot"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "workflow-script-structure",
-      "source": {
-        "source": "local",
-        "path": "./plugins/workflow-script-structure"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "workbench",
-      "source": {
-        "source": "local",
-        "path": "./plugins/workbench"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "task-handoff",
-      "source": {
-        "source": "local",
-        "path": "./plugins/task-handoff"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "skill-writing",
-      "source": {
-        "source": "local",
-        "path": "./plugins/skill-writing"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "bioinformatics-results-report",
-      "source": {
-        "source": "local",
-        "path": "./plugins/bioinformatics-results-report"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",
@@ -149,10 +53,34 @@
       "category": "Education & Research"
     },
     {
-      "name": "personal-skill-marketplace-setup",
+      "name": "bioinformatics-results-report",
       "source": {
         "source": "local",
-        "path": "./plugins/personal-skill-marketplace-setup"
+        "path": "./plugins/bioinformatics-results-report"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    },
+    {
+      "name": "bioinformatics-results-report-classic",
+      "source": {
+        "source": "local",
+        "path": "./plugins/bioinformatics-results-report-classic"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    },
+    {
+      "name": "workflow-script-structure",
+      "source": {
+        "source": "local",
+        "path": "./plugins/workflow-script-structure"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",
@@ -161,10 +89,22 @@
       "category": "Productivity"
     },
     {
-      "name": "bioinformatics-results-report-classic",
+      "name": "single-cell-qc-image-display",
       "source": {
         "source": "local",
-        "path": "./plugins/bioinformatics-results-report-classic"
+        "path": "./plugins/single-cell-qc-image-display"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    },
+    {
+      "name": "feature-gene-heatmap-violin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/feature-gene-heatmap-violin"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",
@@ -185,18 +125,6 @@
       "category": "Education & Research"
     },
     {
-      "name": "scientific-diagram-016",
-      "source": {
-        "source": "local",
-        "path": "./plugins/scientific-diagram-016"
-      },
-      "policy": {
-        "installation": "INSTALLED_BY_DEFAULT",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Education & Research"
-    },
-    {
       "name": "sc-group-gene-bubble-stats",
       "source": {
         "source": "local",
@@ -209,16 +137,40 @@
       "category": "Education & Research"
     },
     {
-      "name": "lucky-note-workbench-iteration",
+      "name": "sc-cell-proportion-stats",
       "source": {
         "source": "local",
-        "path": "./plugins/lucky-note-workbench-iteration"
+        "path": "./plugins/sc-cell-proportion-stats"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",
         "authentication": "ON_INSTALL"
       },
-      "category": "Productivity"
+      "category": "Education & Research"
+    },
+    {
+      "name": "kegg-flow-bubble-plot",
+      "source": {
+        "source": "local",
+        "path": "./plugins/kegg-flow-bubble-plot"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    },
+    {
+      "name": "scientific-diagram-016",
+      "source": {
+        "source": "local",
+        "path": "./plugins/scientific-diagram-016"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
     },
     {
       "name": "c06-ai-design-pipeline",
@@ -227,10 +179,118 @@
         "path": "./plugins/c06-ai-design-pipeline"
       },
       "policy": {
-        "installation": "AVAILABLE",
+        "installation": "INSTALLED_BY_DEFAULT",
         "authentication": "ON_INSTALL"
       },
       "category": "Development"
+    },
+    {
+      "name": "hpc-computing-guide",
+      "source": {
+        "source": "local",
+        "path": "./plugins/hpc-computing-guide"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "server-task-delivery",
+      "source": {
+        "source": "local",
+        "path": "./plugins/server-task-delivery"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "task-handoff",
+      "source": {
+        "source": "local",
+        "path": "./plugins/task-handoff"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "tripartite-expert-review",
+      "source": {
+        "source": "local",
+        "path": "./plugins/tripartite-expert-review"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "skill-writing",
+      "source": {
+        "source": "local",
+        "path": "./plugins/skill-writing"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "personal-skill-marketplace-setup",
+      "source": {
+        "source": "local",
+        "path": "./plugins/personal-skill-marketplace-setup"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "skill-sync-publish",
+      "source": {
+        "source": "local",
+        "path": "./plugins/skill-sync-publish"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "local-agent-delegate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/local-agent-delegate"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "e07-dispatch",
+      "source": {
+        "source": "local",
+        "path": "./plugins/e07-dispatch"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

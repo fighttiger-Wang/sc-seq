@@ -1,0 +1,30 @@
+{
+  "name": "tripartite-expert-review",
+  "version": "0.2.0+codex.20261120083000",
+  "description": "【生信科研与注释专用】针对单细胞注释（A02/A03）、生信数据分析 SOP（A01~A07）与科研图表（B01~B07）的红蓝绿三方专家深度对抗评审方法学",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "tripartite-expert-review",
+    "E02-生信三方评审",
+    "生信三方评审"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "E02 · 生信三方评审 v0.2.0",
+    "shortDescription": "【生信科研与注释专用】红蓝绿三方专家深度对抗评审与三阶收敛准则",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $tripartite-expert-review to 启动生信科研与单细胞注释红蓝绿三方专家深度评审"
+    ]
+  }
+}

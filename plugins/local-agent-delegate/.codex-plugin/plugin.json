@@ -1,0 +1,30 @@
+{
+  "name": "local-agent-delegate",
+  "version": "1.1.0+codex.20261120083000",
+  "description": "E06 · 红蓝对抗闭环 v1.1.0（通用软件/App/工程代码专职双脑红蓝对抗，默认内置 0 额外付费异构王牌 2A Claude Sonnet 5.5 ⚔ 4A Gemini 4 Neon High 对攻，支持额度耗尽自动接力）",
+  "author": {
+    "name": "fight"
+  },
+  "homepage": "https://openai.com/",
+  "repository": "https://openai.com/",
+  "license": "MIT",
+  "keywords": [
+    "local-agent-delegate",
+    "E06-红蓝对抗闭环",
+    "红蓝对抗闭环"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "E06 · 红蓝对抗闭环 v1.1.0",
+    "shortDescription": "专职双脑红蓝对抗闭环器（内置 0 额外付费异构王牌对攻 + 额度自动接力）",
+    "developerName": "fight",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $local-agent-delegate to 启动双脑红蓝对抗闭环"
+    ]
+  }
+}

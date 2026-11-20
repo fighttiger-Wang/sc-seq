@@ -1,9 +1,10 @@
 ---
 name: celltype-function-heatmap
-description: Create exactly two finalized cell-type function gene-expression heatmaps from cell-type and cell-type-by-sample matrices, a gene-module table, and a cell-type color table. Use when users request the fixed epithelial-style heatmap layout with aligned top annotations, centered vertical cell-type labels, right-side gene module blocks, preserved orders, and no clustering.
+displayName: B03 · 功能模块热图 v0.1.0
+description: B03 · 功能模块热图 v0.1.0：固定生成细胞类型及分样本功能基因热图并校验顺序 Create exactly two finalized cell-type function gene-expression heatmaps from cell-type and cell-type-by-sample matrices, a gene-module table, and a cell-type color table. Use when users request the fixed epithelial-style heatmap layout with aligned top annotations, centered vertical cell-type labels, right-side gene module blocks, preserved orders, and no clustering.
 ---
 
-# 细胞类型功能基因热图
+# B03 · 功能模块热图 v0.1.0
 
 Use the bundled R script as the single source of drawing logic. Do not recreate the layout manually or generate exploratory variants unless the user explicitly asks for them.
 

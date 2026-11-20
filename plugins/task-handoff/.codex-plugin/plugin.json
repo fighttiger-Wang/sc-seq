@@ -1,24 +1,23 @@
 {
   "name": "task-handoff",
-  "version": "0.2.1+codex.20260902152211",
-  "description": "Maintain centralized cross-session continuity records for named projects, software, codebases, and skills.",
+  "version": "0.3.0+codex.20261120083000",
+  "description": "会话跨轮次上下文交接与断点接续（仅在重大阶段完工、明确阻塞/暂停或用户主动要求时触发，日常单步微调免扰）",
   "author": {
     "name": "Personal"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "09 · 任务交接 v0.2.1",
-    "shortDescription": "自动续接并维护中央交接记录",
-    "longDescription": "识别命名项目、软件、代码库和 skill，在续接时自动读取中央记录，并在完成、失败、阻塞或暂停前安全更新最新状态与最近 30 次历史。",
-    "developerName": "Personal",
+    "displayName": "E01 · 任务交接 v0.3.0",
+    "shortDescription": "会话跨轮次上下文交接与断点接续（重大阶段/阻塞/主动要求时触发）",
+    "longDescription": "识别命名项目、软件、代码库和 skill，在续接时自动读取中央记录，仅在重大阶段完工、任务明确阻塞/暂停或用户主动要求时更新最新状态与最近 30 次历史。",
+    "developerName": "fight",
     "category": "Productivity",
     "capabilities": [
-      "Cross-session continuity",
-      "Alias resolution",
-      "Revision conflict protection",
-      "Legacy handoff migration",
-      "History and rollback"
+      "Interactive",
+      "Write"
     ],
-    "defaultPrompt": "使用 $task-handoff 续接或更新命名项目、软件、代码库或 skill 的中央交接记录。"
+    "defaultPrompt": [
+      "Use $task-handoff to 会话跨轮次上下文交接与断点接续"
+    ]
   }
 }

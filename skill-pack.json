@@ -2,15 +2,11 @@
   "schemaVersion": 1,
   "name": "workspace-local",
   "displayName": "Personal Shared Skills",
-  "expectedPluginCount": 19,
+  "expectedPluginCount": 24,
   "plugins": [
     {
       "id": "single-cell-qc-extract",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "single-cell-qc-image-display",
-      "version": "0.1.0+codex.20260902152211"
+      "version": "0.1.0+codex.20261116120000"
     },
     {
       "id": "sc-major-celltype-annotation-auto",
@@ -18,68 +14,92 @@
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.11.6+codex.20261027021305"
-    },
-    {
-      "id": "feature-gene-heatmap-violin",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "kegg-flow-bubble-plot",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "workflow-script-structure",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "workbench",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "task-handoff",
-      "version": "0.2.1+codex.20260902152211"
-    },
-    {
-      "id": "skill-writing",
-      "version": "0.3.4+codex.20261026031327"
-    },
-    {
-      "id": "bioinformatics-results-report",
-      "version": "0.1.0+codex.20260902152211"
+      "version": "0.12.0+codex.20261116120000"
     },
     {
       "id": "annotation-knowledge-release",
-      "version": "0.1.0+codex.20260902152211"
+      "version": "0.1.0+codex.20261116120000"
     },
     {
-      "id": "personal-skill-marketplace-setup",
-      "version": "0.3.3+codex.20261013102451"
+      "id": "bioinformatics-results-report",
+      "version": "0.1.0+codex.20261116120000"
     },
     {
       "id": "bioinformatics-results-report-classic",
-      "version": "0.2.0+codex.20261022074542"
+      "version": "0.2.0+codex.20261116120000"
+    },
+    {
+      "id": "workflow-script-structure",
+      "version": "0.1.0+codex.20261116120000"
+    },
+    {
+      "id": "single-cell-qc-image-display",
+      "version": "0.1.0+codex.20261116120000"
+    },
+    {
+      "id": "feature-gene-heatmap-violin",
+      "version": "0.1.0+codex.20261116120000"
     },
     {
       "id": "celltype-function-heatmap",
-      "version": "0.1.0+codex.20260902152211"
-    },
-    {
-      "id": "scientific-diagram-016",
-      "version": "0.1.0+codex.20260907002131"
+      "version": "0.1.0+codex.20261116120000"
     },
     {
       "id": "sc-group-gene-bubble-stats",
-      "version": "0.1.0+codex.20261008120000"
+      "version": "0.1.0+codex.20261116120000"
     },
     {
-      "id": "lucky-note-workbench-iteration",
-      "version": "0.1.0+codex.20261028103000"
+      "id": "sc-cell-proportion-stats",
+      "version": "0.1.0+codex.20261116120000"
+    },
+    {
+      "id": "kegg-flow-bubble-plot",
+      "version": "0.1.0+codex.20261116120000"
+    },
+    {
+      "id": "scientific-diagram-016",
+      "version": "0.1.0+codex.20261116120000"
     },
     {
       "id": "c06-ai-design-pipeline",
-      "version": "5.0.0+codex.20261120003000",
-      "displayName": "19 · C06-AI设计流水线 v5.0.0 (Vibe-Agile)"
+      "version": "5.0.1+codex.20261120083000",
+      "displayName": "C06 · AI设计流水线 v5.0.1"
+    },
+    {
+      "id": "hpc-computing-guide",
+      "version": "1.0.0+codex.20261116120000"
+    },
+    {
+      "id": "server-task-delivery",
+      "version": "1.1.0+codex.20261116120000"
+    },
+    {
+      "id": "task-handoff",
+      "version": "0.3.0+codex.20261120083000"
+    },
+    {
+      "id": "tripartite-expert-review",
+      "version": "0.2.0+codex.20261120083000"
+    },
+    {
+      "id": "skill-writing",
+      "version": "0.4.0+codex.20261120083000"
+    },
+    {
+      "id": "personal-skill-marketplace-setup",
+      "version": "0.4.0+codex.20261120083000"
+    },
+    {
+      "id": "skill-sync-publish",
+      "version": "0.1.0+codex.20261120083000"
+    },
+    {
+      "id": "local-agent-delegate",
+      "version": "1.1.0+codex.20261120083000"
+    },
+    {
+      "id": "e07-dispatch",
+      "version": "1.1.0+codex.20261120083000"
     }
   ],
   "sharedPaths": [

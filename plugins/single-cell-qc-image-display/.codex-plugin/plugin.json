@@ -1,25 +1,23 @@
 {
   "name": "single-cell-qc-image-display",
-  "version": "0.1.0+codex.20260902152211",
-  "description": "Render single-cell QC project tables as Excel workbooks and presentation-ready PNG overview images.",
+  "version": "0.1.0+codex.20261116120000",
+  "description": "展示单细胞过滤前后指标分布小提琴图与散点图",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "02 · 图片展示单细胞质控数据 v0.1.0",
-    "shortDescription": "将单细胞质控大表输出为 Excel 和展示大图",
+    "displayName": "B01 · 质控分布图 v0.1.0",
+    "shortDescription": "展示单细胞过滤前后指标分布小提琴图与散点图",
     "longDescription": "A personal Codex skill for turning structured single-cell RNA-seq QC rows into a centralized Excel workbook and a presentation-ready wide PNG image with project summary cards and detailed sample-level rows.",
     "developerName": "fight",
-    "category": "Productivity",
+    "category": "Education & Research",
     "capabilities": [
       "Interactive",
       "Write"
     ],
     "defaultPrompt": [
-      "把这些单细胞质控信息整理成 Excel 和展示大图。",
-      "根据项目号补充字段后重新输出大表图片。",
-      "将单细胞 QC 样本指标做成汇报用宽幅图。"
+      "Use $single-cell-qc-image-display to 展示单细胞过滤前后指标分布小提琴图与散点图"
     ]
   }
 }

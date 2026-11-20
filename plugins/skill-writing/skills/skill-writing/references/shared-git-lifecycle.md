@@ -2,18 +2,6 @@
 
 Use this workflow for every maintained `workspace-local` Skill on Windows or macOS.
 
-## Release identity
-
-The remote repository's stable `main` ref is the only cross-computer release authority. Keep the workflow number (for example `03`) fixed for lookup, and maintain an independent per-Skill visible semantic release version (for example `v0.7.0`). Record both with the exact Git commit and a content SHA-256. Plugin cachebuster versions are technical installation metadata and must not replace the user-facing release version.
-
-Use four artifact states: `stable`, `candidate`, `rollback`, and `quarantine`.
-Only `stable` may be registered, installed, or callable. Rollback artifacts
-must be explicitly marked and recoverable; quarantine artifacts must be
-excluded from source discovery. A cachebuster never upgrades an older semantic
-version and never makes a stale or dirty source publishable.
-
-Draft edits belong to the current task's isolated worktree or staging copy. They are testable only through an explicit current-task path and are not registered, installed, published, or callable through `/`. After the test report, ask once for a single explicit authorization covering publication, CI-gated merge, stable verification, and installation. Promotion must be all-or-nothing across the selected Skill's source, manifests, release record, and installation; on a failed gate, retain the previous callable release. Use a PR-only outcome only when the user explicitly limits the request to publication only, PR only, no merge, or no install.
-
 ## Why a pull request exists
 
 GitHub is the shared transport, while `main` is the stable release channel. A pull request keeps candidate changes on a `codex/*` branch so that conflicts, changed files, tests, and platform results can be reviewed before every computer consumes them. A PR is not required for Git to function, but it is the safety boundary that prevents an untested edit from immediately becoming the shared version.
@@ -49,17 +37,13 @@ Both marketplace entries must use `INSTALLED_BY_DEFAULT`, `ON_INSTALL`, `./plugi
 1. Run `personal-skill-marketplace-setup` in unconfirmed `publish` mode. This is a read-only plan.
 2. If the plan reports an unregistered plugin, complete all registries and rerun validation. Do not bypass the error with manual Git commands.
 3. Present changed paths, affected plugins, tests, target branch, and whether GitHub authentication is available.
-4. Ask once for the full end-to-end release authorization. The question must explicitly cover version update, commit, push, PR creation, CI wait, SHA-pinned merge, stable-main verification, and local cache refresh. One affirmative reply authorizes the complete sequence; do not ask a second merge or installation question. If the user explicitly requests publication only, PR only, no merge, or no install, use the narrower PR-only route.
-5. After the combined confirmation, let the setup Skill automatically increment unchanged semantic patch versions, synchronize display names/cachebusters/manifests, test, commit, and push a `codex/*` branch. Never push directly to `main`.
-   Before incrementing, it must fetch the stable ref and reject any affected
-   candidate whose semantic version is lower than or equal to the stable
-   manifest, whose active metadata contains a legacy version, or whose status
-   contains mixed staged/unstaged paths.
-6. Create or reuse a PR through authenticated GitHub CLI/API access. Without authentication, return a compare URL; a merge-authorized run must stop because it cannot verify or merge the PR.
-7. Under the single combined authorization, the setup Skill waits for all observed checks and commit statuses to succeed, requires a clean non-draft PR, merges with the exact head SHA, verifies that both release and merge commits are in remote `main`, and refreshes the local cache from verified stable content. It restores an original registration only when that source is clean, on the stable branch, and synchronized. Otherwise it preserves the old source as a work copy and retains/registers a persistent clean stable clone.
+4. Ask once for explicit publication confirmation.
+5. After confirmation, let the setup Skill update affected cachebusters, synchronize versions, test, commit, and push a `codex/*` branch. Never push directly to `main`.
+6. Create a PR when authenticated GitHub CLI/API access exists. Otherwise return a compare URL and state that the PR has not yet been created.
+7. Do not merge automatically. Report CI results and ask separately before merging unless the user already gave explicit merge authorization.
 
 ## After merge
 
-On the releasing computer, a successful full closeout safely fast-forwards a clean registered stable source and refreshes the complete callable cache from verified stable `main`. It never overwrites or re-registers a dirty, divergent, detached, development, or non-Git source; that source remains a preserved work copy while a persistent clean stable clone becomes the runtime registration. Verify the actual versioned cache directories, cached manifests, and source-to-cache file hashes after final registration settles. On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs affected plugins. Restart Codex after an installed update, then verify that the new task loaded the expected versioned `SKILL.md` path before declaring the release callable.
+On another computer, preflight compares the verified remote stable commit before the first relevant Skill use or edit in that task. When the commit is unchanged it does not download or reinstall anything. When `main` advanced, it performs a fast-forward update and installs only affected plugins. Restart Codex after an installed update.
 
 Machine-local items do not travel through GitHub: clone path, Git credentials, Codex home, marketplace registration, and the managed `AGENTS.md` trigger. Bootstrap configures these separately on every computer.

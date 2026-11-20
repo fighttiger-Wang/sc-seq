@@ -1,9 +1,10 @@
 ---
 name: scientific-diagram-016
-description: Create stable, publication-ready scientific workflow diagrams, study-design maps, comparison frameworks, hypothesis matrices, evidence chains, and simple mechanism or spatial schematics as self-contained SVG. Use for newly authored conceptual figures; do not use for measured quantitative charts, existing result figures, complex biological illustration, or image generation.
+displayName: B07 · 机制流程概念图 v0.1.0
+description: B07 · 机制流程概念图 v0.1.0：以 Typst 固定模板稳定生成科研流程图与概念图 Create stable, publication-ready scientific workflow diagrams, study-design maps, comparison frameworks, hypothesis matrices, evidence chains, and simple mechanism or spatial schematics as self-contained SVG. Use for newly authored conceptual figures; do not use for measured quantitative charts, existing result figures, complex biological illustration, or image generation.
 ---
 
-# Scientific Diagram 016
+# B07 · 机制流程概念图 v0.1.0
 
 Create concise scientific concept figures whose structure remains readable in HTML, on a 390 px screen, and in A4 print. Prefer fixed Typst/CeTZ templates that produce separate desktop, mobile, and print SVGs. Produce editable source plus self-contained SVG; label non-data-derived figures clearly.
 

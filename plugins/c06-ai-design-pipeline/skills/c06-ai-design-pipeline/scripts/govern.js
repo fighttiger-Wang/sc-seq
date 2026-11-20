@@ -205,7 +205,7 @@ function runGovernance(targetDir, options = {}) {
   }
 
   // 输出清晰的人话体检报告
-  console.log(`# 🧹 C06 项目长期治理与体检除草报告 (口令 \`g\`)`);
+  console.log(`# 🧹 C06 项目长期治理与体检除草报告 (口令 \`.g\` / \`体检\`)`);
   console.log(`- 体检目标: ${root}`);
   console.log(`- 扫描规模: 共 ${allFiles.length} 个文件 (其中核心源码 ${codeTexts.length} 个)\n`);
 

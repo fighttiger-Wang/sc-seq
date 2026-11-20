@@ -27,4 +27,4 @@
   1. **立即停止第 3 次盲改**！
   2. 强制执行 `node "<SKILL_DIR>/scripts/vibe-guard.js" undo` 将代码 100% 物理还原到改前干净基线（严禁凭记忆手写“假回滚”）。
   3. 触发负样本沉淀：`node "<SKILL_DIR>/scripts/distill.js" --negative --category "Bug修复踩坑" --title "<问题简述>" --badcase "<失败改法>" --solution "<待查方向>" --rule "<防再犯红线>"`
-  4. 向用户输出四格回执，并建议通过 E06 / E07 呼叫异构模型（Codex / DeepSeek）进行双脑交叉会诊。
+  4. 向用户输出四格回执，并建议通过 `E06-红蓝对抗闭环` / `E07-派发` 呼叫异构模型进行双脑交叉会诊。

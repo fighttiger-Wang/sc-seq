@@ -1,0 +1,29 @@
+# B05 · 单细胞细胞比例统计与显著性分析 参数配置文件模板
+
+# 输入数据路径（支持 Seurat RDS/RData 或 metadata 表格）
+input: "/mnt/test/AABB/Project_Name/Plot.rData"
+
+# 外部映射文件（可选，若 metadata 中已存在相应列可留空）
+annotation_file: "/mnt/test/AABB/Project_Name/Annotation_Input.xlsx"
+grouping_file: "/mnt/test/AABB/Project_Name/Annotation_Input.xlsx"
+
+# 交付输出路径
+output_dir: "/mnt/test/AABB/Project_Name/cell_proportion_analysis"
+
+# 分析层级（元数据列名，支持多个逗号分隔）
+celltype_columns: "cell_type_fine,cell_type_major"
+
+# 实验分组与样本顺序控制（用于严格固定图表坐标轴与图例顺序）
+group_order:
+  - "WT"
+  - "Placebo"
+  - "Treatment_A"
+  - "Treatment_B"
+
+# 配色与排版微调
+plotting:
+  palette: "nature"      # 可选: nature, classic, vibrant
+  ncols: 4               # 动态多子图排版列数（默认 4）
+  panel_width: 3.8       # 单个子图宽度（英寸）
+  panel_height: 3.2      # 单个子图高度（英寸）
+  header_height: 2.0     # 顶部双层隔离图例区高度（英寸，防止重叠关键参数）

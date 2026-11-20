@@ -23,8 +23,8 @@
 1. **无头渲染与静态门禁**：
    - 运行 `node "<SKILL_DIR>/scripts/vibe-guard.js" verify` 检验语法与符号完整性；
    - 运行 `node "<SKILL_DIR>/scripts/screenshot.js" <入口HTML> <截图路径>` 确保 0 Console Error。
-2. **按需多模型交叉审查（联动 E06 / E07）**：
-   - 大改完成后，询问用户是否需要唤醒独立子 Agent 或通过 `/E06`、`/E07` 派发 DeepSeek / Codex 对照 `references/audit_checklist.md` 做独立体验走查。
+2. **按需多模型交叉审查（联动 `E06-红蓝对抗闭环` / `E07-派发`）**：
+   - 大改完成后，询问用户是否需要唤醒独立子 Agent 或通过 `/E06-红蓝对抗闭环`、`/E07-派发` 对照 `references/audit_checklist.md` 做独立体验走查。
 3. **Pake 极简打包（可选）**：
    - 若用户要求生成独立桌面 `.exe`，检查本机 `pake` 环境并打包输出至 `dist/releases/`，同步更新项目 `CHANGELOG.md`。
 4. **交付四格回执**：输出标准**创作者四格人话回执单**。

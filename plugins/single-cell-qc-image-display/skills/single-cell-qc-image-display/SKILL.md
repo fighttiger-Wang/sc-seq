@@ -1,9 +1,10 @@
 ---
 name: single-cell-qc-image-display
-description: Create centralized Excel workbooks and presentation-ready PNG overview images from structured single-cell RNA-seq QC data. Use when the user asks to turn single-cell QC tables into a large display image, export the table to Excel, update the table/image with added project fields such as tissue digestion protocol, or reuse the previous single-cell QC table-and-image template for new LC projects and sample-level metrics.
+displayName: B01 · 质控分布图 v0.1.0
+description: B01 · 质控分布图 v0.1.0：将单细胞质控大表输出为 Excel 和展示大图 Create centralized Excel workbooks and presentation-ready PNG overview images from structured single-cell RNA-seq QC data. Use when the user asks to turn single-cell QC tables into a large display image, export the table to Excel, update the table/image with added project fields such as tissue digestion protocol, or reuse the previous single-cell QC table-and-image template for new LC projects and sample-level metrics.
 ---
 
-# Single Cell QC Image Display
+# B01 · 质控分布图 v0.1.0
 
 ## Purpose
 

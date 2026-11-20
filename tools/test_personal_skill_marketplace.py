@@ -15,7 +15,15 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DISPLAY_RE = re.compile(r"^\d{2} · .+$")
+DISPLAY_RE = re.compile(r"^([A-Z]\d{2}|\d{2}) · .+ v\d+\.\d+\.\d+$")
+ORDERED_PREFIXES = [
+    "A01", "A02", "A03", "A04", "A05", "A06", "A07",
+    "B01", "B02", "B03", "B04", "B05", "B06", "B07",
+    "C06",
+    "D01", "D02",
+    "E01", "E02", "E03", "E04", "E05", "E06", "E07",
+]
+
 TEXT_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".ps1", ".sh", ".py", ".r", ".txt"}
 IGNORED_PARTS = {".git", "logs", "outputs", "tmp", "__pycache__"}
 SECRET_RE = re.compile(r"(^\.env($|\.)|\.pem$|\.key$|credentials|secrets?|\.sqlite3(?:-wal|-shm)?$)", re.I)
@@ -136,7 +144,8 @@ class Doctor:
                 agent_display = display_match.group(1).strip() if display_match else ""
                 plugin_display = str((manifest.get("interface") or {}).get("displayName", ""))
                 self.add(f"numbered display name {plugin_id}", agent_display == plugin_display and bool(DISPLAY_RE.fullmatch(plugin_display)), f"plugin.json='{plugin_display}'; openai.yaml='{agent_display}'")
-                self.add(f"workflow order {plugin_id}", plugin_display.startswith(f"{position:02d} · "), f"Expected prefix {position:02d} ·")
+                exp_pfx = ORDERED_PREFIXES[position - 1] if position <= len(ORDERED_PREFIXES) else f"{position:02d}"
+                self.add(f"workflow order {plugin_id}", plugin_display.startswith(f"{exp_pfx} · ") or plugin_display.startswith(f"{position:02d} · "), f"Expected prefix {exp_pfx} ·")
                 implicit = implicit_match.group(1).lower() == "true" if implicit_match else True
                 self.add(f"implicit invocation {plugin_id}", implicit, "Maintained shared skills must remain in the default skill set")
 
@@ -301,7 +310,6 @@ class Doctor:
             dict_end = setup_text.find("}", dict_start)
         dict_text = setup_text[dict_start:dict_end+1]
 
-        import ast
         try:
             skills_map = ast.literal_eval(dict_text)
         except Exception:
@@ -329,7 +337,7 @@ class Doctor:
                 all_ok = False
                 failed_skills.append(f"{chinese_cmd_name}(name='{actual_name}')")
 
-        detail = f"Discrepancies found: {', '.join(failed_skills)}" if failed_skills else "All 17 Antigravity skills verified with valid Chinese slash command names"
+        detail = f"Discrepancies found: {', '.join(failed_skills)}" if failed_skills else f"All {len(skills_map)} Antigravity skills verified with valid Chinese slash command names"
         self.add("antigravity slash menu integrity", all_ok, detail)
 
 

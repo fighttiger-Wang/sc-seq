@@ -1341,25 +1341,43 @@ def prepare_persistent_stable_root(
 
 
 ANTIGRAVITY_SKILLS_MAP: dict[str, tuple[int, str]] = {
-    "single-cell-qc-extract": (1, "01-单细胞质控提取"),
-    "single-cell-qc-image-display": (2, "02-图片展示单细胞质控数据"),
-    "sc-major-celltype-annotation-auto": (3, "03-单细胞大类注释-主要谱系"),
-    "sc-marker-cluster-annotation-auto": (4, "04-单细胞亚群注释-精细分型"),
-    "feature-gene-heatmap-violin": (5, "05-特征基因热图及选定基因小提琴图"),
-    "kegg-flow-bubble-plot": (6, "06-KEGG流泡图"),
-    "workflow-script-structure": (7, "07-流程脚本结构"),
-    "workbench": (8, "08-工作台"),
-    "task-handoff": (9, "09-任务交接"),
-    "skill-writing": (10, "10-skill写作"),
-    "bioinformatics-results-report": (11, "11-生信结果智能解读报告"),
-    "annotation-knowledge-release": (12, "12-注释知识库发布"),
-    "personal-skill-marketplace-setup": (13, "13-共享Skill下载安装"),
-    "bioinformatics-results-report-classic": (14, "14-生信结果智能解读报告-经典文档版"),
-    "celltype-function-heatmap": (15, "15-细胞类型功能基因热图"),
-    "scientific-diagram-016": (16, "16-科研流程图与概念图"),
-    "sc-group-gene-bubble-stats": (17, "17-单细胞分组基因表达气泡图与统计"),
-    "lucky-note-workbench-iteration": (18, "18-Lucky_Note工作台迭代与体验护栏"),
+    "single-cell-qc-extract": (1, "A01-质控过滤提取"),
+    "sc-major-celltype-annotation-auto": (2, "A02-大类谱系注释"),
+    "sc-marker-cluster-annotation-auto": (3, "A03-亚群精细注释"),
+    "annotation-knowledge-release": (4, "A04-知识库发布"),
+    "bioinformatics-results-report": (5, "A05-交互解读报告"),
+    "bioinformatics-results-report-classic": (6, "A06-文档解读报告"),
+    "workflow-script-structure": (7, "A07-流程脚本工程"),
+    "single-cell-qc-image-display": (8, "B01-质控分布图"),
+    "feature-gene-heatmap-violin": (9, "B02-Marker表达图"),
+    "celltype-function-heatmap": (10, "B03-功能模块热图"),
+    "sc-group-gene-bubble-stats": (11, "B04-分组表达气泡图"),
+    "sc-cell-proportion-stats": (12, "B05-细胞比例统计图"),
+    "kegg-flow-bubble-plot": (13, "B06-KEGG流泡图"),
+    "scientific-diagram-016": (14, "B07-机制流程概念图"),
+    "c06-ai-design-pipeline": (15, "C06-AI设计流水线"),
+    "hpc-computing-guide": (16, "D01-HPC超算指南"),
+    "server-task-delivery": (17, "D02-服务器任务投递"),
+    "task-handoff": (18, "E01-任务交接"),
+    "tripartite-expert-review": (19, "E02-生信三方评审"),
+    "skill-writing": (20, "E03-Skill规范写作"),
+    "personal-skill-marketplace-setup": (21, "E04-Skill市场安装"),
+    "skill-sync-publish": (22, "E05-Skill同步发布"),
+    "local-agent-delegate": (23, "E06-红蓝对抗闭环"),
+    "e07-dispatch": (24, "E07-派发"),
 }
+
+RETIRED_ANTIGRAVITY_SKILL_DIRS: tuple[str, ...] = (
+    "E02-三方专家评审",
+    "E06-本机智能体委托",
+    "C01-工作台",
+    "C02-UI视觉设计",
+    "C03-需求对齐追问",
+    "C04-独立体验走查",
+    "C05-桌面应用打包",
+    "18-Lucky_Note工作台迭代与体验护栏",
+    "E05-多智能体委托",
+)
 
 
 def zip_directory(folder_path: Path, output_zip: Path, exclude_patterns: tuple[str, ...] = ("__pycache__", ".git")) -> None:
@@ -1395,6 +1413,13 @@ def synchronize_antigravity_environment(
     if target_skills_dir.is_dir() or antigravity_home.is_dir():
         if not dry_run:
             target_skills_dir.mkdir(parents=True, exist_ok=True)
+            for retired_name in RETIRED_ANTIGRAVITY_SKILL_DIRS:
+                retired_dir = target_skills_dir / retired_name
+                if retired_dir.exists():
+                    shutil.rmtree(retired_dir)
+            for item in target_skills_dir.iterdir():
+                if item.is_dir() and item.name.startswith("_archive"):
+                    shutil.rmtree(item)
             shared_source = marketplace_root / "shared"
             if shared_source.is_dir():
                 if shared_target_dir.exists():
@@ -1437,7 +1462,12 @@ def synchronize_antigravity_environment(
                     else:
                         existing_desc = ""
 
-                    combined_desc = f"{display_name}：{short_desc} {existing_desc}".strip() if short_desc else f"{display_name}。{existing_desc}".strip()
+                    if existing_desc.startswith(f"{display_name}：") or existing_desc.startswith(f"{display_name}:") or existing_desc.startswith(display_name):
+                        combined_desc = existing_desc
+                    elif short_desc:
+                        combined_desc = f"{display_name}：{short_desc} {existing_desc}".strip()
+                    else:
+                        combined_desc = f"{display_name}。{existing_desc}".strip()
                     body_start = content.find("---", 3)
                     body = content[body_start + 3:].strip() if body_start != -1 else content
                     if body.startswith("# "):
