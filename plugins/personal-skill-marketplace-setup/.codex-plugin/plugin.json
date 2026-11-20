@@ -1,13 +1,13 @@
 {
   "name": "personal-skill-marketplace-setup",
-  "version": "0.4.0+codex.20261120083000",
+  "version": "0.4.1+codex.20261120072412",
   "description": "新电脑部署、从 GitHub 拉取更新与本地 / 斜杠菜单修复器（纯下载/安装/修复，零日常自动联网减速）",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "E04 · Skill市场安装 v0.4.0",
+    "displayName": "E04 · Skill市场安装 v0.4.1",
     "shortDescription": "新电脑部署、从 GitHub 拉取更新与本地 / 斜杠菜单修复器",
     "longDescription": "Cross-platform installer and local repair utility for the shared workspace-local skill marketplace: bootstrap on a new computer, pull latest stable updates on demand, and synchronize/repair Antigravity and Codex slash menu registrations without routine network latency.",
     "developerName": "fight",

@@ -30,6 +30,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 from pathlib import Path
 from typing import Any
@@ -79,6 +80,45 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def rmtree_safe(path: Path) -> None:
+    if not path.exists() and not path.is_symlink():
+        return
+    if path.is_symlink():
+        path.unlink()
+        return
+
+    def _clear_readonly(func, target_path, _exc) -> None:
+        os.chmod(target_path, stat.S_IWRITE | stat.S_IREAD)
+        func(target_path)
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_clear_readonly)
+    else:
+        shutil.rmtree(path, onerror=_clear_readonly)
+
+
+def directory_content_sha256(root: Path) -> str:
+    if not root.is_dir():
+        return ""
+    h = hashlib.sha256()
+    files = sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and ".git" not in path.parts
+        and path.suffix.lower() not in {".pyc", ".pyo"}
+        and path.name != ".DS_Store"
+    )
+    for path in files:
+        rel = path.relative_to(root).as_posix()
+        h.update(rel.encode("utf-8"))
+        h.update(b"\0")
+        h.update(sha256_file(path).encode("ascii"))
+        h.update(b"\n")
+    return h.hexdigest()
+
+
 def resolve_antigravity_home() -> Path:
     return Path(
         os.environ.get("ANTIGRAVITY_HOME")
@@ -104,12 +144,9 @@ def resolve_marketplace_root(explicit: Path | None = None) -> Path:
                 return Path(mp).resolve()
         except Exception:
             pass
-    for candidate in (
-        Path(r"E:\A002-Codex\工作区\local-marketplace-stable-20260916-193427-e53a557c"),
-        Path(r"E:\A002-Codex\工作区\sc-seq"),
-    ):
-        if (candidate / "skill-pack.json").is_file():
-            return candidate.resolve()
+    candidate = Path(r"E:\A002-Codex\工作区\local-marketplace-stable-20260916-193427-e53a557c")
+    if (candidate / "skill-pack.json").is_file():
+        return candidate.resolve()
     cursor = Path(__file__).resolve()
     for parent in cursor.parents:
         if (parent / "skill-pack.json").is_file():
@@ -143,7 +180,7 @@ def take_snapshot(skill_query: str, marketplace_root: Path) -> dict[str, Any]:
 
     snap_dir = get_snapshot_base() / cn_name
     if snap_dir.exists():
-        shutil.rmtree(snap_dir)
+        rmtree_safe(snap_dir)
     snap_dir.mkdir(parents=True, exist_ok=True)
 
     recorded = {}
@@ -179,12 +216,12 @@ def rollback_snapshot(skill_query: str, marketplace_root: Path) -> dict[str, Any
     restored = []
     if (snap_dir / "antigravity_skill").is_dir():
         if ag_skill_dir.exists():
-            shutil.rmtree(ag_skill_dir)
+            rmtree_safe(ag_skill_dir)
         shutil.copytree(snap_dir / "antigravity_skill", ag_skill_dir)
         restored.append(str(ag_skill_dir))
     if (snap_dir / "marketplace_plugin").is_dir():
         if mp_plugin_dir.exists():
-            shutil.rmtree(mp_plugin_dir)
+            rmtree_safe(mp_plugin_dir)
         shutil.copytree(snap_dir / "marketplace_plugin", mp_plugin_dir)
         restored.append(str(mp_plugin_dir))
 
@@ -483,6 +520,62 @@ def check_guardrail_4_registry_alignment(marketplace_root: Path, ag_home: Path) 
         errors.append(f"[G7 陷阱库未同步] 缺少 {ag_pitfalls}")
     elif sha256_file(mp_pitfalls) != sha256_file(ag_pitfalls):
         errors.append(f"[G7 陷阱库失步] {ag_pitfalls} 与 {mp_pitfalls} 哈希不一致，请运行 sync-antigravity")
+
+    # 5. Fixed-path ghost marketplace check (<workspace>/.agents/plugins/marketplace.json)
+    ghost_manifest = marketplace_root.parent / ".agents" / "plugins" / "marketplace.json"
+    if ghost_manifest.is_file():
+        errors.append(f"[G4 幽灵市场残留] 存在未清理的工作区级幽灵市场清单: {ghost_manifest}")
+
+    # 6. Fast Codex plugin cache parity check (gracefully skipped when Codex is absent or unconfigured)
+    codex_home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex")).expanduser().resolve()
+    codex_config = codex_home / "config.toml"
+    codex_marker = codex_home / "workspace-local.json"
+    codex_cache_root = codex_home / "plugins" / "cache" / "workspace-local"
+    codex_active_for_repo = False
+    if codex_cache_root.is_dir() and codex_config.is_file() and sp_file.is_file():
+        cfg_text = codex_config.read_text(encoding="utf-8", errors="replace")
+        has_ws_entries = False
+        try:
+            try:
+                import tomllib  # type: ignore
+            except ImportError:
+                import tomli as tomllib  # type: ignore
+            cfg_data = tomllib.loads(cfg_text)
+            has_ws_entries = any(str(k).endswith("@workspace-local") for k in (cfg_data.get("plugins") or {}))
+        except ImportError:
+            has_ws_entries = "@workspace-local" in cfg_text
+        except Exception:
+            has_ws_entries = False
+        marker_matches = True
+        if codex_marker.is_file():
+            try:
+                marker_root = str(json.loads(codex_marker.read_text(encoding="utf-8")).get("marketplaceRoot") or "")
+                if marker_root:
+                    marker_matches = Path(marker_root).expanduser().resolve() == marketplace_root.resolve()
+            except Exception:
+                marker_matches = False
+        codex_active_for_repo = has_ws_entries and marker_matches
+
+    if codex_active_for_repo:
+        sp_data = json.loads(sp_file.read_text(encoding="utf-8"))
+        expected_map = {str(item["id"]): str(item["version"]) for item in sp_data.get("plugins", [])}
+        cached_dirs = {d.name for d in codex_cache_root.iterdir() if d.is_dir()}
+        retired_cached = sorted(cached_dirs - set(expected_map.keys()))
+        if retired_cached:
+            errors.append(f"[G4 Codex缓存失步] 存在已退役插件缓存: {', '.join(retired_cached)}")
+        for plugin_id, expected_ver in expected_map.items():
+            plugin_cache = codex_cache_root / plugin_id
+            ver_dir = plugin_cache / expected_ver
+            if not ver_dir.is_dir():
+                errors.append(f"[G4 Codex缓存失步] 缺少插件缓存 {plugin_id}@{expected_ver}")
+                continue
+            ver_subdirs = [d.name for d in plugin_cache.iterdir() if d.is_dir()]
+            if ver_subdirs != [expected_ver]:
+                errors.append(f"[G4 Codex缓存失步] {plugin_id} 存在冗余版本目录: {ver_subdirs}")
+                continue
+            src_dir = marketplace_root / "plugins" / plugin_id
+            if directory_content_sha256(src_dir) != directory_content_sha256(ver_dir):
+                errors.append(f"[G4 Codex缓存失步] {plugin_id}@{expected_ver} 缓存文件哈希与源码不一致，请运行 sync-antigravity")
 
     return errors, warnings
 

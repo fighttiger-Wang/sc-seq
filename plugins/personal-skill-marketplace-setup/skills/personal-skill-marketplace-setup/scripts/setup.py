@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import hashlib
 import json
@@ -11,6 +12,7 @@ import os
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -99,8 +101,9 @@ def run(
     capture: bool = False,
     dry_run: bool = False,
     show_output: bool = True,
+    log_stream=None,
 ):
-    print("+", " ".join(command), flush=True)
+    print("+", " ".join(command), file=log_stream or sys.stdout, flush=True)
     if dry_run:
         return subprocess.CompletedProcess(command, 0, "", "")
     result = subprocess.run(
@@ -548,6 +551,45 @@ def verify_ref(root: Path, ref: str, head: str) -> None:
         raise RuntimeError(f"Requested ref {ref} resolves to {resolved}, but the source checkout is {head}")
 
 
+def _windows_app_version_key(path: Path) -> tuple[int, ...]:
+    pkg_name = path.parts[-4] if len(path.parts) >= 4 else path.name
+    match = re.search(r"_(\d+(?:\.\d+)+)_", pkg_name)
+    if not match:
+        return (0,)
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _windows_apps_codex_from_config(codex_home: Path) -> Path | None:
+    cfg_path = codex_home / "config.toml"
+    if not cfg_path.is_file():
+        return None
+    try:
+        cfg_text = cfg_path.read_text(encoding="utf-8")
+        cfg = _load_toml(cfg_text)
+    except Exception:
+        return None
+    candidates: list[Path] = []
+    node_env = ((cfg.get("mcp_servers") or {}).get("node_repl") or {}).get("env") or {}
+    cli_val = node_env.get("CODEX_CLI_PATH")
+    if isinstance(cli_val, str) and cli_val.strip():
+        candidates.append(Path(cli_val.strip()))
+    notify = cfg.get("notify")
+    if isinstance(notify, list) and notify and isinstance(notify[0], str):
+        # e.g. ...\app\resources\cua_node\bin\...\codex-computer-use.exe -> ...\app\resources\codex.exe
+        p0 = Path(notify[0].strip())
+        for parent in p0.parents:
+            if parent.name == "resources":
+                candidates.append(parent / "codex.exe")
+                break
+    for cand in candidates:
+        try:
+            if cand.is_file():
+                return cand.resolve()
+        except OSError:
+            continue
+    return None
+
+
 def resolve_codex_cli(explicit: str | None, root: Path, codex_home: Path) -> str | None:
     if explicit:
         path = Path(explicit).expanduser().resolve()
@@ -558,6 +600,22 @@ def resolve_codex_cli(explicit: str | None, root: Path, codex_home: Path) -> str
     if discovered and "WindowsApps" not in discovered:
         return discovered
     if os.name == "nt":
+        from_cfg = _windows_apps_codex_from_config(codex_home)
+        if from_cfg is not None:
+            return str(from_cfg)
+        windows_apps = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "WindowsApps"
+        try:
+            if windows_apps.is_dir():
+                matches = sorted(
+                    windows_apps.glob("OpenAI.Codex_*/app/resources/codex.exe"),
+                    key=_windows_app_version_key,
+                    reverse=True,
+                )
+                for candidate in matches:
+                    if candidate.is_file():
+                        return str(candidate.resolve())
+        except OSError:
+            pass
         candidate = codex_home / "plugins" / ".plugin-appserver" / "codex.exe"
         if candidate.is_file():
             return str(candidate.resolve())
@@ -581,13 +639,18 @@ def duplicate_findings(root: Path, codex_home: Path, codex_cli: str | None) -> l
         bare = bare_root / plugin_id / "SKILL.md"
         if bare.is_file():
             warnings.append(f"Bare skill source may duplicate workspace-local: {bare.parent}")
-    if codex_cli:
-        output = run([codex_cli, "plugin", "list"], capture=True, show_output=False).stdout
-        for plugin_id in ids:
-            pattern = re.compile(rf"(?m)^\s*{re.escape(plugin_id)}@([^\s]+)\s+installed,\s*enabled")
-            for marketplace in pattern.findall(output):
-                if marketplace != MARKETPLACE_NAME:
-                    warnings.append(f"Enabled plugin duplicate: {plugin_id}@{marketplace}")
+    config_path = codex_home / "config.toml"
+    if config_path.is_file() and _has_toml_parser():
+        try:
+            cfg = _load_toml(config_path.read_text(encoding="utf-8"))
+        except Exception:
+            cfg = {}
+        for key, entry in (cfg.get("plugins") or {}).items():
+            if not isinstance(entry, dict) or entry.get("enabled") is not True or "@" not in key:
+                continue
+            pid, marketplace = key.split("@", 1)
+            if pid in ids and marketplace != MARKETPLACE_NAME:
+                warnings.append(f"Enabled plugin duplicate: {pid}@{marketplace}")
     return sorted(set(warnings))
 
 
@@ -612,7 +675,7 @@ def installation_findings(root: Path, codex_home: Path, codex_cli: str | None) -
     if not codex_cli:
         result["status"] = "codex-cli-unavailable"
         return result
-    output = run([codex_cli, "plugin", "list"], capture=True, show_output=False).stdout
+    output = run([codex_cli, "plugin", "list", "-m", MARKETPLACE_NAME], capture=True, show_output=False).stdout
     missing = []
     for item in pack.get("plugins", []):
         pattern = re.compile(
@@ -1097,8 +1160,14 @@ def verify_remote_release(
     }
 
 
-def codex_marketplace_roots(codex_cli: str, root: Path) -> list[str]:
-    completed = run([codex_cli, "plugin", "marketplace", "list"], cwd=root, capture=True, show_output=False)
+def codex_marketplace_roots(codex_cli: str, root: Path, log_stream=None) -> list[str]:
+    completed = run(
+        [codex_cli, "plugin", "marketplace", "list"],
+        cwd=root,
+        capture=True,
+        show_output=False,
+        log_stream=log_stream,
+    )
     roots = []
     pattern = re.compile(rf"(?m)^\s*{re.escape(MARKETPLACE_NAME)}\s+(.+?)\s*$")
     for match in pattern.finditer(completed.stdout or ""):
@@ -1112,6 +1181,480 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def rmtree_safe(path: Path) -> None:
+    if not path.exists() and not path.is_symlink():
+        return
+    if path.is_symlink():
+        path.unlink()
+        return
+
+    def _clear_readonly(func, target_path, _exc) -> None:
+        os.chmod(target_path, stat.S_IWRITE | stat.S_IREAD)
+        func(target_path)
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_clear_readonly)
+    else:
+        shutil.rmtree(path, onerror=_clear_readonly)
+
+
+def directory_content_sha256(root: Path) -> str:
+    if not root.is_dir():
+        return ""
+    digest = hashlib.sha256()
+    files = sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and ".git" not in path.parts
+        and path.suffix.lower() not in {".pyc", ".pyo"}
+        and path.name != ".DS_Store"
+    )
+    for file_path in files:
+        relative = file_path.relative_to(root).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(sha256_file(file_path).encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _has_toml_parser() -> bool:
+    try:
+        import tomllib  # noqa: F401
+        return True
+    except ImportError:
+        try:
+            import tomli  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+
+def _load_toml(text: str) -> dict:
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError(
+                "Python 3.11+ (tomllib) or 'tomli' package is required on Python 3.10 to parse Codex config.toml"
+            ) from exc
+    return tomllib.loads(text)
+
+
+def _read_text_preserve_eol(path: Path) -> str:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def _atomic_write_text_preserving_mode(path: Path, text: str) -> None:
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            tmp_path = Path(handle.name)
+            handle.write(text)
+        if path.exists():
+            shutil.copymode(path, tmp_path)
+        os.replace(tmp_path, path)
+        tmp_path = None
+    finally:
+        if tmp_path is not None and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+
+
+def _safe_cache_plugin_dir(cache_root: Path, plugin_id: str) -> Path:
+    if (
+        not plugin_id
+        or plugin_id in {".", ".."}
+        or "/" in plugin_id
+        or "\\" in plugin_id
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", plugin_id)
+    ):
+        raise RuntimeError(f"Unsafe or invalid plugin ID for Codex cache operation: {plugin_id!r}")
+    root_resolved = cache_root.resolve()
+    target = (cache_root / plugin_id).resolve()
+    if target.parent != root_resolved:
+        raise RuntimeError(f"Refusing Codex cache operation outside cache root: {target}")
+    return cache_root / plugin_id
+
+
+@contextlib.contextmanager
+def _codex_home_sync_lock(codex_home: Path, timeout_seconds: float = 30.0):
+    lock_path = codex_home / ".workspace-local-sync.lock"
+    codex_home.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + timeout_seconds
+    with lock_path.open("a+b") as handle:
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"0")
+            handle.flush()
+        locked = False
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                while True:
+                    handle.seek(0)
+                    try:
+                        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                        locked = True
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError(f"Timed out waiting for Codex sync lock: {lock_path}")
+                        time.sleep(0.05)
+            else:
+                import fcntl
+
+                while True:
+                    try:
+                        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        locked = True
+                        break
+                    except BlockingIOError:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError(f"Timed out waiting for Codex sync lock: {lock_path}")
+                        time.sleep(0.05)
+            yield
+        finally:
+            if locked:
+                if os.name == "nt":
+                    import msvcrt
+
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _remove_config_plugin_block(config_text: str, plugin_key: str) -> str:
+    newline = "\r\n" if "\r\n" in config_text else "\n"
+    lines = config_text.splitlines()
+    escaped = re.escape(plugin_key)
+    header_re = re.compile(
+        rf'^\[\s*plugins\s*\.\s*(?:"{escaped}"|\'{escaped}\')\s*\]\s*(?:#.*)?$'
+    )
+    nested_header_re = re.compile(
+        rf'^\[\s*plugins\s*\.\s*(?:"{escaped}"|\'{escaped}\')\s*\.'
+    )
+    dotted_re = re.compile(
+        rf'^\s*plugins\s*\.\s*(?:"{escaped}"|\'{escaped}\')\s*(?:\.|=)'
+    )
+    out: list[str] = []
+    skipping = False
+    drop_one_trailing_blank = False
+    for line in lines:
+        stripped = line.strip()
+        if header_re.match(stripped):
+            skipping = True
+            drop_one_trailing_blank = True
+            continue
+        if skipping:
+            if stripped.startswith("["):
+                if nested_header_re.match(stripped):
+                    drop_one_trailing_blank = True
+                    continue
+                skipping = False
+                drop_one_trailing_blank = False
+            elif not stripped:
+                if drop_one_trailing_blank:
+                    drop_one_trailing_blank = False
+                    continue
+                out.append(line)
+                continue
+            else:
+                continue
+        if dotted_re.match(line):
+            continue
+        out.append(line)
+    result = newline.join(out)
+    if config_text.endswith(("\n", "\r\n")) and result and not result.endswith(newline):
+        result += newline
+    return result
+
+
+def _synchronize_codex_plugins_locked(
+    marketplace_root: Path,
+    codex_home: Path,
+    codex_cli: str,
+    config_path: Path,
+    dry_run: bool,
+) -> dict:
+    roots = codex_marketplace_roots(codex_cli, marketplace_root, log_stream=sys.stderr)
+    if not roots:
+        return {"status": "skipped", "reason": "workspace-local-marketplace-not-registered", "codexRestartRequired": False}
+    if len(roots) != 1 or normalized_path(roots[0]) != normalized_path(marketplace_root):
+        if dry_run:
+            return {
+                "status": "skipped-root-mismatch",
+                "registeredRoots": roots,
+                "expectedRoot": str(marketplace_root),
+                "codexRestartRequired": False,
+            }
+        raise RuntimeError(
+            f"Registered {MARKETPLACE_NAME} root {roots} does not match {marketplace_root}"
+        )
+
+    pack = load_json(marketplace_root / "skill-pack.json")
+    expected = {str(item["id"]): str(item["version"]) for item in pack.get("plugins", [])}
+    before_cfg_text = _read_text_preserve_eol(config_path)
+    before_cfg = _load_toml(before_cfg_text)
+
+    suffix = f"@{MARKETPLACE_NAME}"
+    plugins_cfg = before_cfg.get("plugins") or {}
+    cfg_ws_ids = {
+        key[: -len(suffix)]
+        for key in plugins_cfg
+        if key.endswith(suffix)
+    }
+    cache_root = codex_home / "plugins" / "cache" / MARKETPLACE_NAME
+    cache_ids = {d.name for d in cache_root.iterdir() if d.is_dir()} if cache_root.is_dir() else set()
+    retired = sorted((cfg_ws_ids | cache_ids) - set(expected.keys()))
+
+    # Validate every ID and cache target boundary before invoking remove/rmtree/add
+    for plugin_id in sorted(set(expected.keys()) | set(retired)):
+        _safe_cache_plugin_dir(cache_root, plugin_id)
+
+    # Snapshot which plugins differed on disk before `plugin list` (which can auto-materialize version bumps)
+    source_hashes = {
+        plugin_id: directory_content_sha256(marketplace_root / "plugins" / plugin_id)
+        for plugin_id in expected
+    }
+    pre_stale: list[str] = []
+    for plugin_id, expected_version in expected.items():
+        plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+        version_cache_dir = plugin_cache_dir / expected_version
+        if not version_cache_dir.is_dir():
+            pre_stale.append(plugin_id)
+            continue
+        version_subdirs = [d.name for d in plugin_cache_dir.iterdir() if d.is_dir()]
+        if version_subdirs != [expected_version] or directory_content_sha256(version_cache_dir) != source_hashes[plugin_id]:
+            pre_stale.append(plugin_id)
+
+    if dry_run:
+        missing_dry: list[str] = []
+        drifted_dry: list[str] = []
+        for plugin_id in expected:
+            cfg_entry = plugins_cfg.get(f"{plugin_id}{suffix}")
+            plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+            if not isinstance(cfg_entry, dict) and not plugin_cache_dir.exists():
+                missing_dry.append(plugin_id)
+            elif not isinstance(cfg_entry, dict) or cfg_entry.get("enabled") is not True or plugin_id in pre_stale:
+                drifted_dry.append(plugin_id)
+        if not retired and not drifted_dry and not missing_dry:
+            return {
+                "status": "up-to-date",
+                "removed": [],
+                "refreshed": [],
+                "installed": [],
+                "verifiedPluginCount": len(expected),
+                "codexRestartRequired": False,
+            }
+        return {
+            "status": "dry-run",
+            "removed": retired,
+            "refreshed": drifted_dry,
+            "installed": missing_dry,
+            "autoRefreshedByCli": [],
+            "verifiedPluginCount": len(expected),
+            "codexRestartRequired": True,
+        }
+
+    list_output = run(
+        [codex_cli, "plugin", "list", "-m", MARKETPLACE_NAME],
+        cwd=marketplace_root,
+        capture=True,
+        show_output=False,
+        log_stream=sys.stderr,
+    ).stdout or ""
+
+    missing: list[str] = []
+    drifted: list[str] = []
+    auto_refreshed: list[str] = []
+    for plugin_id, expected_version in expected.items():
+        installed_any_re = re.compile(rf"(?m)^\s*{re.escape(plugin_id)}@{re.escape(MARKETPLACE_NAME)}\s+installed,")
+        enabled_exact_re = re.compile(
+            rf"(?m)^\s*{re.escape(plugin_id)}@{re.escape(MARKETPLACE_NAME)}\s+"
+            rf"installed,\s*enabled\s+{re.escape(expected_version)}(?:\s|$)"
+        )
+        plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+        version_cache_dir = plugin_cache_dir / expected_version
+        is_installed_anywhere = bool(installed_any_re.search(list_output)) or plugin_id in cfg_ws_ids or plugin_cache_dir.exists()
+        if not is_installed_anywhere:
+            missing.append(plugin_id)
+            continue
+        if not enabled_exact_re.search(list_output) or not version_cache_dir.is_dir():
+            drifted.append(plugin_id)
+            continue
+        version_subdirs = [d.name for d in plugin_cache_dir.iterdir() if d.is_dir()]
+        if version_subdirs != [expected_version]:
+            drifted.append(plugin_id)
+            continue
+        cached_hash = directory_content_sha256(version_cache_dir)
+        if source_hashes[plugin_id] != cached_hash:
+            drifted.append(plugin_id)
+        elif plugin_id in pre_stale:
+            auto_refreshed.append(plugin_id)
+
+    if not retired and not drifted and not missing:
+        if auto_refreshed:
+            verify_plugin_cache(marketplace_root, codex_home)
+            return {
+                "status": "synchronized",
+                "removed": [],
+                "refreshed": auto_refreshed,
+                "installed": [],
+                "autoRefreshedByCli": auto_refreshed,
+                "verifiedPluginCount": len(expected),
+                "codexRestartRequired": True,
+            }
+        return {
+            "status": "up-to-date",
+            "removed": [],
+            "refreshed": [],
+            "installed": [],
+            "verifiedPluginCount": len(expected),
+            "codexRestartRequired": False,
+        }
+
+    with tempfile.TemporaryDirectory(prefix="codex-sync-run-") as run_backup_tmp:
+        run_backup_dir = Path(run_backup_tmp)
+        backup_cfg_file = run_backup_dir / "config.toml.bak"
+        backup_cfg_file.write_text(before_cfg_text, encoding="utf-8", newline="")
+        shutil.copymode(config_path, backup_cfg_file)
+        _atomic_write_text_preserving_mode(codex_home / "config.toml.bak.auto-sync", before_cfg_text)
+
+        cache_backup_root = run_backup_dir / "cache"
+        touched_ids = sorted(set(retired) | set(drifted) | set(missing))
+        had_cache_before: dict[str, bool] = {}
+        for plugin_id in touched_ids:
+            plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+            if plugin_cache_dir.exists():
+                had_cache_before[plugin_id] = True
+                shutil.copytree(plugin_cache_dir, cache_backup_root / plugin_id)
+            else:
+                had_cache_before[plugin_id] = False
+
+        try:
+            for plugin_id in retired:
+                selector = f"{plugin_id}@{MARKETPLACE_NAME}"
+                plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+                cmd = [codex_cli, "plugin", "remove", selector]
+                print("+", " ".join(cmd), file=sys.stderr, flush=True)
+                subprocess.run(
+                    cmd,
+                    cwd=marketplace_root,
+                    text=True,
+                    capture_output=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=subprocess_environment(cmd, marketplace_root),
+                )
+                rmtree_safe(plugin_cache_dir)
+                cur_text = _read_text_preserve_eol(config_path)
+                if selector in (_load_toml(cur_text).get("plugins") or {}):
+                    updated_text = _remove_config_plugin_block(cur_text, selector)
+                    _atomic_write_text_preserving_mode(config_path, updated_text)
+
+            for plugin_id in drifted:
+                selector = f"{plugin_id}@{MARKETPLACE_NAME}"
+                plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+                cmd = [codex_cli, "plugin", "remove", selector]
+                print("+", " ".join(cmd), file=sys.stderr, flush=True)
+                subprocess.run(
+                    cmd,
+                    cwd=marketplace_root,
+                    text=True,
+                    capture_output=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=subprocess_environment(cmd, marketplace_root),
+                )
+                rmtree_safe(plugin_cache_dir)
+                cur_text = _read_text_preserve_eol(config_path)
+                if selector in (_load_toml(cur_text).get("plugins") or {}):
+                    updated_text = _remove_config_plugin_block(cur_text, selector)
+                    _atomic_write_text_preserving_mode(config_path, updated_text)
+                run([codex_cli, "plugin", "add", selector], cwd=marketplace_root, capture=True, show_output=False, log_stream=sys.stderr)
+
+            for plugin_id in missing:
+                plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+                rmtree_safe(plugin_cache_dir)
+                run([codex_cli, "plugin", "add", f"{plugin_id}@{MARKETPLACE_NAME}"], cwd=marketplace_root, capture=True, show_output=False, log_stream=sys.stderr)
+
+            verify_plugin_cache(marketplace_root, codex_home)
+            after_cfg = _load_toml(_read_text_preserve_eol(config_path))
+            for key, value in before_cfg.items():
+                if key != "plugins" and after_cfg.get(key) != value:
+                    raise RuntimeError(f"config.toml section '{key}' mutated unexpectedly during sync")
+            before_plugins = before_cfg.get("plugins") or {}
+            after_plugins = after_cfg.get("plugins") or {}
+            for key, value in before_plugins.items():
+                if not key.endswith(suffix) and after_plugins.get(key) != value:
+                    raise RuntimeError(f"Non-workspace-local plugin '{key}' mutated unexpectedly during sync")
+            for plugin_id in expected:
+                entry = after_plugins.get(f"{plugin_id}{suffix}")
+                if not isinstance(entry, dict) or entry.get("enabled") is not True:
+                    raise RuntimeError(f"Expected enabled plugin missing from config.toml after sync: {plugin_id}{suffix}")
+            remaining_retired = [
+                key[: -len(suffix)]
+                for key in after_plugins
+                if key.endswith(suffix) and key[: -len(suffix)] not in expected
+            ]
+            if remaining_retired:
+                raise RuntimeError(f"Retired plugins remained in config.toml after sync: {remaining_retired}")
+        except Exception:
+            _atomic_write_text_preserving_mode(config_path, before_cfg_text)
+            shutil.copymode(backup_cfg_file, config_path)
+            for plugin_id in touched_ids:
+                plugin_cache_dir = _safe_cache_plugin_dir(cache_root, plugin_id)
+                rmtree_safe(plugin_cache_dir)
+                if had_cache_before.get(plugin_id):
+                    shutil.copytree(cache_backup_root / plugin_id, plugin_cache_dir)
+            raise
+
+    return {
+        "status": "synchronized",
+        "removed": retired,
+        "refreshed": sorted(set(drifted) | set(auto_refreshed)),
+        "installed": missing,
+        "autoRefreshedByCli": auto_refreshed,
+        "verifiedPluginCount": len(expected),
+        "codexRestartRequired": True,
+    }
+
+
+def synchronize_codex_plugins(
+    marketplace_root: Path,
+    codex_home: Path,
+    codex_cli: str | None = None,
+    dry_run: bool = False,
+) -> dict:
+    """Incrementally sync @workspace-local plugins & cache without touching other config."""
+    if not codex_cli:
+        return {"status": "skipped", "reason": "codex-cli-unavailable", "codexRestartRequired": False}
+    config_path = codex_home / "config.toml"
+    if not config_path.is_file():
+        return {"status": "skipped", "reason": "config-toml-missing", "codexRestartRequired": False}
+    if dry_run:
+        return _synchronize_codex_plugins_locked(marketplace_root, codex_home, codex_cli, config_path, dry_run=True)
+    with _codex_home_sync_lock(codex_home):
+        return _synchronize_codex_plugins_locked(marketplace_root, codex_home, codex_cli, config_path, dry_run=False)
 
 
 def plugin_source_files(plugin_root: Path) -> list[Path]:
@@ -1193,7 +1736,7 @@ def verify_plugin_cache(root: Path, codex_home: Path) -> dict:
 
 def verify_enabled_plugin_versions(codex_cli: str, root: Path, codex_home: Path) -> dict:
     pack = load_json(root / "skill-pack.json")
-    completed = run([codex_cli, "plugin", "list"], cwd=root, capture=True, show_output=False)
+    completed = run([codex_cli, "plugin", "list", "-m", MARKETPLACE_NAME], cwd=root, capture=True, show_output=False)
     missing = []
     for item in pack.get("plugins", []):
         pattern = re.compile(
@@ -1380,25 +1923,102 @@ RETIRED_ANTIGRAVITY_SKILL_DIRS: tuple[str, ...] = (
 )
 
 
+def _is_valid_zip(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            return zf.testzip() is None
+    except (OSError, zipfile.BadZipFile):
+        return False
+
+
 def zip_directory(folder_path: Path, output_zip: Path, exclude_patterns: tuple[str, ...] = ("__pycache__", ".git")) -> None:
-    if output_zip.is_file():
-        output_zip.unlink()
-    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
-        for root_dir, _, files in os.walk(folder_path):
-            if any(pat in root_dir for pat in exclude_patterns):
-                continue
-            for file in files:
-                if file.endswith(".pyc"):
+    tmp_zip = output_zip.with_name(f".{output_zip.name}.{uuid.uuid4().hex[:6]}.tmp")
+    try:
+        with zipfile.ZipFile(tmp_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
+            for root_dir, _, files in os.walk(folder_path):
+                if any(pat in root_dir for pat in exclude_patterns):
                     continue
-                file_path = Path(root_dir) / file
-                arcname = file_path.relative_to(folder_path)
-                zipf.write(file_path, arcname)
+                for file in files:
+                    if file.endswith(".pyc"):
+                        continue
+                    file_path = Path(root_dir) / file
+                    arcname = file_path.relative_to(folder_path)
+                    zipf.write(file_path, arcname)
+        os.replace(tmp_zip, output_zip)
+    finally:
+        if tmp_zip.exists():
+            tmp_zip.unlink(missing_ok=True)
+
+
+def _stage_antigravity_skill_dir(
+    src_plugin_dir: Path,
+    src_skill_dir: Path,
+    stage_dir: Path,
+    order: int,
+    chinese_cmd_name: str,
+    shared_target_dir: Path,
+) -> None:
+    shutil.copytree(src_skill_dir, stage_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+
+    pj_file = src_plugin_dir / ".codex-plugin" / "plugin.json"
+    display_name = f"{order:02d} · {chinese_cmd_name[3:]}"
+    short_desc = ""
+    if pj_file.is_file():
+        try:
+            pj_data = load_json(pj_file)
+            display_name = pj_data.get("interface", {}).get("displayName", display_name)
+            short_desc = pj_data.get("interface", {}).get("shortDescription", "")
+        except Exception:
+            pass
+
+    skill_md_file = stage_dir / "SKILL.md"
+    if skill_md_file.is_file():
+        content = skill_md_file.read_text(encoding="utf-8")
+        desc_start = content.find("description:")
+        if desc_start != -1:
+            end_frontmatter = content.find("---", desc_start)
+            existing_desc = content[desc_start + len("description:"):end_frontmatter].strip()
+            if existing_desc.startswith(">-") or existing_desc.startswith("|"):
+                existing_desc = existing_desc[2:].strip()
+            if existing_desc.startswith('"') and existing_desc.endswith('"'):
+                existing_desc = existing_desc[1:-1]
+        else:
+            existing_desc = ""
+
+        if existing_desc.startswith(f"{display_name}：") or existing_desc.startswith(f"{display_name}:") or existing_desc.startswith(display_name):
+            combined_desc = existing_desc
+        elif short_desc:
+            combined_desc = f"{display_name}：{short_desc} {existing_desc}".strip()
+        else:
+            combined_desc = f"{display_name}。{existing_desc}".strip()
+        body_start = content.find("---", 3)
+        body = content[body_start + 3:].strip() if body_start != -1 else content
+        if body.startswith("# "):
+            first_line_end = body.find("\n")
+            body = f"# {display_name}\n" + (body[first_line_end + 1:] if first_line_end != -1 else "")
+        else:
+            body = f"# {display_name}\n\n" + body
+
+        if "annotation-universal-contract.md" in body:
+            ref_dir = stage_dir / "references"
+            ref_dir.mkdir(parents=True, exist_ok=True)
+            contract_file = shared_target_dir / "annotation-universal-contract.md"
+            if contract_file.exists():
+                shutil.copy2(contract_file, ref_dir / "annotation-universal-contract.md")
+            body = body.replace("../../../../shared/annotation-universal-contract.md", "references/annotation-universal-contract.md")
+
+        new_content = f"---\nname: {chinese_cmd_name}\ndisplayName: {display_name}\ndescription: {combined_desc}\n---\n\n{body}\n"
+        skill_md_file.write_text(new_content, encoding="utf-8")
 
 
 def synchronize_antigravity_environment(
     marketplace_root: Path,
     workspace_root: Path | None = None,
     dry_run: bool = False,
+    state_file: Path | None = None,
+    desktop_dir: Path | None = None,
 ) -> dict:
     antigravity_home = Path(
         os.environ.get("ANTIGRAVITY_HOME")
@@ -1406,8 +2026,32 @@ def synchronize_antigravity_environment(
         or (Path.home() / ".gemini")
     )
     target_skills_dir = antigravity_home / "config" / "skills"
-    target_plugins_skills_dir = antigravity_home / "config" / "plugins" / "personal-bio-skills" / "skills"
     shared_target_dir = antigravity_home / "config" / "shared"
+
+    if state_file is not None:
+        state_path = Path(state_file).expanduser().resolve()
+    else:
+        env_codex_home = os.environ.get("CODEX_HOME")
+        if env_codex_home:
+            state_path = Path(env_codex_home).expanduser().resolve() / "skill-sync-state.json"
+        elif os.environ.get("ANTIGRAVITY_HOME") or os.environ.get("GEMINI_HOME"):
+            state_path = antigravity_home / "skill-sync-state.json"
+        else:
+            default_codex = Path.home() / ".codex"
+            state_path = (default_codex if default_codex.is_dir() else antigravity_home) / "skill-sync-state.json"
+
+    sync_state: dict = {}
+    if state_path.is_file():
+        try:
+            loaded_state = load_json(state_path)
+            if isinstance(loaded_state, dict):
+                sync_state = loaded_state
+        except Exception:
+            sync_state = {}
+    ag_hashes: dict[str, str] = sync_state.setdefault("antigravityHashes", {})
+    desktop_hashes: dict[str, str] = sync_state.setdefault("desktopPluginHashes", {})
+    downstream_drift_backups: list[dict[str, str]] = []
+    desktop_updated_plugins: list[str] = []
 
     synced_skills: list[str] = []
     if target_skills_dir.is_dir() or antigravity_home.is_dir():
@@ -1416,122 +2060,137 @@ def synchronize_antigravity_environment(
             for retired_name in RETIRED_ANTIGRAVITY_SKILL_DIRS:
                 retired_dir = target_skills_dir / retired_name
                 if retired_dir.exists():
-                    shutil.rmtree(retired_dir)
+                    rmtree_safe(retired_dir)
             for item in target_skills_dir.iterdir():
                 if item.is_dir() and item.name.startswith("_archive"):
-                    shutil.rmtree(item)
+                    rmtree_safe(item)
             shared_source = marketplace_root / "shared"
             if shared_source.is_dir():
                 if shared_target_dir.exists():
-                    shutil.rmtree(shared_target_dir)
+                    rmtree_safe(shared_target_dir)
                 shutil.copytree(shared_source, shared_target_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
                 pitfalls_src = shared_source / "global_pitfalls.json"
                 if pitfalls_src.is_file():
                     shutil.copy2(pitfalls_src, target_skills_dir / "shared_global_pitfalls.json")
 
-        for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
-            src_plugin_dir = marketplace_root / "plugins" / plugin_id
-            src_skill_dir = src_plugin_dir / "skills" / plugin_id
-            if not src_skill_dir.is_dir():
-                continue
-            dest_skill_dir = target_skills_dir / chinese_cmd_name
-            if not dry_run:
-                if dest_skill_dir.exists():
-                    shutil.rmtree(dest_skill_dir)
-                shutil.copytree(src_skill_dir, dest_skill_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+        with tempfile.TemporaryDirectory(prefix="ag-sync-stage-") as stage_tmp:
+            stage_root = Path(stage_tmp)
+            for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
+                src_plugin_dir = marketplace_root / "plugins" / plugin_id
+                src_skill_dir = src_plugin_dir / "skills" / plugin_id
+                if not src_skill_dir.is_dir():
+                    continue
+                dest_skill_dir = target_skills_dir / chinese_cmd_name
+                if not dry_run:
+                    stage_dir = stage_root / chinese_cmd_name
+                    _stage_antigravity_skill_dir(
+                        src_plugin_dir,
+                        src_skill_dir,
+                        stage_dir,
+                        order,
+                        chinese_cmd_name,
+                        shared_target_dir,
+                    )
+                    rendered_hash = directory_content_sha256(stage_dir)
+                    prev_ag_hash = ag_hashes.get(chinese_cmd_name)
+                    if dest_skill_dir.is_dir():
+                        current_dest_hash = directory_content_sha256(dest_skill_dir)
+                        should_backup = (
+                            (prev_ag_hash is not None and current_dest_hash != prev_ag_hash)
+                            or (prev_ag_hash is None and current_dest_hash != rendered_hash)
+                        )
+                        if should_backup:
+                            stamp = dt.datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+                            backup_base = antigravity_home / "archive_e_series_backup" / "downstream_drift_backups"
+                            backup_dir = backup_base / f"{stamp}-{chinese_cmd_name}"
+                            if backup_dir.exists():
+                                backup_dir = backup_base / f"{stamp}-{uuid.uuid4().hex[:6]}-{chinese_cmd_name}"
+                            backup_dir.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copytree(dest_skill_dir, backup_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+                            downstream_drift_backups.append({"skill": chinese_cmd_name, "backupPath": str(backup_dir)})
 
-                pj_file = src_plugin_dir / ".codex-plugin" / "plugin.json"
-                display_name = f"{order:02d} · {chinese_cmd_name[3:]}"
-                short_desc = ""
-                if pj_file.is_file():
-                    try:
-                        pj_data = load_json(pj_file)
-                        display_name = pj_data.get("interface", {}).get("displayName", display_name)
-                        short_desc = pj_data.get("interface", {}).get("shortDescription", "")
-                    except Exception:
-                        pass
+                    if dest_skill_dir.exists():
+                        rmtree_safe(dest_skill_dir)
+                    shutil.copytree(stage_dir, dest_skill_dir)
+                    ag_hashes[chinese_cmd_name] = rendered_hash
 
-                skill_md_file = dest_skill_dir / "SKILL.md"
-                if skill_md_file.is_file():
-                    content = skill_md_file.read_text(encoding="utf-8")
-                    desc_start = content.find("description:")
-                    if desc_start != -1:
-                        end_frontmatter = content.find("---", desc_start)
-                        existing_desc = content[desc_start + len("description:"):end_frontmatter].strip()
-                        if existing_desc.startswith(">-") or existing_desc.startswith("|"):
-                            existing_desc = existing_desc[2:].strip()
-                        if existing_desc.startswith('"') and existing_desc.endswith('"'):
-                            existing_desc = existing_desc[1:-1]
-                    else:
-                        existing_desc = ""
-
-                    if existing_desc.startswith(f"{display_name}：") or existing_desc.startswith(f"{display_name}:") or existing_desc.startswith(display_name):
-                        combined_desc = existing_desc
-                    elif short_desc:
-                        combined_desc = f"{display_name}：{short_desc} {existing_desc}".strip()
-                    else:
-                        combined_desc = f"{display_name}。{existing_desc}".strip()
-                    body_start = content.find("---", 3)
-                    body = content[body_start + 3:].strip() if body_start != -1 else content
-                    if body.startswith("# "):
-                        first_line_end = body.find("\n")
-                        body = f"# {display_name}\n" + (body[first_line_end + 1:] if first_line_end != -1 else "")
-                    else:
-                        body = f"# {display_name}\n\n" + body
-
-                    if "annotation-universal-contract.md" in body:
-                        ref_dir = dest_skill_dir / "references"
-                        ref_dir.mkdir(parents=True, exist_ok=True)
-                        contract_file = shared_target_dir / "annotation-universal-contract.md"
-                        if contract_file.exists():
-                            shutil.copy2(contract_file, ref_dir / "annotation-universal-contract.md")
-                        body = body.replace("../../../../shared/annotation-universal-contract.md", "references/annotation-universal-contract.md")
-
-                    new_content = f"---\nname: {chinese_cmd_name}\ndisplayName: {display_name}\ndescription: {combined_desc}\n---\n\n{body}\n"
-                    skill_md_file.write_text(new_content, encoding="utf-8")
-
-            synced_skills.append(chinese_cmd_name)
+                synced_skills.append(chinese_cmd_name)
 
         if not dry_run and target_skills_dir.is_dir():
             plugin_root = antigravity_home / "config" / "plugins" / "personal-bio-skills"
             if plugin_root.exists():
-                shutil.rmtree(plugin_root)
+                rmtree_safe(plugin_root)
 
             skills_json_file = antigravity_home / "config" / "skills.json"
             skills_json_data = {"entries": [{"path": target_skills_dir.as_posix()}]}
             skills_json_file.write_text(json.dumps(skills_json_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     desktop_sync = None
-    desktop_dir = Path("E:/Desktop/检索调用文件/skill")
-    if desktop_dir.is_dir():
-        desktop_sync = {"status": "synchronized", "path": str(desktop_dir)}
+    resolved_desktop_dir = Path("E:/Desktop/检索调用文件/skill") if desktop_dir is None else Path(desktop_dir)
+    if resolved_desktop_dir.is_dir():
+        desktop_sync = {"status": "synchronized", "path": str(resolved_desktop_dir)}
         if not dry_run:
+            mp_dir = resolved_desktop_dir / "personal-codex-skills-marketplace-16"
+            mp_zip = resolved_desktop_dir / f"{mp_dir.name}.zip"
+            any_desktop_changed = False
             for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
                 src_plugin = marketplace_root / "plugins" / plugin_id
                 if not src_plugin.is_dir():
                     continue
-                standalone_dir = desktop_dir / f"{order:02d}-{plugin_id}"
-                if standalone_dir.is_dir():
-                    shutil.rmtree(standalone_dir)
+                src_hash = directory_content_sha256(src_plugin)
+                prev_hash = desktop_hashes.get(plugin_id)
+                hash_changed = prev_hash != src_hash
+
+                standalone_dir = resolved_desktop_dir / f"{order:02d}-{plugin_id}"
+                standalone_zip = resolved_desktop_dir / f"{order:02d}-{plugin_id}.zip"
+                standalone_exists = standalone_dir.is_dir()
+                standalone_needs_update = standalone_exists and (
+                    hash_changed
+                    or directory_content_sha256(standalone_dir) != src_hash
+                    or not _is_valid_zip(standalone_zip)
+                )
+                dst_plugin = mp_dir / "plugins" / plugin_id if mp_dir.is_dir() else None
+                mp_exists = dst_plugin is not None and dst_plugin.is_dir()
+                mp_plugin_needs_update = mp_exists and (
+                    hash_changed or directory_content_sha256(dst_plugin) != src_hash
+                )
+
+                if standalone_needs_update:
+                    rmtree_safe(standalone_dir)
                     shutil.copytree(src_plugin, standalone_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
-                    zip_directory(standalone_dir, desktop_dir / f"{order:02d}-{plugin_id}.zip")
+                    zip_directory(standalone_dir, standalone_zip)
+                if mp_plugin_needs_update and dst_plugin is not None:
+                    rmtree_safe(dst_plugin)
+                    shutil.copytree(src_plugin, dst_plugin, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
 
-            mp_dir = desktop_dir / "personal-codex-skills-marketplace-16"
+                if standalone_needs_update or mp_plugin_needs_update:
+                    desktop_updated_plugins.append(plugin_id)
+                    any_desktop_changed = True
+
+                targets_present = standalone_exists or mp_exists
+                targets_ok = (
+                    (not standalone_exists or (directory_content_sha256(standalone_dir) == src_hash and _is_valid_zip(standalone_zip)))
+                    and (not mp_exists or directory_content_sha256(dst_plugin) == src_hash)  # type: ignore[arg-type]
+                )
+                if targets_present and targets_ok:
+                    desktop_hashes[plugin_id] = src_hash
+                else:
+                    desktop_hashes.pop(plugin_id, None)
+
             if mp_dir.is_dir():
-                for plugin_id in ANTIGRAVITY_SKILLS_MAP.keys():
-                    src_plugin = marketplace_root / "plugins" / plugin_id
-                    dst_plugin = mp_dir / "plugins" / plugin_id
-                    if src_plugin.is_dir() and dst_plugin.is_dir():
-                        shutil.rmtree(dst_plugin)
-                        shutil.copytree(src_plugin, dst_plugin, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
-                if (marketplace_root / "skill-pack.json").is_file():
-                    shutil.copy2(marketplace_root / "skill-pack.json", mp_dir / "skill-pack.json")
-                zip_directory(mp_dir, desktop_dir / f"{mp_dir.name}.zip")
+                src_sp = marketplace_root / "skill-pack.json"
+                dst_sp = mp_dir / "skill-pack.json"
+                if src_sp.is_file() and (not dst_sp.is_file() or sha256_file(src_sp) != sha256_file(dst_sp)):
+                    shutil.copy2(src_sp, dst_sp)
+                    any_desktop_changed = True
+                if any_desktop_changed or not _is_valid_zip(mp_zip):
+                    zip_directory(mp_dir, mp_zip)
 
-            manifest_file = desktop_dir / "EXPORT-MANIFEST.json"
+            manifest_file = resolved_desktop_dir / "EXPORT-MANIFEST.json"
             if manifest_file.is_file():
                 try:
                     m_data = load_json(manifest_file)
+                    manifest_before = json.dumps(m_data, ensure_ascii=False, sort_keys=True)
                     for sk in m_data.get("skills", []):
                         sk_id = sk.get("id")
                         pj_f = marketplace_root / "plugins" / sk_id / ".codex-plugin" / "plugin.json"
@@ -1541,18 +2200,44 @@ def synchronize_antigravity_environment(
                             sk["version"] = v
                             sk["sourcePackage"] = v
                             sk["displayName"] = pj_d.get("interface", {}).get("displayName", sk.get("displayName"))
-                            z_path = desktop_dir / f"{sk.get('order', 0):02d}-{sk_id}.zip"
-                            if z_path.is_file():
+                            z_path = resolved_desktop_dir / f"{sk.get('order', 0):02d}-{sk_id}.zip"
+                            if _is_valid_zip(z_path):
                                 sk["contentSha256"] = sha256_file(z_path)
-                    manifest_file.write_text(json.dumps(m_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                    if json.dumps(m_data, ensure_ascii=False, sort_keys=True) != manifest_before:
+                        manifest_file.write_text(json.dumps(m_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 except Exception:
                     pass
+
+    if not dry_run and (target_skills_dir.is_dir() or antigravity_home.is_dir() or resolved_desktop_dir.is_dir()):
+        sync_state["updatedAt"] = dt.datetime.now().astimezone().isoformat()
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_state: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="\n",
+                dir=state_path.parent,
+                prefix=f".{state_path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as handle:
+                tmp_state = Path(handle.name)
+                handle.write(json.dumps(sync_state, ensure_ascii=False, indent=2) + "\n")
+            os.replace(tmp_state, state_path)
+            tmp_state = None
+        finally:
+            if tmp_state is not None and tmp_state.exists():
+                tmp_state.unlink(missing_ok=True)
 
     return {
         "status": "dry-run" if dry_run else ("synchronized" if synced_skills else "antigravity-not-found"),
         "antigravityHome": str(antigravity_home),
+        "stateFile": str(state_path),
         "syncedSkillsCount": len(synced_skills),
         "syncedSkills": synced_skills,
+        "downstreamDriftBackups": downstream_drift_backups,
+        "desktopUpdatedPlugins": desktop_updated_plugins,
         "desktopSync": desktop_sync,
     }
 
@@ -1896,6 +2581,7 @@ def main() -> None:
     parser.add_argument("--replace-location-config", action="store_true")
     parser.add_argument("--relocate", action="store_true")
     parser.add_argument("--skip-managed-guidance", action="store_true")
+    parser.add_argument("--skip-codex", action="store_true")
     parser.add_argument("--disable-bootstrap-copy", action="store_true")
     parser.add_argument("--confirm-publish", action="store_true")
     parser.add_argument("--one-step", action="store_true", help="Run the fully authorized publish, merge, verify, and cache closeout")
@@ -1958,12 +2644,28 @@ def main() -> None:
         raise RuntimeError(f"Marketplace source and Codex home must not overlap: {root} <-> {codex_home}")
 
     if args.mode == "sync-antigravity":
+        codex_cli = None
+        if not args.skip_codex:
+            codex_cli = resolve_codex_cli(args.codex_cli, root, codex_home)
+            if codex_cli and (codex_home / "config.toml").is_file() and not _has_toml_parser():
+                raise RuntimeError(
+                    "Python 3.11+ (tomllib) or 'tomli' package is required on Python 3.10 to parse Codex config.toml before syncing"
+                )
         sync_result = synchronize_antigravity_environment(
             marketplace_root=root,
             workspace_root=args.workspace_root,
             dry_run=args.dry_run,
         )
-        print(json.dumps({"syncAntigravity": sync_result}, ensure_ascii=False, indent=2))
+        if args.skip_codex:
+            codex_sync_result = {"status": "skipped", "reason": "skip-codex-flag", "codexRestartRequired": False}
+        else:
+            codex_sync_result = synchronize_codex_plugins(
+                marketplace_root=root,
+                codex_home=codex_home,
+                codex_cli=codex_cli,
+                dry_run=args.dry_run,
+            )
+        print(json.dumps({"syncAntigravity": sync_result, "syncCodex": codex_sync_result}, ensure_ascii=False, indent=2))
         return
 
     facts_before = git_facts(root, args.repo_url) if not (cloned and args.dry_run) else {"git": True, "remote": args.repo_url, "branch": args.ref or "main", "commit": None, "dirty": False}

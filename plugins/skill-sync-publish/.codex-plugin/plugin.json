@@ -1,6 +1,6 @@
 {
   "name": "skill-sync-publish",
-  "version": "0.1.0+codex.20261120083000",
+  "version": "0.1.1+codex.20261120072412",
   "description": "改完 Skill 后的 4 步原子级发布流水线（鲁棒性体检 ➔ 自动升版本号 ➔ 三端原子同步 ➔ GitHub 远端推送）",
   "author": {
     "name": "fight"
@@ -15,7 +15,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "E05 · Skill同步发布 v0.1.0",
+    "displayName": "E05 · Skill同步发布 v0.1.1",
     "shortDescription": "改完 Skill 后的 4 步原子级发布流水线（体检/升版/三端同步/推送 GitHub）",
     "developerName": "fight",
     "category": "Productivity",

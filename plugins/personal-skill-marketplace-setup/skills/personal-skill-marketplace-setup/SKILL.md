@@ -1,10 +1,10 @@
 ---
 name: personal-skill-marketplace-setup
-displayName: E04 · Skill市场安装 v0.4.0
-description: E04 · Skill市场安装 v0.4.0：新电脑部署、从 GitHub 拉取更新与本地 / 斜杠菜单修复器 Pure downloader, installer, and local slash-menu repair utility (`bootstrap` / `install` / `update` / `sync-antigravity` / `repair` / `audit`) for the shared Codex and Antigravity skill marketplace. Never run network `preflight` or `git fetch` automatically before routine chat tasks; use `E05-Skill同步发布` for publishing modified skills.
+displayName: E04 · Skill市场安装 v0.4.1
+description: E04 · Skill市场安装 v0.4.1：新电脑部署、从 GitHub 拉取更新与本地 / 斜杠菜单修复器 Pure downloader, installer, and local slash-menu repair utility (`bootstrap` / `install` / `update` / `sync-antigravity` / `repair` / `audit`) for the shared Codex and Antigravity skill marketplace. Never run network `preflight` or `git fetch` automatically before routine chat tasks; use `E05-Skill同步发布` for publishing modified skills.
 ---
 
-# E04 · Skill市场安装 v0.4.0
+# E04 · Skill市场安装 v0.4.1
 
 跨平台（Windows / macOS）**纯下载、安装与本地环境修复器**。使用 `scripts/setup.py` 管理本地共享技能市场（Git 远端仓库：`https://github.com/fighttiger-Wang/sc-seq.git`）。
 

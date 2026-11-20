@@ -1,10 +1,10 @@
 ---
 name: skill-writing
-displayName: E03 · Skill规范写作 v0.5.0
-description: E03 · Skill规范写作 v0.5.0：编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验 Author, update, and validate dual-platform (Antigravity + Codex) skills across the A-E 5-cabin architecture (24 standard skills) with 7 zero-overhead robustness guardrails (`validate_skill_robustness.py`), single-source-of-truth in-place replacement, snapshot/rollback protection (`.u`), and handoff to `E05-Skill同步发布` for atomic release.
+displayName: E03 · Skill规范写作 v0.5.1
+description: E03 · Skill规范写作 v0.5.1：编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验 Author, update, and validate dual-platform (Antigravity + Codex) skills across the A-E 5-cabin architecture (24 standard skills) with 7 zero-overhead robustness guardrails (`validate_skill_robustness.py`), single-source-of-truth in-place replacement, snapshot/rollback protection (`.u`), and handoff to `E05-Skill同步发布` for atomic release.
 ---
 
-# E03 · Skill规范写作 v0.5.0
+# E03 · Skill规范写作 v0.5.1
 
 定义 Antigravity（`~/.gemini/config/skills/`）与 Codex（`<shared-marketplace-root>/plugins/`）双平台统一的 **Skill 架构分类账本、命名与 Frontmatter 铁律、唯一真相原地替换原则** 及 **7 大零损耗自动化鲁棒性护栏**。
 

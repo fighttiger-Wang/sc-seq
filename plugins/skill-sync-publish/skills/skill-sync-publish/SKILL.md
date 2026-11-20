@@ -1,10 +1,10 @@
 ---
 name: skill-sync-publish
-displayName: E05 · Skill同步发布 v0.1.0
-description: E05 · Skill同步发布 v0.1.0：改完 Skill 后的 4 步原子级发布流水线（体检/升版/三端同步/推送 GitHub） Execute the 4-step atomic release pipeline after modifying any Skill: (1) cabin robustness validation via E03 `validate_skill_robustness.py`, (2) semantic version bump across `SKILL.md`, `plugin.json`, `openai.yaml`, and `skill-pack.json`, (3) tri-platform sync (`sync-antigravity`), and (4) GitHub `main` push (or `--pr`).
+displayName: E05 · Skill同步发布 v0.1.1
+description: E05 · Skill同步发布 v0.1.1：改完 Skill 后的 4 步原子级发布流水线（体检/升版/三端同步/推送 GitHub） Execute the 4-step atomic release pipeline after modifying any Skill: (1) cabin robustness validation via E03 `validate_skill_robustness.py`, (2) semantic version bump across `SKILL.md`, `plugin.json`, `openai.yaml`, and `skill-pack.json`, (3) tri-platform sync (`sync-antigravity`), and (4) GitHub `main` push (or `--pr`).
 ---
 
-# E05 · Skill同步发布 v0.1.0
+# E05 · Skill同步发布 v0.1.1
 
 专职负责改完任何 Skill 后的 **4 步原子级同步与发布流水线**，彻底根治“改了代码漏升版本号”、“手工拷贝破坏 `/` 斜杠菜单”以及“本地改完忘推 GitHub 远端”三大顽疾。
 

@@ -1,5 +1,5 @@
 interface:
-  display_name: "E03 · Skill规范写作 v0.5.0"
+  display_name: "E03 · Skill规范写作 v0.5.1"
   short_description: "编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验"
   default_prompt: "Use $skill-writing to 编写或升级符合双端规范与五大鲁棒护栏的标准 Skill"
 

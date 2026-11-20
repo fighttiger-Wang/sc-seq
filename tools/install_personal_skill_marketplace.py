@@ -37,6 +37,46 @@ def atomic_json(path: Path, value) -> None:
     os.replace(temporary, path)
 
 
+def _windows_app_version_key(path: Path) -> tuple[int, ...]:
+    pkg_name = path.parts[-4] if len(path.parts) >= 4 else path.name
+    match = re.search(r"_(\d+(?:\.\d+)+)_", pkg_name)
+    if not match:
+        return (0,)
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _windows_apps_codex_from_config(codex_home: Path) -> Path | None:
+    cfg_path = codex_home / "config.toml"
+    if not cfg_path.is_file():
+        return None
+    try:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib  # type: ignore
+        cfg = tomllib.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    candidates: list[Path] = []
+    cli_val = (((cfg.get("mcp_servers") or {}).get("node_repl") or {}).get("env") or {}).get("CODEX_CLI_PATH")
+    if isinstance(cli_val, str) and cli_val.strip():
+        candidates.append(Path(cli_val.strip()))
+    notify = cfg.get("notify")
+    if isinstance(notify, list) and notify and isinstance(notify[0], str):
+        p0 = Path(notify[0].strip())
+        for parent in p0.parents:
+            if parent.name == "resources":
+                candidates.append(parent / "codex.exe")
+                break
+    for cand in candidates:
+        try:
+            if cand.is_file():
+                return cand
+        except OSError:
+            continue
+    return None
+
+
 def resolve_codex(explicit: str | None, root: Path) -> str:
     candidates: list[Path | str] = []
     if explicit:
@@ -46,6 +86,20 @@ def resolve_codex(explicit: str | None, root: Path) -> str:
         candidates.append(discovered)
     if os.name == "nt":
         codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
+        from_cfg = _windows_apps_codex_from_config(codex_home)
+        if from_cfg is not None:
+            candidates.append(from_cfg)
+        windows_apps = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "WindowsApps"
+        try:
+            if windows_apps.is_dir():
+                matches = sorted(
+                    windows_apps.glob("OpenAI.Codex_*/app/resources/codex.exe"),
+                    key=_windows_app_version_key,
+                    reverse=True,
+                )
+                candidates.extend(matches)
+        except OSError:
+            pass
         candidates.append(codex_home / "plugins" / ".plugin-appserver" / "codex.exe")
         cursor = root.resolve()
         for _ in range(7):
@@ -295,7 +349,7 @@ def install(
                 )
         for plugin in selected_plugins:
             run([codex, "plugin", "add", f"{plugin['id']}@{pack['name']}"], dry_run=dry_run)
-        plugin_list = run([codex, "plugin", "list"], capture=True, dry_run=dry_run, show_output=False)
+        plugin_list = run([codex, "plugin", "list", "-m", str(pack["name"])], capture=True, dry_run=dry_run, show_output=False)
         if not dry_run:
             missing = [
                 item["id"]

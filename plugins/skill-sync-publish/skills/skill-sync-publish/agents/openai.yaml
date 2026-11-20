@@ -1,5 +1,5 @@
 interface:
-  display_name: "E05 · Skill同步发布 v0.1.0"
+  display_name: "E05 · Skill同步发布 v0.1.1"
   short_description: "改完 Skill 后的 4 步原子级发布流水线（体检/升版/三端同步/推送 GitHub）"
   default_prompt: "Use $skill-sync-publish to 一键体检、升版、三端同步并发布 Skill 到 GitHub"
 

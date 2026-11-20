@@ -385,7 +385,7 @@ class MarketplaceSetupTests(unittest.TestCase):
                     return subprocess.CompletedProcess(command, 0, "", "")
                 if tail[:2] == ["plugin", "add"]:
                     return subprocess.CompletedProcess(command, 0, "", "")
-                if tail == ["plugin", "list"]:
+                if tail[:2] == ["plugin", "list"]:
                     return subprocess.CompletedProcess(command, 0, "", "")
                 raise AssertionError(f"Unexpected command: {command}")
 
@@ -588,6 +588,412 @@ class MarketplaceSetupTests(unittest.TestCase):
             facts = MANAGER.git_facts(persistent_root, str(remote))
             self.assertEqual(facts["branch"], "main")
             self.assertFalse(facts["dirty"])
+
+    def test_rmtree_safe_removes_readonly_files(self) -> None:
+        import stat
+        with temporary_directory("marketplace-rmtree-ro-") as temporary:
+            target = Path(temporary) / "ro-dir"
+            (target / "nested").mkdir(parents=True)
+            ro_file = target / "nested" / "locked.txt"
+            ro_file.write_text("read only\n", encoding="utf-8")
+            os.chmod(ro_file, stat.S_IREAD)
+            MANAGER.rmtree_safe(target)
+            self.assertFalse(target.exists())
+
+    def test_synchronize_codex_plugins_skips_when_codex_absent(self) -> None:
+        with temporary_directory("marketplace-codex-skip-") as temporary:
+            base = Path(temporary)
+            root = base / "mp"
+            codex_home = base / "codex-home"
+            root.mkdir()
+            codex_home.mkdir()
+            res_no_cli = MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli=None)
+            self.assertEqual(res_no_cli["status"], "skipped")
+            self.assertEqual(res_no_cli["reason"], "codex-cli-unavailable")
+            self.assertFalse(res_no_cli["codexRestartRequired"])
+            res_no_cfg = MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="codex.exe")
+            self.assertEqual(res_no_cfg["status"], "skipped")
+            self.assertEqual(res_no_cfg["reason"], "config-toml-missing")
+
+    def test_synchronize_codex_plugins_incremental_refresh_and_retire(self) -> None:
+        import shutil
+        with temporary_directory("marketplace-codex-sync-") as temporary:
+            base = Path(temporary)
+            root = base / "mp"
+            codex_home = base / "codex-home"
+            cache_root = codex_home / "plugins" / "cache" / "workspace-local"
+            root.mkdir(parents=True)
+            codex_home.mkdir(parents=True)
+
+            plugins_spec = [
+                ("alpha", "1.0.0+codex.1", "alpha-new\n"),
+                ("beta", "1.0.0+codex.1", "beta-same\n"),
+                ("gamma", "2.0.0+codex.2", "gamma-new\n"),
+            ]
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": pid, "version": ver} for pid, ver, _ in plugins_spec]}) + "\n",
+                encoding="utf-8",
+            )
+            for pid, ver, content in plugins_spec:
+                pdir = root / "plugins" / pid
+                (pdir / ".codex-plugin").mkdir(parents=True)
+                (pdir / "skills" / pid).mkdir(parents=True)
+                (pdir / ".codex-plugin" / "plugin.json").write_text(
+                    json.dumps({"name": pid, "version": ver}) + "\n",
+                    encoding="utf-8",
+                )
+                (pdir / "skills" / pid / "SKILL.md").write_text(content, encoding="utf-8")
+
+            # Seed cache: alpha (same ver, stale content), beta (match), retired (leftover); gamma missing
+            for pid, ver, content in [("alpha", "1.0.0+codex.1", "alpha-stale\n"), ("beta", "1.0.0+codex.1", "beta-same\n"), ("retired", "0.1.0+codex.0", "old\n")]:
+                cdir = cache_root / pid / ver
+                (cdir / ".codex-plugin").mkdir(parents=True)
+                (cdir / "skills" / pid).mkdir(parents=True)
+                (cdir / ".codex-plugin" / "plugin.json").write_text(
+                    json.dumps({"name": pid, "version": ver}) + "\n",
+                    encoding="utf-8",
+                )
+                (cdir / "skills" / pid / "SKILL.md").write_text(content, encoding="utf-8")
+
+            cfg_path = codex_home / "config.toml"
+            cfg_path.write_text(
+                'model = "gpt-6.1-sol"\n\n'
+                '[plugins."browser@openai-bundled"]\nenabled = true\n\n'
+                '[plugins."alpha@workspace-local"]\nenabled = true\n\n'
+                '[plugins."beta@workspace-local"]\nenabled = true\n\n'
+                '[plugins."retired@workspace-local"]\nenabled = true\n',
+                encoding="utf-8",
+            )
+
+            installed_versions = {
+                "alpha": "1.0.0+codex.1",
+                "beta": "1.0.0+codex.1",
+            }
+            calls: list[list[str]] = []
+
+            def fake_subproc(cmd, *, cwd=None, text=True, capture_output=False, encoding=None, errors=None, env=None):
+                calls.append(cmd)
+                tail = cmd[1:]
+                if tail == ["plugin", "marketplace", "list"]:
+                    return subprocess.CompletedProcess(cmd, 0, f"workspace-local  {root}\n", "")
+                if tail == ["plugin", "list", "-m", "workspace-local"]:
+                    lines = [f"{pid}@workspace-local  installed, enabled  {ver}" for pid, ver in installed_versions.items()]
+                    return subprocess.CompletedProcess(cmd, 0, "\n".join(lines) + "\n", "")
+                if tail[:2] == ["plugin", "remove"]:
+                    pid = tail[2].split("@", 1)[0]
+                    installed_versions.pop(pid, None)
+                    cdir = cache_root / pid
+                    if cdir.exists():
+                        shutil.rmtree(cdir)
+                    cur = cfg_path.read_text(encoding="utf-8")
+                    cfg_path.write_text(MANAGER._remove_config_plugin_block(cur, f"{pid}@workspace-local"), encoding="utf-8")
+                    return subprocess.CompletedProcess(cmd, 0, "", "")
+                if tail[:2] == ["plugin", "add"]:
+                    pid = tail[2].split("@", 1)[0]
+                    ver = dict((p, v) for p, v, _ in plugins_spec)[pid]
+                    installed_versions[pid] = ver
+                    shutil.copytree(root / "plugins" / pid, cache_root / pid / ver)
+                    cur = cfg_path.read_text(encoding="utf-8")
+                    if f'[plugins."{pid}@workspace-local"]' not in cur:
+                        cur = cur.rstrip() + f'\n\n[plugins."{pid}@workspace-local"]\nenabled = true\n'
+                        cfg_path.write_text(cur, encoding="utf-8")
+                    return subprocess.CompletedProcess(cmd, 0, "", "")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            with mock.patch.object(MANAGER.subprocess, "run", side_effect=fake_subproc):
+                res = MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="fake-codex")
+                self.assertEqual(res["status"], "synchronized")
+                self.assertEqual(res["removed"], ["retired"])
+                self.assertEqual(res["refreshed"], ["alpha"])
+                self.assertEqual(res["installed"], ["gamma"])
+                self.assertTrue(res["codexRestartRequired"])
+                self.assertFalse(any("beta@workspace-local" in " ".join(c) for c in calls if "remove" in c or "add" in c))
+
+                # Second run must be an idempotent no-op
+                res2 = MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="fake-codex")
+                self.assertEqual(res2["status"], "up-to-date")
+                self.assertFalse(res2["codexRestartRequired"])
+
+            cfg_after = MANAGER._load_toml(cfg_path.read_text(encoding="utf-8"))
+            self.assertEqual(cfg_after["plugins"]["browser@openai-bundled"], {"enabled": True})
+            self.assertNotIn("retired@workspace-local", cfg_after["plugins"])
+            self.assertTrue((cache_root / "alpha" / "1.0.0+codex.1" / "skills" / "alpha" / "SKILL.md").read_text(encoding="utf-8") == "alpha-new\n")
+            self.assertFalse((cache_root / "retired").exists())
+
+    def test_synchronize_codex_plugins_rejects_unsafe_retired_plugin_id(self) -> None:
+        with temporary_directory("marketplace-codex-unsafe-") as temporary:
+            base = Path(temporary)
+            root = base / "mp"
+            codex_home = base / "codex-home"
+            sentinel = codex_home / "plugins" / "cache" / "escape"
+            (sentinel / "keep.txt").parent.mkdir(parents=True)
+            (sentinel / "keep.txt").write_text("must survive\n", encoding="utf-8")
+            (codex_home / "plugins" / "cache" / "workspace-local").mkdir(parents=True)
+            root.mkdir(parents=True)
+            (root / "skill-pack.json").write_text('{"plugins": []}\n', encoding="utf-8")
+            cfg_path = codex_home / "config.toml"
+            cfg_path.write_text('[plugins."../escape@workspace-local"]\nenabled = true\n', encoding="utf-8")
+
+            def fake_subproc(cmd, *, cwd=None, text=True, capture_output=False, encoding=None, errors=None, env=None):
+                if cmd[1:] == ["plugin", "marketplace", "list"]:
+                    return subprocess.CompletedProcess(cmd, 0, f"workspace-local  {root}\n", "")
+                raise AssertionError(f"CLI should not be mutated on unsafe ID: {cmd}")
+
+            with mock.patch.object(MANAGER.subprocess, "run", side_effect=fake_subproc):
+                with self.assertRaisesRegex(RuntimeError, "Unsafe or invalid plugin ID"):
+                    MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="fake-codex")
+            self.assertTrue((sentinel / "keep.txt").is_file())
+
+    def test_synchronize_codex_plugins_dry_run_avoids_plugin_list_side_effects(self) -> None:
+        with temporary_directory("marketplace-codex-dry-") as temporary:
+            base = Path(temporary)
+            root = base / "mp"
+            codex_home = base / "codex-home"
+            (root / "plugins" / "alpha" / ".codex-plugin").mkdir(parents=True)
+            (root / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "alpha", "version": "1.0.0+codex.1"}]}) + "\n",
+                encoding="utf-8",
+            )
+            (root / "plugins" / "alpha" / ".codex-plugin" / "plugin.json").write_text(
+                '{"name": "alpha", "version": "1.0.0+codex.1"}\n',
+                encoding="utf-8",
+            )
+            codex_home.mkdir(parents=True)
+            (codex_home / "config.toml").write_text('model = "gpt-6.1-sol"\n', encoding="utf-8")
+            calls: list[list[str]] = []
+
+            def fake_subproc(cmd, *, cwd=None, text=True, capture_output=False, encoding=None, errors=None, env=None):
+                calls.append(cmd)
+                if cmd[1:] == ["plugin", "marketplace", "list"]:
+                    return subprocess.CompletedProcess(cmd, 0, f"workspace-local  {root}\n", "")
+                raise AssertionError(f"dry_run must not invoke {cmd}")
+
+            with mock.patch.object(MANAGER.subprocess, "run", side_effect=fake_subproc):
+                res = MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="fake-codex", dry_run=True)
+            self.assertEqual(res["status"], "dry-run")
+            self.assertEqual(res["installed"], ["alpha"])
+            self.assertEqual(len(calls), 1)
+
+    def test_synchronize_codex_plugins_rolls_back_cache_and_config_on_add_failure(self) -> None:
+        import shutil
+        import stat
+        with temporary_directory("marketplace-codex-rollback-") as temporary:
+            base = Path(temporary)
+            root = base / "mp"
+            codex_home = base / "codex-home"
+            cache_root = codex_home / "plugins" / "cache" / "workspace-local"
+            pdir = root / "plugins" / "alpha"
+            (pdir / ".codex-plugin").mkdir(parents=True)
+            (pdir / "skills" / "alpha").mkdir(parents=True)
+            (root / "skill-pack.json").write_text('{"plugins": [{"id": "alpha", "version": "1.0.0+codex.1"}]}\n', encoding="utf-8")
+            (pdir / ".codex-plugin" / "plugin.json").write_text('{"name": "alpha", "version": "1.0.0+codex.1"}\n', encoding="utf-8")
+            (pdir / "skills" / "alpha" / "SKILL.md").write_text("alpha-new\n", encoding="utf-8")
+
+            cdir = cache_root / "alpha" / "1.0.0+codex.1"
+            (cdir / ".codex-plugin").mkdir(parents=True)
+            (cdir / "skills" / "alpha").mkdir(parents=True)
+            (cdir / ".codex-plugin" / "plugin.json").write_text('{"name": "alpha", "version": "1.0.0+codex.1"}\n', encoding="utf-8")
+            (cdir / "skills" / "alpha" / "SKILL.md").write_text("alpha-old\n", encoding="utf-8")
+
+            cfg_path = codex_home / "config.toml"
+            original_cfg = (
+                'model = "gpt-6.1-sol"\r\n\r\n'
+                '[plugins."alpha@workspace-local"] # comment\r\nenabled = true\r\n\r\n'
+                '[plugins."alpha@other-marketplace"]\r\nenabled = true\r\n'
+            )
+            cfg_path.write_bytes(original_cfg.encode("utf-8"))
+            if os.name != "nt":
+                os.chmod(cfg_path, 0o600)
+
+            dups = MANAGER.duplicate_findings(root, codex_home, None)
+            self.assertEqual(dups, ["Enabled plugin duplicate: alpha@other-marketplace"])
+
+            def fake_subproc(cmd, *, cwd=None, text=True, capture_output=False, encoding=None, errors=None, env=None):
+                tail = cmd[1:]
+                if tail == ["plugin", "marketplace", "list"]:
+                    return subprocess.CompletedProcess(cmd, 0, f"workspace-local  {root}\n", "")
+                if tail == ["plugin", "list", "-m", "workspace-local"]:
+                    return subprocess.CompletedProcess(cmd, 0, "alpha@workspace-local installed, enabled 1.0.0+codex.1\n", "")
+                if tail == ["plugin", "remove", "alpha@workspace-local"]:
+                    shutil.rmtree(cache_root / "alpha")
+                    cur = MANAGER._read_text_preserve_eol(cfg_path)
+                    stripped_cfg = MANAGER._remove_config_plugin_block(cur, "alpha@workspace-local")
+                    cfg_path.write_bytes(stripped_cfg.encode("utf-8"))
+                    return subprocess.CompletedProcess(cmd, 0, "", "")
+                if tail == ["plugin", "add", "alpha@workspace-local"]:
+                    return subprocess.CompletedProcess(cmd, 1, "", "simulated add failure")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            with mock.patch.object(MANAGER.subprocess, "run", side_effect=fake_subproc):
+                with self.assertRaises(RuntimeError):
+                    MANAGER.synchronize_codex_plugins(root, codex_home, codex_cli="fake-codex")
+
+            self.assertEqual(cfg_path.read_bytes(), original_cfg.encode("utf-8"))
+            if os.name != "nt":
+                self.assertEqual(stat.S_IMODE(cfg_path.stat().st_mode), 0o600)
+            self.assertEqual((cdir / "skills" / "alpha" / "SKILL.md").read_text(encoding="utf-8"), "alpha-old\n")
+
+    def test_antigravity_sync_backs_up_downstream_drift_without_polluting_skill_dir(self) -> None:
+        with temporary_directory("marketplace-ag-drift-") as temporary:
+            base = Path(temporary)
+            mp = base / "mp"
+            ag_home = base / "ag-home"
+            state_file = base / "codex-home" / "skill-sync-state.json"
+            plugin_id = "single-cell-qc-extract"
+            cn_name = "A01-质控过滤提取"
+            sdir = mp / "plugins" / plugin_id
+            (sdir / ".codex-plugin").mkdir(parents=True)
+            (sdir / "skills" / plugin_id).mkdir(parents=True)
+            (sdir / ".codex-plugin" / "plugin.json").write_text(
+                json.dumps({"name": plugin_id, "version": "0.1.0+codex.1", "interface": {"displayName": "A01 · 质控过滤提取 v0.1.0", "shortDescription": "short"}}),
+                encoding="utf-8",
+            )
+            (sdir / "skills" / plugin_id / "SKILL.md").write_text(
+                "---\nname: single-cell-qc-extract\ndescription: desc\n---\n\n# A01 · 质控过滤提取 v0.1.0\n\nbody\n",
+                encoding="utf-8",
+            )
+            ag_home.mkdir(parents=True)
+            with mock.patch.dict(os.environ, {"ANTIGRAVITY_HOME": str(ag_home)}):
+                first = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=base / "no-desktop")
+                self.assertEqual(first["downstreamDriftBackups"], [])
+                dest_dir = ag_home / "config" / "skills" / cn_name
+                self.assertTrue((dest_dir / "SKILL.md").is_file())
+                self.assertFalse((dest_dir / ".sync-manifest.json").exists())
+                self.assertTrue(state_file.is_file())
+
+                # Simulate an unmerged downstream edit in Antigravity
+                (dest_dir / "SKILL.md").write_text("manual downstream tweak\n", encoding="utf-8")
+                second = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=base / "no-desktop")
+                self.assertEqual(len(second["downstreamDriftBackups"]), 1)
+                backup_path = Path(second["downstreamDriftBackups"][0]["backupPath"])
+                self.assertTrue((backup_path / "SKILL.md").is_file())
+                self.assertEqual((backup_path / "SKILL.md").read_text(encoding="utf-8"), "manual downstream tweak\n")
+
+                # Corrupt state file + manual edit must still protect downstream edit
+                state_file.write_text("{broken json", encoding="utf-8")
+                (dest_dir / "SKILL.md").write_text("unmerged tweak under corrupt state\n", encoding="utf-8")
+                third = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=base / "no-desktop")
+                self.assertEqual(len(third["downstreamDriftBackups"]), 1)
+                backup_path3 = Path(third["downstreamDriftBackups"][0]["backupPath"])
+                self.assertEqual((backup_path3 / "SKILL.md").read_text(encoding="utf-8"), "unmerged tweak under corrupt state\n")
+
+    def test_desktop_sync_repairs_corrupt_zip_and_restored_dir(self) -> None:
+        with temporary_directory("marketplace-desktop-zip-") as temporary:
+            base = Path(temporary)
+            mp = base / "mp"
+            desktop_dir = base / "desktop"
+            state_file = base / "codex-home" / "skill-sync-state.json"
+            plugin_id = "single-cell-qc-extract"
+            sdir = mp / "plugins" / plugin_id
+            (sdir / ".codex-plugin").mkdir(parents=True)
+            (sdir / "skills" / plugin_id).mkdir(parents=True)
+            (sdir / ".codex-plugin" / "plugin.json").write_text('{"name": "single-cell-qc-extract", "version": "0.1.0+codex.1"}\n', encoding="utf-8")
+            (sdir / "skills" / plugin_id / "SKILL.md").write_text("new content\n", encoding="utf-8")
+
+            standalone_dir = desktop_dir / f"01-{plugin_id}"
+            standalone_dir.mkdir(parents=True)
+            (standalone_dir / "old.txt").write_text("old", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"ANTIGRAVITY_HOME": str(base / "no-ag")}):
+                first = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=desktop_dir)
+                self.assertEqual(first["desktopUpdatedPlugins"], [plugin_id])
+                zpath = desktop_dir / f"01-{plugin_id}.zip"
+                self.assertTrue(MANAGER._is_valid_zip(zpath))
+
+                # Corrupt zip without changing upstream source: next run must detect and repair
+                zpath.write_bytes(b"not a valid zip")
+                repaired_zip = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=desktop_dir)
+                self.assertEqual(repaired_zip["desktopUpdatedPlugins"], [plugin_id])
+                self.assertTrue(MANAGER._is_valid_zip(zpath))
+
+                # Restore stale file into standalone_dir: next run must detect and repair
+                (standalone_dir / "skills" / plugin_id / "SKILL.md").write_text("restored old\n", encoding="utf-8")
+                repaired_dir = MANAGER.synchronize_antigravity_environment(mp, state_file=state_file, desktop_dir=desktop_dir)
+                self.assertEqual(repaired_dir["desktopUpdatedPlugins"], [plugin_id])
+                self.assertEqual((standalone_dir / "skills" / plugin_id / "SKILL.md").read_text(encoding="utf-8"), "new content\n")
+
+    def test_validator_skips_leftover_codex_cache_without_config_and_publish_gates(self) -> None:
+        validator = load_module(
+            "validate_skill_robustness",
+            ROOT / "plugins" / "skill-writing" / "skills" / "skill-writing" / "scripts" / "validate_skill_robustness.py",
+        )
+        publisher = load_module(
+            "publish_skill",
+            ROOT / "plugins" / "skill-sync-publish" / "skills" / "skill-sync-publish" / "scripts" / "publish_skill.py",
+        )
+        with temporary_directory("marketplace-g4-pub-") as temporary:
+            base = Path(temporary)
+            ag_home = base / "ag-home"
+            ag_skills = ag_home / "config" / "skills"
+            ag_skills.mkdir(parents=True)
+            (ag_home / "config" / "skills.json").write_text('{"entries": []}\n', encoding="utf-8")
+            for _, (_, cn) in validator.STANDARD_20_MAP.items():
+                (ag_skills / cn).mkdir()
+            (ag_skills / "shared_global_pitfalls.json").write_bytes((ROOT / "shared" / "global_pitfalls.json").read_bytes())
+
+            # Case 1: leftover empty/stale cache WITHOUT config.toml must be skipped gracefully
+            codex_home = base / "codex-home"
+            (codex_home / "plugins" / "cache" / "workspace-local" / "orphan-old").mkdir(parents=True)
+            with mock.patch.dict(os.environ, {"ANTIGRAVITY_HOME": str(ag_home), "CODEX_HOME": str(codex_home)}):
+                errs_skip, _ = validator.check_guardrail_4_registry_alignment(ROOT, ag_home)
+                self.assertFalse(any("Codex缓存失步" in e for e in errs_skip), errs_skip)
+
+                # Case 2: active config.toml + matching marker MUST report cache drift
+                (codex_home / "config.toml").write_text('[plugins."skill-writing@workspace-local"]\nenabled = true\n', encoding="utf-8")
+                (codex_home / "workspace-local.json").write_text(json.dumps({"marketplaceRoot": str(ROOT)}), encoding="utf-8")
+                errs_active, _ = validator.check_guardrail_4_registry_alignment(ROOT, ag_home)
+                self.assertTrue(any("Codex缓存失步" in e for e in errs_active), errs_active)
+
+            # Publish JSON & git gate checks
+            self.assertEqual(publisher._parse_json_stdout('{"ok": 1}'), {"ok": 1})
+            with self.assertRaises(ValueError):
+                publisher._parse_json_stdout('[1, 2]')
+
+            git = MANAGER.require_git()
+            remote = base / "remote.git"
+            repo = base / "repo"
+            subprocess.run([git, "init", "--bare", str(remote)], check=True, capture_output=True)
+            subprocess.run([git, "init", "-b", "main", str(repo)], check=True, capture_output=True)
+            subprocess.run([git, "config", "user.email", "tests@example.invalid"], cwd=repo, check=True)
+            subprocess.run([git, "config", "user.name", "Marketplace Tests"], cwd=repo, check=True)
+            for pid, ver in [("alpha", "0.5.0+codex.1"), ("beta", "0.2.0+codex.1")]:
+                (repo / "plugins" / pid / ".codex-plugin").mkdir(parents=True)
+                (repo / "plugins" / pid / ".codex-plugin" / "plugin.json").write_text(
+                    json.dumps({"name": pid, "version": ver}) + "\n", encoding="utf-8"
+                )
+            (repo / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "alpha", "version": "0.5.0+codex.1"}, {"id": "beta", "version": "0.2.0+codex.1"}]}) + "\n",
+                encoding="utf-8",
+            )
+            subprocess.run([git, "add", "."], cwd=repo, check=True)
+            subprocess.run([git, "commit", "-m", "seed"], cwd=repo, check=True, capture_output=True)
+            subprocess.run([git, "remote", "add", "origin", str(remote)], cwd=repo, check=True)
+            subprocess.run([git, "push", "-u", "origin", "main"], cwd=repo, check=True, capture_output=True)
+            subprocess.run([git, "fetch", "origin", "main"], cwd=repo, check=True, capture_output=True)
+
+            # Downgrade against origin/main must fail even when plugin.json was lowered directly
+            (repo / "plugins" / "alpha" / ".codex-plugin" / "plugin.json").write_text(
+                '{"name": "alpha", "version": "0.4.0+codex.0"}\n', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "version downgrade"):
+                publisher.check_remote_version_no_downgrade(git, repo, ["alpha"])
+            (repo / "plugins" / "alpha" / ".codex-plugin" / "plugin.json").write_text(
+                '{"name": "alpha", "version": "0.5.0+codex.1"}\n', encoding="utf-8"
+            )
+
+            # Unrelated edit inside shared skill-pack.json must fail single-skill gate
+            (repo / "skill-pack.json").write_text(
+                json.dumps({"plugins": [{"id": "alpha", "version": "0.5.0+codex.1"}, {"id": "beta", "version": "0.2.1+codex.2"}]}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "unrelated plugins"):
+                publisher.check_unrelated_dirty_paths(git, repo, "alpha", False)
+            subprocess.run([git, "checkout", "--", "skill-pack.json"], cwd=repo, check=True)
+
+            # Untracked nested file under plugins/beta/ must be caught by -uall
+            (repo / "plugins" / "beta" / "extra" / "note.txt").parent.mkdir(parents=True)
+            (repo / "plugins" / "beta" / "extra" / "note.txt").write_text("unrelated\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "unrelated uncommitted files"):
+                publisher.check_unrelated_dirty_paths(git, repo, "alpha", False)
 
 
 if __name__ == "__main__":
