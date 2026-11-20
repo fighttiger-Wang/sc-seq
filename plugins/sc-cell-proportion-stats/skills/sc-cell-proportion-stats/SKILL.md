@@ -41,68 +41,13 @@ description: B05 · 细胞比例统计图 v0.1.0：从单细胞转录组数据�
 
 ### 2. 标准化统计分析表格交付（多 Sheet Excel 工作簿 + 规范 TSV）
 
-交付至 `summary/tables/` 目录：
-- **`Cell_Proportion_Significance_Summary.xlsx`**（标准化科研配色专业工作簿）：
-  - **Sheet 1「说明与统计规范」**：记录项目来源、细胞总数、样本分组、统计学检验原理与显著性符号定义。
-  - **Sheet 2「<Prefix>_样本比例明细」**：各生物学重复样本在各细胞类型中的绝对计数与归一化百分比（%）宽表。
-  - **Sheet 3「<Prefix>_组统计量」**：各实验组的样本量 $N$、均值（Mean）、标准差（SD）、标准误（SEM）、中位数（Median）、四分位距（IQR）、极小值与极大值。
-  - **Sheet 4「<Prefix>_两两比较显著性」**：各组两两对比的均值差（Diff Mean）、变化倍数（Fold Change）、$\log_2\text{FC}$、Welch's $t$ 检验 $p$ 值、Wilcoxon 秩和检验 $p$ 值、FDR 校正 $p$ 值（$p.adj$）及严格对应的显著性符号。
-  - **Sheet 5「<Prefix>_Roe组织偏好性」**：基于卡方检验期望频数的 Ro/e 比值表（$\text{Ro/e} > 1$ 代表正向富集，$\text{Ro/e} < 1$ 代表负向耗竭）。
-- **纯文本 TSV 伴随表**：
-  - `Cell_Proportion_<Prefix>_Sample_Percentages.tsv`
-  - `Cell_Proportion_<Prefix>_Group_Statistics.tsv`
-  - `Cell_Proportion_<Prefix>_Pairwise_Tests.tsv`
-  - `Cell_Proportion_<Prefix>_Roe_Preferences.tsv`
+按需读取：[references/delivery_tables.md](references/delivery_tables.md)（需要 Excel 5 个 Sheet 与 TSV 伴随表的完整字段明细时读取）。
 
 ---
 
 ## 快速调用方式
 
-### 方式一：一键式 Shell 自动化流水线（推荐集群使用）
-```bash
-bash scripts/run_all_proportion_pipeline.sh \
-  -i "/mnt/test/AABB/Project_Name/Plot.rData" \
-  -a "/mnt/test/AABB/Project_Name/Annotation_Input.xlsx" \
-  -g "/mnt/test/AABB/Project_Name/Annotation_Input.xlsx" \
-  -o "/mnt/test/AABB/Project_Name/cell_proportion_analysis" \
-  --group_order "WT,Placebo,Treatment_A,Treatment_B" \
-  --celltype_cols "cell_type_fine,cell_type_major" \
-  --sif "/mnt/test/FCX/sif/sc_Analysis_V4.0.sif"
-```
-
-### 方式二：分步独立脚本调用
-
-#### 1. 统计计算与主工作簿生成 (R)
-```bash
-Rscript scripts/run_proportion_stats.R \
-  --input "path/to/Plot.rData" \
-  --anno "path/to/Annotation_Input.xlsx" \
-  --group "path/to/Annotation_Input.xlsx" \
-  --output "./cell_proportion_analysis" \
-  --celltype_cols "cell_type_fine,cell_type_major" \
-  --group_order "WT,Placebo,Treatment_A,Treatment_B"
-```
-
-#### 2. 自适应网格零重叠高分云雨图绘制 (Python)
-```bash
-python3 scripts/plot_dynamic_raincloud.py \
-  --input "./cell_proportion_analysis/summary/tables/Cell_Proportion_Fine_Sample_Percentages.tsv" \
-  --output "./cell_proportion_analysis/summary/plots" \
-  --prefix "Fine" \
-  --groups "WT,Placebo,Treatment_A,Treatment_B" \
-  --ncols 4 \
-  --palette "nature"
-```
-
-#### 3. 多维复合气泡柱状图绘制 (R)
-```bash
-Rscript scripts/plot_multidim_composite.R \
-  --input "./cell_proportion_analysis/metadata_annotated.rds" \
-  --output "./cell_proportion_analysis/summary/plots" \
-  --celltype_col "cell_type_fine" \
-  --prefix "Fine" \
-  --group_order "WT,Placebo,Treatment_A,Treatment_B"
-```
+按需读取：[references/usage_commands.md](references/usage_commands.md)（需要一键 Shell 流水线与分步 R/Python 脚本完整调用命令时读取；方式一：`scripts/run_all_proportion_pipeline.sh`，方式二：`run_proportion_stats.R` → `plot_dynamic_raincloud.py` → `plot_multidim_composite.R`）。
 
 ---
 

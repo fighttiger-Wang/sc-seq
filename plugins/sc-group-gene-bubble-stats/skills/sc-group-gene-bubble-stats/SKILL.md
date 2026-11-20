@@ -1,7 +1,7 @@
 ---
 name: sc-group-gene-bubble-stats
 displayName: B04 · 分组表达气泡图 v0.1.0
-description: B04 · 分组表达气泡图 v0.1.0：从单细胞表达谱数据生成分组基因表达分面气泡图与完整组间统计分析表 B04 · 单细胞分组基因表达气泡图与统计 v0.1.0：从单细胞表达谱数据生成分组基因表达分面气泡图与完整组间统计分析表 Create publication-ready single-cell split/faceted group gene expression bubble plots (DotPlots) and comprehensive inter-group statistical workbooks (means, SEM, fold change, p-values) from single-cell expression data and gene lists. Use when users ask for 单细胞组间分面气泡图、分组基因表达气泡图、表达谱数据组间比较、组间表达量与比例统计表、指定基因亚群表达比较柱状散点图、或复现 Microglia 样式的出版级组间比较分析图表。
+description: B04 · 分组表达气泡图 v0.1.0：从单细胞表达谱数据生成分组基因表达分面气泡图与完整组间统计分析表 Create publication-ready single-cell split/faceted group gene expression bubble plots (DotPlots) and comprehensive inter-group statistical workbooks (means, SEM, fold change, p-values) from single-cell expression data and gene lists. Use when users ask for 单细胞组间分面气泡图、分组基因表达气泡图、表达谱数据组间比较、组间表达量与比例统计表、指定基因亚群表达比较柱状散点图、或复现 Microglia 样式的出版级组间比较分析图表。
 ---
 
 # B04 · 分组表达气泡图 v0.1.0

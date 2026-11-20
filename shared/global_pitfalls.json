@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-20",
+  "pitfalls": [
+    {
+      "id": "PIT-001",
+      "title": "openclaw01 禁止写 --mem",
+      "scope": ["D02", "B05", "slurm"],
+      "rule": "openclaw01 集群 Slurm 节点配置了 RealMemory=1，默认严禁在 #SBATCH 或 submit-r 参数中显式声明 --mem=...，否则会触发 Requested node configuration is not available 拒排。",
+      "forbidden_patterns": ["#SBATCH --mem=64G", "[string]$Mem = \"64G\""]
+    },
+    {
+      "id": "PIT-002",
+      "title": "跨 Skill 调用只认编号前缀，禁止引用旧名",
+      "scope": ["all"],
+      "rule": "跨 Skill 引用与路由一律按编号前缀（如 B07-机制流程概念图、E02-生信三方评审、E05-Skill同步发布、E06-红蓝对抗闭环、C06-AI设计流水线）匹配，禁止在指令或路由中写死已废弃旧名。",
+      "retired_names": [
+        "scientific-diagram-016",
+        "E02-三方专家评审",
+        "E05-多智能体委托",
+        "E06-本机智能体委托",
+        "C01-工作台",
+        "C02-UI视觉设计",
+        "C03-需求对齐追问",
+        "C04-独立体验走查",
+        "C05-桌面应用打包"
+      ]
+    },
+    {
+      "id": "PIT-003",
+      "title": "唯一真相，原地替换，禁止同文档矛盾断言",
+      "scope": ["all"],
+      "rule": "修改规则或交付标准时必须在原位置原地替换旧条文（Single Source of Truth），严禁在旧条文后追加新补丁导致同一文档出现互相矛盾的断言（如 5-sheet 唯一合法 vs 4-sheet 标准版）。",
+      "forbidden_patterns": ["legacy four-sheet output is invalid", "fixed five-sheet workbook"]
+    },
+    {
+      "id": "PIT-004",
+      "title": "Seurat v5 layer 兼容",
+      "scope": ["A02", "A03", "B02", "B03", "B04", "B05", "D02"],
+      "rule": "处理 Seurat v5 Assay5 对象时禁止直接假设 @data/@counts 单槽位存在；读取表达矩阵前需兼容 LayerData()/JoinLayers() 或检查多层 counts/data。"
+    },
+    {
+      "id": "PIT-005",
+      "title": "UTF-8 无 BOM",
+      "scope": ["all"],
+      "rule": "所有 .md、.json、.yaml、.py、.js、.sh、.awk 文件必须保存为 UTF-8 无 BOM 编码（且 Shell/Awk 脚本使用 LF 换行），严禁写入 EF BB BF BOM 头。"
+    }
+  ]
+}

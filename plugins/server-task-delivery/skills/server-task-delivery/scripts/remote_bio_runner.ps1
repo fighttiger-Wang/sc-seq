@@ -9,7 +9,8 @@ param(
     [string]$LocalPath = "",
     [string]$JobName = "sc_analysis",
     [int]$Cpus = 8,
-    [string]$Mem = "64G",
+    # openclaw01 RealMemory=1: omit --mem by default to avoid Slurm node-config rejection
+    [string]$Mem = "",
     [string]$Partition = "allsc",
     [string]$SifImage = "/mnt/test/FCX/sif/sc_Analysis_V4.0.sif",
     [switch]$IncludeDiskUsage
@@ -155,6 +156,11 @@ if (grepl("\\.rds$", f, ignore.case=TRUE)) {
         $rawScript = (Get-Content -Raw -Encoding UTF8 $LocalScript) -replace "`r`n", "`n"
         $scriptB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rawScript))
 
+        $memDirective = if ([string]::IsNullOrWhiteSpace($Mem)) {
+            "# openclaw01 RealMemory=1: omit --mem by default"
+        } else {
+            "#SBATCH --mem=$Mem"
+        }
         $sbatchCmd = @"
 set -euo pipefail
 mkdir -p '$remoteScriptDir' '$remoteLogDir' '$RemotePath/plots' '$RemotePath/tables' '$RemotePath/rds'
@@ -164,7 +170,7 @@ cat << 'EOF' > '$remoteSbatchPath'
 #SBATCH -p $Partition
 #SBATCH --job-name=$JobName
 #SBATCH --cpus-per-task=$Cpus
-#SBATCH --mem=$Mem
+$memDirective
 #SBATCH --time=12:00:00
 #SBATCH --output=$remoteLogDir/%x_%j.out
 #SBATCH --error=$remoteLogDir/%x_%j.err

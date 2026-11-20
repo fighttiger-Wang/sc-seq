@@ -1,12 +1,12 @@
 ---
 name: skill-writing
-displayName: E03 · Skill规范写作 v0.4.0
-description: E03 · Skill规范写作 v0.4.0：编写可 / 调用的双端标准 Skill 与五大零损耗鲁棒性护栏校验 Author, update, and validate dual-platform (Antigravity + Codex) skills across the A-E 5-cabin architecture (20 standard skills) with 5 zero-overhead robustness guardrails (`validate_skill_robustness.py`), snapshot/rollback protection (`.u`), and handoff to `E05-Skill同步发布` for atomic release.
+displayName: E03 · Skill规范写作 v0.5.0
+description: E03 · Skill规范写作 v0.5.0：编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验 Author, update, and validate dual-platform (Antigravity + Codex) skills across the A-E 5-cabin architecture (24 standard skills) with 7 zero-overhead robustness guardrails (`validate_skill_robustness.py`), single-source-of-truth in-place replacement, snapshot/rollback protection (`.u`), and handoff to `E05-Skill同步发布` for atomic release.
 ---
 
-# E03 · Skill规范写作 v0.4.0
+# E03 · Skill规范写作 v0.5.0
 
-定义 Antigravity（`~/.gemini/config/skills/`）与 Codex（`<shared-marketplace-root>/plugins/`）双平台统一的 **Skill 架构分类账本、命名与 Frontmatter 铁律、基线防退化门禁** 及 **5 大零损耗自动化鲁棒性护栏**。
+定义 Antigravity（`~/.gemini/config/skills/`）与 Codex（`<shared-marketplace-root>/plugins/`）双平台统一的 **Skill 架构分类账本、命名与 Frontmatter 铁律、唯一真相原地替换原则** 及 **7 大零损耗自动化鲁棒性护栏**。
 
 > **职责边界**：
 > - **`E03-Skill规范写作`（本 Skill）**：负责 Skill 架构设计、分舱编码规范、改前快照回滚与 `scripts/validate_skill_robustness.py` 鲁棒性体检（口令 `.g` / `体检`）。
@@ -63,7 +63,7 @@ description: E03 · Skill规范写作 v0.4.0：编写可 / 调用的双端标准
 
 ---
 
-## 三、 五大零性能损耗鲁棒性护栏 (`scripts/validate_skill_robustness.py`)
+## 三、 七大零性能损耗鲁棒性护栏 (`scripts/validate_skill_robustness.py`)
 
 修改任何 Skill 前后，均可通过内置脚本执行毫秒级体检与快照保护（对应全局口令 `.g` / `体检` 与 `.u` / `撤回`）：
 
@@ -71,34 +71,25 @@ description: E03 · Skill规范写作 v0.4.0：编写可 / 调用的双端标准
 # 1. 改前创建秒级备份快照
 python scripts/validate_skill_robustness.py --snapshot <skill-id-or-name>
 
-# 2. 运行全套 20 个 Skill（或单个 Skill）五大护栏分舱体检
+# 2. 运行全套标准 Skill（或单个 Skill）七大护栏分舱体检
 python scripts/validate_skill_robustness.py [--skill <skill-id-or-name>] [--json]
 
 # 3. 改坏时 1 秒物理还原（对应口令 .u / 撤回）
 python scripts/validate_skill_robustness.py --rollback <skill-id-or-name>
 ```
 
-### 五大自动化护栏核验法则：
-1. 📏 **护栏 1（主文件防肥胖红线 `<= 8 KB`）**：
-   - 新编写或重构的 **C 类 / E 类 Skill 主文件 `SKILL.md` 严格强制 `<= 8 KB`**（杜绝 28KB 巨石撑爆上下文）；长篇协议或模板一律下沉至 `references/` 按需读取。
-   - 对于历史遗留超 8KB 的 A/B/D 类专业生信 Skill，输出温和 `WARNING` 提示可按需下沉 `references/`，不阻断既有生信管线。
-2. 🛡️ **护栏 2（`/` 斜杠菜单防消失锁 & 无 BOM UTF-8）**：
-   - 强制校验 Antigravity 目录名 == `SKILL.md` `name` == `ANTIGRAVITY_SKILLS_MAP` 注册项；
-   - 强制校验 `displayName` 符合 `^[A-Z]\d{2} · .+ v\d+\.\d+\.\d+$`；
-   - 强制校验所有 `.md/.json/.yaml/.py/.js` 为 **UTF-8 无 BOM**。
-3. 🧬 **护栏 3（A/B/C/D/E 五大类分舱特化校验）**：
-   - **A/B 生信与绘图舱**：校验 `shared/sc-annotation-evidence-core` 知识库快照哈希一致性与生物学规则基线，不强套工程快捷键；
-   - **C 前端设计舱**：校验 `vibe-guard.js`、`distill.js`、`govern.js` 核心脚本完备性与防删函数护栏；
-   - **D 算力运维舱**：校验无本机个人账户绝对路径硬编码泄漏；
-   - **E 治理与调度舱**：校验快捷口令是否统一采用 **`.前缀`（`.? / .u / .d / .g / .s`）**，严禁劫持裸单字母 `A/B/C/D/b`，严禁默认调用付费外援（`dsh`/`codex`）。
-4. 🗺️ **护栏 4（三端注册表 100% 对齐核验）**：
-   - 校验 `~/.gemini/config/skills/`（20 个标准 Skill）、`~/.gemini/config/skills.json`、`setup.py` 的 `ANTIGRAVITY_SKILLS_MAP` 与 `skill-pack.json` / `marketplace.json` 100% 对齐，无孤儿目录或残留 `_archive_*`。
-5. ⏪ **护栏 5（改前真快照与 1 秒回滚）**：
-   - 改前 `--snapshot` 自动将插件与 Antigravity 目录备份至 `~/.gemini/archive_e_series_backup/skill_snapshots/`；遇异常随时 `--rollback`（口令 `.u`）1 秒字节级还原。
+### 七大自动化护栏核验法则：
+1. 📏 **护栏 1（全仓主文件 `<= 8 KB` 硬红线）**：A~E 全部标准 Skill 的 `SKILL.md` 一律强制 `<= 8 KB`，超限直接报错阻断；长表/schema/示例下沉至 `references/` 并保留按需读取指针。
+2. 🛡️ **护栏 2（`/` 斜杠菜单防消失锁 & 无 BOM UTF-8）**：校验 Antigravity 目录名 == `SKILL.md` `name` == `ANTIGRAVITY_SKILLS_MAP`、`displayName` 格式，以及全仓文件 **UTF-8 无 BOM**。
+3. 🧬 **护栏 3（A/B/C/D/E 五大类分舱特化校验）**：A/B 校验知识库快照哈希；C 校验 `vibe-guard.js`/`distill.js`/`govern.js`；D 校验无个人路径泄漏；E 校验 `.前缀` 口令（`.?/.u/.d/.g/.s`）与禁默认付费外援。
+4. 🗺️ **护栏 4（三端注册表 100% 对齐）**：`~/.gemini/config/skills/`、`skills.json`、`setup.py` `ANTIGRAVITY_SKILLS_MAP` 与 `skill-pack.json` 100% 对齐，无孤儿或 `_archive_*`。
+5. ⏪ **护栏 5（改前真快照与 1 秒回滚）**：`--snapshot` 备份至 `~/.gemini/archive_e_series_backup/skill_snapshots/`，`--rollback`（`.u`）1 秒还原。
+6. 🔗 **护栏 6（全仓反向引用与死链雷达）**：校验 `SKILL.md` 与 `references/*.md` 中所有相对链接目标真实存在，且跨 Skill 调用只认编号前缀（如 `B07-机制流程概念图`），严禁残留旧名。
+7. 🧭 **护栏 7（同文档矛盾检查 & `global_pitfalls.json` 巡检）**：拦截同文档矛盾断言（如 5-sheet vs 4-sheet、`openclaw01` 默认 `--mem`），并按 `shared/global_pitfalls.json` 全仓巡检。
 
 ---
 
-## 四、 修改既有 Skill 的防退化规程与发布交接
+## 四、 唯一真相原地替换原则与发布交接
 
-1. **既有规则基线保护**：修改任何已有 Skill（尤其是 `A02`/`A03` 生信注释规则）前，必须先通读其当前 `SKILL.md` 及关联 `references/`，仅做最小增量修改（`add`/`clarify`/`strengthen`），未经用户显式授权严禁删减既有生物学判据或质控门禁。
+1. **唯一真相原地替换原则（废除“只叠补丁”旧规矩）**：修改已有规则、路径或交付标准时，**必须在原位置原地替换旧条文**，严禁在旧条文后追加新补丁导致同一文档出现自相矛盾；下沉细节至 `references/` 时须保持业务规则、阈值、配色与命令零丢失。
 2. **移交 `E05-Skill同步发布` 闭环**：当 Skill 编写或修改通过 `validate_skill_robustness.py`（`0 Error`）后，直接调用 `/E05-Skill同步发布`（`publish_skill.py`）一键完成版本递增、三端同步与 GitHub 远端推送。

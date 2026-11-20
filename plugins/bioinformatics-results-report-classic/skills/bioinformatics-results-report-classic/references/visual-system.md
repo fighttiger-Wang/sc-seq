@@ -42,7 +42,7 @@ Use system Chinese fonts. Prefer a readable Song-style serif stack for narrative
 - Preserve the original background, palette, labels, and aspect ratio.
 - Prefer self-contained SVG for newly authored workflows, study-design diagrams, mechanism schematics, and expected-pattern figures. Do not convert an authored SVG to PNG before report embedding.
 - Declare newly authored concept figures with `authored_concept: true`; treat any raster reference or SVG/hash mismatch in the final HTML as a failed regression.
-- For newly authored workflows and study designs, delegate only to the exact `scientific-diagram-016` Skill. Prefer its fixed Typst/CeTZ desktop, mobile, and print templates; if that route fails, use a plain table, numbered steps, or a simple direct-box SVG.
+- For newly authored workflows and study designs, delegate by number prefix to **`B07-机制流程概念图`** (`B07*`). Prefer its fixed Typst/CeTZ desktop, mobile, and print templates; if that route fails, use a plain table, numbered steps, or a simple direct-box SVG.
 - Keep connectors thin and orthogonal where possible, avoid diagonal crossings, and give every node a clear hierarchy: phase label, concise title, then optional one-line detail.
 - Use color semantically and sparingly. Required, conditional, validation, and warning states may have distinct soft fills, but peer nodes should not receive arbitrary rainbow colors.
 - Concept figures must visibly state when they are literature-informed hypotheses rather than calculated project results.

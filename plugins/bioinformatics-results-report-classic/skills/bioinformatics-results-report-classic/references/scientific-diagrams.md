@@ -2,18 +2,18 @@
 
 Use this reference only when the report requires a newly authored conceptual figure. Existing supplied scientific plots remain unchanged.
 
-## Exact specialist-skill lookup
+## Specialist-skill lookup (prefix-based)
 
-The only specialist drawing skill approved for this report skill is the machine ID `scientific-diagram-016`.
+The specialist drawing skill approved for this report skill is **`B07-机制流程概念图`** (matched by number prefix `B07*` in Antigravity/Codex skills, or its marketplace plugin ID in raw plugin layouts).
 
-1. Check the exact installed path `<CODEX_HOME>/skills/scientific-diagram-016/SKILL.md` first.
-2. If it is absent, scan only the configured local workspace-skill cache for paths whose final skill directory is exactly `scientific-diagram-016`; do not scan the whole disk and do not fuzzy-match names, display numbers, descriptions, or drawing-related words.
-3. Use the specialist only when exactly one readable `SKILL.md` is resolved. Read that file completely before creating the figure, then follow only the references relevant to the selected figure class.
-4. Treat zero matches, multiple matches, unreadable instructions, renderer errors, and failed diagram QA as specialist failure. Do not install packages, access the network, or silently switch to another drawing skill.
+1. Check `<ANTIGRAVITY_HOME>/config/skills/B07-机制流程概念图/SKILL.md` (or `~/.gemini/config/skills/B07-机制流程概念图/SKILL.md`) and `<CODEX_HOME>/skills/B07*/SKILL.md` by prefix `B07`.
+2. If absent, scan the configured local workspace-skill cache for the `B07-机制流程概念图` skill directory (avoid hardcoding retired machine IDs).
+3. Use the specialist only when one readable `SKILL.md` is resolved. Read that file completely before creating the figure, then follow only the references relevant to the selected figure class.
+4. Treat zero matches, ambiguous multiple matches, unreadable instructions, renderer errors, and failed diagram QA as specialist failure. Do not install packages, access the network, or silently switch to an unrelated drawing skill.
 
 ## Specialist route
 
-When `scientific-diagram-016` resolves successfully, use it for these newly authored figure classes:
+When `B07-机制流程概念图` resolves successfully, use it for these newly authored figure classes:
 
 - workflow;
 - study-design;

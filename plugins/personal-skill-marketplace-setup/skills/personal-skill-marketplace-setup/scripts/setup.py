@@ -1425,6 +1425,9 @@ def synchronize_antigravity_environment(
                 if shared_target_dir.exists():
                     shutil.rmtree(shared_target_dir)
                 shutil.copytree(shared_source, shared_target_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+                pitfalls_src = shared_source / "global_pitfalls.json"
+                if pitfalls_src.is_file():
+                    shutil.copy2(pitfalls_src, target_skills_dir / "shared_global_pitfalls.json")
 
         for plugin_id, (order, chinese_cmd_name) in ANTIGRAVITY_SKILLS_MAP.items():
             src_plugin_dir = marketplace_root / "plugins" / plugin_id

@@ -14,26 +14,9 @@ labels must use controlled, reusable names at one presentation level.
 
 ### 自底向上四阶段注释与层级协调架构 (Four-Phase Bottom-Up Annotation Framework)
 
-在执行全细胞/混合谱系大类注释时，强制采用自底向上归纳注释流水线：
+全细胞/混合谱系大类注释强制采用自底向上四阶段流水线：微观探底 → 层级拓扑审计 → 有界切面规约（祖先-后代互斥，`Celltype_EN` 严禁父子并列）→ 契约交付与硬拦截。
+按需读取：`references/four-phase-bottom-up-framework.md`（大类注释开始时、做层级/粒度协调与交付校验前必读）。
 
-1. **第一阶段：全谱系无拘微观探底 (Micro-level Discovery via Open-World Evidence)**
-   - **数据第一性原理驱动**：不预设宏观大类限制，结合全基因组背景、DE Marker 统计、检测率（`pct.1/pct.2`）、连续 UMAP 拓扑及全球开放顶刊学术文献，将全表每个 Cluster 直接探底注释到证据充分的最细稳定生物学叶实体（Leaf Identity）。
-   - **三轨正交分离**：严格将【谱系身份 (Identity)】、【功能状态 (State: 增殖、缺氧、激活)】与【技术异常 (Abnormality: 碎片、双细胞嫌疑)】分轨记录，状态与技术标记绝不侵占主干身份。
-
-2. **第二阶段：全景层级拓扑审计 (Panoramic Hierarchy & Topology Audit)**
-   - 在全员微观身份确立后，从全局高度审视全部 Cluster：
-     - **组织实质属性判定**：区分常规多系统复合器官（如肺、肾、肝，包含保守的间质/内皮/免疫微环境）与高度特化实质器官（如视网膜、睾丸、垂体）。
-     - **谱系切面对等性检查**：检查各大分支的细分深度是否对等，识别是否存在“某一谱系大部粗化而个别离岛跳级”的父子混淆隐患。
-
-3. **第三阶段：双向有界切面规约与投影 (Bounded Harmonization & Projection)**
-   - **祖先-后代互斥定理 (Ancestor-Descendant Exclusion Theorem)**：在交付的主列 `Celltype_EN` 中，严禁出现互为祖先与后代的标签同台并列（如 `Epithelial_cell` 与 `Ciliated_cell` 严禁同列）。
-   - **向上有界（锁死大类基石）**：间质分支死死锁定在成纤维、平滑肌、周细胞、间皮 4 大基石；免疫分支死死锁定在 T、B、NK、巨噬、单核等常规大类。**物理阻断向通用 `Stromal_cell` 或 `Immune_cell` 退化的大锅饭合并！**
-   - **谱系内特化群规约**：当上皮分支内存在特化亚型（如纤毛、神经内分泌 PNEC），在大类交付时统一规约至主干大类（`Epithelial_cell`），其高分辨率微观特征 **100% 完整保留在 `State`、`Key Markers` 与 `Rationale` 列（零信息损失）**。
-   - **外周独立实体保护**：对于软骨细胞（`ACAN+/COL2A1+`）、雪旺细胞（`SOX10+/MPZ+`）或造血祖细胞等独立于四大主干系统的边缘大类，依据特异 Marker 赋予独立大类身份，绝不削足适履硬塞给成纤维或上皮。
-
-4. **第四阶段：契约交付与硬拦截把关 (Contract Delivery & Hard Assertion)**
-   - 校验器内置数学断言：严禁祖先与后代标签在 `Celltype_EN` 列同台并列；一旦冲突直接抛出致命异常（Fatal Error）并中断构建，杜绝带病表格流向客户。
-   - 交付表格严格遵循契约：4-sheet 完整大表（Cambria 11，冻结窗格，状态浅红标注）与标准 3 列简表（`Cluster`, `Celltype_EN`, `中文名称`），数据目录过程文件零残留。
 
 ## Inputs
 
@@ -122,17 +105,15 @@ widths, wrapping and shrink-to-fit disabled, sample freeze panes, and red fill
 `#F8696B` only on the Chinese-name cell.
 
 ### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
-1. **交付文件规范与数据目录绝对纯净**：交付件**固定且仅允许保留两份表格**：
-   - **时间戳完整注释大表**：`{project_name}_大类注释结果_{YYYYMMDD_HHMMSS}.xlsx`（4-sheet 标准版：注释与详细证据、细胞配色、细胞类型与文献、说明与数据来源，遵循格式契约）。
-   - **简明对应关系表**：`cluster注释信息.xlsx`（固定包含 `Cluster`, `Celltype_EN`, `中文名称` 3列，自适应列宽，无筛选，冻结首行，专供下游快速查阅与对接制图）。
-   - **严禁输出无时间戳的大表副本**（杜绝 `{project_name}_大类注释结果.xlsx` 同名无时间戳冗余大表，避免客户混淆）。
-   - **过程文件零残留**：严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。
-2. **严禁跨项目扩散扫描**：执行过程中严禁使用通配符跳出当前输入路径，去全局递归遍历其他客户历史售后目录（如 `E:\Desktop\售后\*`），杜绝历史项目非标准命名造成的交叉污染及无谓耗时。
-3. **环境调用一次到位**：使用预设的稳定 Python 运行时（`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`），禁止递归全盘查找 Python 路径。
+
+交付件固定且仅两份表格，数据目录过程文件零残留，严禁跨项目扩散扫描，使用预设稳定 Python 运行时。
+按需读取：`references/delivery-purity-and-execution.md`（交付落盘前、整理输出目录或调用 Python 环境时必读）。
 
 ### 开放生物学发现与防负优化保证 (Open Discovery & Non-Degradation Guarantee)
-1. **第一阶段纯数据驱动**：注释第一阶段始终基于当前样本自身的全基因组经验基石、连续拓扑流形与双向排他门控，绝对不退化为封闭白名单或死字典硬匹配。
-2. **第二阶段文献缓存加速**：内置文献与命名库仅作为成熟通用细胞类型的第二阶段免检索加速池，绝不对陌生、罕见、病理或非模式生物细胞类型行使否决权；面对未知特化程序，完整保留数据驱动特征，触发靶向学术检索或恪守科学诚实原则客观披露待实验验证状态，守护 100% 注释准确性。
+
+第一阶段纯数据驱动，内置文献/命名库仅为第二阶段加速池，无否决权。
+按需读取：`references/open-discovery-guarantee.md`（遇陌生/罕见/病理/非模式生物细胞类型或决定是否检索文献时必读）。
+
 
 Never output generic `Cell`, silently discard a cluster, use one marker or one
 UMAP location as sole proof, or claim confirmed doublet from aggregate evidence.

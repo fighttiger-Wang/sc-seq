@@ -40,262 +40,31 @@ Preserve parent scope and cluster IDs. Final output sorts numeric cluster IDs fr
 
 ## Decision logic
 
-For every cluster:
-
-1. Establish the parent program without using it to hide contamination. Build a
-   dataset-wide background profile and downweight signals present across most
-   clusters, tissue-wide ambient programs, and housekeeping/QC genes.
-2. Compare sibling candidates as complete programs: identity anchors first,
-   explicit sibling exclusions second, differentiation programs third, and
-   state/QC programs last. UMAP is supporting evidence. For high-risk
-   unconventional-T boundaries, run the configured absolute program gate
-   before leaf selection: NKT requires TCR plus distinct NK-receptor and
-   cytotoxic programs; MAIT requires a coherent T program, alpha-beta branch
-   support, and multiple MAIT-associated markers; DNT tolerates non-dominant
-   receptor background but not a dominant competing CD4/CD8 or gamma-delta
-   program.
-   When multiple sibling programs pass, read the
-   [identity arbitration contract](references/identity-arbitration-contract.md).
-   Eligibility gates never grant automatic final-label priority: compare the
-   complete competing programs and explicitly resolve one-sided dominance, a
-   registered boundary identity, or an unresolved boundary before binding the
-   label.
-3. Jointly interpret `mean_expr`, `expr_ratio`, `log2FC`, `pct.1`, and `pct.2`.
-   High expression in a few cells is not a broadly supported program; a modest
-   signal across most cells may be meaningful. `norm_expr` must not be counted
-   twice.
-4. Audit tissue-relevant off-parent programs. A globally elevated epithelial
-   program is background; a locally enriched multi-gene, high-prevalence program
-   may indicate contamination, reassignment, or a mixed boundary. One shared
-   marker is never enough for a doublet call.
-5. Review every cluster on the full UMAP and audit repeated labels: neighboring
-   types, continuous trajectories, disconnected same-label islands, isolated
-   cycling/state islands, and marker/UMAP conflicts. Record an explicit identity
-   action. A conflict may reject a provisional label only when integrated
-   Marker and topology review selects an already-supported same-level candidate;
-   UMAP alone cannot create or overwrite an identity.
-   Formal delivery must bind the records to the output of
-   `qualitative_evidence_core`: do not hand-author `evidence.json`,
-    `records.json`, and `umap_audit.json` by copying a proposed label into all
-    three files. A UMAP reassignment is valid only for a documented
-    marker/UMAP conflict and only to a candidate present in the core's
-    candidate-program audits.
-    Formal UMAP delivery additionally requires an independently generated
-    image/coordinate geometry artifact bound to the supplied UMAP SHA-256.
-    `reviewed=true` and prose topology fields are declarations, not geometry
-    evidence.
-6. Resolve primary identity, then separately assign any
-   `low_quality`, `background_interference`, `abnormal_state`, `debris`,
-   `suspected_doublet`, or `mixed_population` flags. Flags may coexist.
-   A registered specialization panel may add a conditional `下位亚类` only
-   after its base identity program passes. For example, a coherent endothelial
-   tip/angiogenic program may be retained as `Tip_endothelial` beneath a
-   capillary identity. It is not forbidden, but it must not replace the base
-   lineage, be inferred from UMAP alone, or be promoted from a state marker.
-7. If competing programs are complete and near-balanced, use `Multi_cell` with
-   concrete components and red warning formatting. If one program dominates,
-   retain its identity and explain the secondary signal as background,
-   contamination, or state, and record the unresolved evidence explicitly.
-8. Before formal workbook construction, require the expert plotting and naming
-   gate. `allow_specific_label` is required for a specific subtype. Parent,
-   unresolved, provisional, manual-review, merge, or recluster outcomes must
-   be represented by structured verdict and handling fields; do not encode
-   them by inventing a longer `Celltype_EN` string. An approved abbreviation
-   requires a canonical full name and explicit expert naming approval.
-
-## Boundary behavior
-
-Never let a single receptor chain, a single shared marker, or a state marker
-create a subtype. `SLC4A10`, `ZBTB16`, `TRDC`, and cytotoxic genes must be
-interpreted as components of a complete program and against cross-cluster
-background; aggregate expression cannot establish same-cell coexpression.
-
-Do not infer subtype from a shared state program alone. Cycling, exhaustion,
-interferon response, cytotoxicity, antigen presentation, and stress remain
-states unless a coherent identity program supports a subtype. For every lineage
-boundary record both candidate programs, prevalence, relative dominance,
-exclusions, and the decision. If the knowledge base lacks a defensible leaf,
-enter the executable open-world research stage described in
-[open-world-research-workflow.md](references/open-world-research-workflow.md).
-The ontology result may remain visible only as an explicitly unbound fallback.
-Do not bind it formally until the exact `research_requests.json` is resolved.
-Use a validated external candidate only with two independent sources and
-current-case supporting markers; do not silently choose an arbitrary ancestor.
-When research would replace the pre-research identity, require a current-case
-competitor comparison with the prior identity, multi-gene support for the new
-candidate, and explicit competing-program exclusion evidence; literature
-plausibility alone cannot authorize a replacement.
-External research is also bounded by the source's semantic claim. Classify each
-source as `identity`, `identity_like`, `state`, `program`, or
-`lineage_identity`, preserve its verbatim qualifying wording, and bind no label
-above the conservative level jointly supported by all sources. A `-like`,
-`resembles`, or `similar to` statement cannot become the unqualified identity;
-a state or program cannot become a literature-established stable identity; and
-a lineage-derived label requires current-case lineage evidence, not aggregate
-cluster expression. When the literature supports only a state/program, retain a
-same-level neutral contextual identity and place the qualified comparison and
-state in `下位亚类` and `细胞状态` rather than narrowing the ontology vocabulary.
-
-Apply the versioned
-[identity arbitration policy](references/identity-arbitration-policy.v1.json)
-after candidate generation. Absolute, branch, exclusion, and boundary gates
-establish eligibility only. State/development programs are evaluated after
-identity competition, and UMAP is an audit after marker-supported arbitration;
-neither may create or rescue an identity program.
+按需读取：[references/subcluster-decision-logic.md](references/subcluster-decision-logic.md)（逐 cluster 决策 1-8 步、`Boundary behavior`、开放世界研究与身份仲裁；每个 cluster 定标签前必读）。
 
 ## Output
 
-Produce a cluster-level `cluster -> celltype_label` mapping usable for UMAP.
-Keep the most likely主体细胞类型 even for impurity, low quality, abnormal,
-debris, or suspected doublet clusters. Put abnormality, components,
-characteristic genes, UMAP judgment, explanation, literature, and handling
-recommendation in separate fields. Do not create confidence or score fields.
-For a subcluster deliverable, `Celltype_EN` is the expert-approved identity
-plotting label. It may contain a supported parent or descendant identity, but
-only the structured expert verdict can authorize a specific subtype. Keep
-state, program, disease role, and UMAP topology in dedicated evidence fields.
-Never manufacture a state-qualified or Marker-derived plotting name. Use a
-shortened professional name only when the naming dictionary and expert review
-explicitly approve the abbreviation.
-The UMAP mapping must remain machine-readable even when the biological call is
-conditional: keep `Celltype_EN` as a clean canonical plotting label and put
-`passed/conditional`, boundary, off-parent, background, and validation handling
-in separate fields. A red fill in `绘图列表/Celltype_EN` is a visual warning only;
-it must never change the cell value or be required by a plotting script. The
-same clean `Celltype_EN` value must be present in `注释结果` for exact cluster
-joins. A conditional label may therefore be usable for UMAP while being marked
-manual-review-only for quantitative downstream analysis.
-The `注释结果` sheet may additionally contain an optional `下位亚类` field
-before `细胞谱系`: populate it only when a lower-level subtype is supported in
-the current case, leave it blank otherwise, and never use it to alter the
-existing identity, UMAP, state, or red-fill logic.
-When a UMAP image is supplied, generate the independent geometry artifact with
-`scripts/umap_image_facts.py` before formal construction and pass it to the
-builder as `--umap-facts`. If the artifact is absent, stale, or bound to a
-different image, formal workbook construction must stop.
-Mark the annotation cell red when
-the cluster should not be interpreted as a normal pure type; do not replace the
-plotting label with `Doublet` or `Debris`.
+按需读取：[references/subcluster-output-contract.md](references/subcluster-output-contract.md)（`Celltype_EN`、四类决策分离、命名字典、红色警示、`下位亚类`、UMAP 几何；构造映射与工作簿前必读）。
 
-Do not derive expert status, red warnings, or off-parent handling from cluster
-IDs or a manually maintained cluster list. Derive them from the bound evidence
-record and reject formal delivery when `passed` contradicts a failed/unknown
-identity gate, a material boundary/off-parent/background flag, an unresolved
-evidence gap, or a marker/UMAP conflict.
+## Expert review and retrieval
 
-Keep four decisions separate: `identity` (the biological label),
-`identity_resolution` (`specific`, `parent_level`, `unresolved`, or
-`provisional`), `boundary_status` (`none`, `off_parent`, `mixed`,
-`contamination_suspected`, or `technical_quality`), and downstream
-`review_status`/`downstream_eligible`. A parent-level label is a fallback only
-when the specific identity gate fails or remains unknown; UMAP adjacency or a
-request for visual uniformity cannot trigger parent fallback. A conditional
-specific label may remain usable for UMAP, but it is not eligible for
-quantitative downstream use by default.
+按需读取：[references/retrieval-and-expert-review-gate.md](references/retrieval-and-expert-review-gate.md)（专家复核门、校准计数、`research_required` 检索与 `--force-research`；正式构表前必读）。
 
-For sibling clusters, consistency constrains resolution and review handling,
-not biological label equality. If similarly placed siblings have no decisive
-case-level discriminator, keep the same resolution and review level. If their
-final identities differ, record `discriminator_evidence_ids`; never copy one
-cluster's label to another solely because their UMAP regions are adjacent.
+## Delivery and workbook
 
-Use the versioned naming dictionary. Established unambiguous abbreviations such
-as `gdT` and `Tn` are allowed; short common labels such as B cell and T cell
-remain full. One biological identity has one canonical spelling; display
-qualifiers such as `_provisional` are standardized evidence-level disclosures,
-and `_state_` labels are standardized identity-plus-state displays; neither is
-a new ontology identity.
+交付固定为 4-sheet 标准版（`注释与详细证据`、`细胞配色`、`细胞类型与文献`、`说明与数据来源`）加 `cluster注释信息.xlsx`；历史 5-sheet 工作簿仅作只读校验输入，不得新生成。
 
-## Expert review and case-driven optimization
+按需读取：[references/delivery-and-workbook-contract.md](references/delivery-and-workbook-contract.md)（交付目录纯净、环境调用、开放发现保证、Cambria 11 与列宽格式；交付前必读）。
 
-Formal annotation is not complete when executable gates pass. Apply
-[expert-review-and-optimization.md](references/expert-review-and-optimization.md)
-to every cluster before formal workbook construction. Record the independent
-review status, evidence basis, identity boundary, and a concrete case-specific
-optimization recommendation. A missing review record blocks delivery. The
-final response must summarize the expert review outcome and the highest-value
-recommendations, including when no additional optimization is currently needed.
+按需读取：[references/output-schema.md](references/output-schema.md)（4-sheet 详细列契约；构表或校验前必读）。
 
-## Retrieval and reproducibility
+## Blind test
 
-This skill has an independent calibration counter. Its first five uses after
-this skill/core/dictionary revision must verify involved types against current
-literature and curated atlases. From use six onward retrieve only for
-marker/context/UMAP conflicts or knowledge-base gaps. Record source, retrieval
-date, species, tissue, supported program, exclusions, and adoption/rejection
-rationale in a reusable evidence sheet.
-
-Run preparation once without research evidence. If it emits
-`status=research_required`, immediately use available online retrieval tools to
-resolve every request; this is a required task action, not an optional report
-note. Write a structured `research_evidence.json` bound to the emitted
-`request_sha256`, then rerun preparation with `--research-evidence`. A DOI list,
-article titles copied from memory, or a hand-authored `research_status=resolved`
-is invalid. Formal workbook construction remains blocked until the research
-artifact passes source independence, current-case multi-gene support, exclusion,
-and hash checks. If UMAP review later exposes a new unexplained island or
-identity conflict, rerun preparation with `--force-research` and a concrete
-`--research-reason`; do not reuse an earlier request hash.
-
-Record versions, hashes, counter, source paths, cluster order, parent context,
-and the full UMAP audit. Formal delivery requires the fixed five-sheet workbook,
-an independently generated `--umap-facts` artifact whose image hash matches the
-supplied UMAP, and a hash-matching passing QA sidecar in the workspace build
-location; legacy
-four-sheet output is invalid. Deliver only the timestamped Excel workbook and
-the companion cluster reference table (`cluster注释信息.xlsx`) to the supplied E-drive input directory,
-and keep QA JSON sidecars in the workspace unless the user explicitly asks for them. Do not automatically edit or filter
-the underlying object.
-
-### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
-1. **交付文件规范与数据目录绝对纯净**：交付件**固定且仅允许保留两份表格**：
-   - **时间戳完整亚群注释大表**：`{project_name}_亚群注释结果_{YYYYMMDD_HHMMSS}.xlsx`（4-sheet 标准版：注释与详细证据、细胞配色、细胞类型与文献、说明与数据来源，遵循格式契约）。
-   - **简明对应关系表**：`cluster注释信息.xlsx`（固定包含 `Cluster`, `Celltype_EN`, `中文名称` 3列，自适应列宽，无筛选，冻结首行，专供下游快速查阅与对接制图）。
-   - **严禁输出无时间戳的大表副本**（杜绝 `{project_name}_亚群注释结果.xlsx` 同名无时间戳冗余大表，避免客户混淆）。
-   - **过程文件零残留**：严禁在用户输入数据目录下遗留 `build/`、`scratch/`、`*.json`、`*.py`、`*.qa.json` 等任何过程文件或调试脚本；所有分析计算必须在内存数据流中完成，或使用临时目录并在交付前彻底销毁。
-2. **严禁跨项目扩散扫描**：执行过程中严禁使用通配符跳出当前输入路径，去全局递归遍历其他客户历史售后目录（如 `E:\Desktop\售后\*`），杜绝历史项目非标准命名造成的交叉污染及无谓耗时。
-3. **环境调用一次到位**：使用预设的稳定 Python 运行时（`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`），禁止递归全盘查找 Python 路径。
-
-### 开放生物学发现与防负优化保证 (Open Discovery & Non-Degradation Guarantee)
-1. **第一阶段纯数据驱动**：亚群注释第一阶段始终基于局部空间重归一化（Local Renormalization）、微模块残差评估（Micro-module Residuals）、连续流形与父群谱系树硬门控，绝对不退化为封闭白名单或死字典硬匹配。
-2. **第二阶段文献缓存加速**：内置文献与亚型命名库仅作为成熟通用亚型的第二阶段免检索加速池，绝不对特定组织特化亚型、过渡态、活化态或罕见亚群行使否决权；面对未知微模块程序，完整保留数据驱动特征，触发靶向学术检索或恪守科学诚实原则客观披露待实验验证状态，守护 100% 亚群注释精细度与准确性。
-
-Workbook formatting is part of the delivery contract. Use Cambria 11 as the
-workbook font. Save content-fit column widths/row heights for `绘图列表`, for
-frozen columns A:C in `注释结果`, for frozen columns A:C in `详细证据`, and for
-frozen column A in `细胞类型与文献`; keep long text columns at fixed widths with
-wrapping and shrink-to-fit disabled. In `细胞类型与文献`, the visible hyperlink
-text in `文献` must show DOI/PMID identifiers when available, not the article
-title, while preserving the clickable link.
-
-For a blind test, invoke the preparation entry point with `--blind-test`.
-Do not pass a prior annotation workbook, old records, old UMAP audit,
-cluster-specific exclusions, or marker exclusions. The only label-bearing
-artifact allowed in the blind run is the ontology's candidate-program
-vocabulary. The model-facing digest redacts the qualitative core's
-`stable_id`, `suggested_identity`, `primary_program`, major label, derived
-rationale, and recommended action. Treat those fields in the internal evidence
-pack as audit bindings, never as the annotation answer. First write an
-independent provisional label from the current-case multi-gene programs and
-the candidate audits; then perform a separate all-cluster UMAP review. UMAP
-review must be read from the supplied image and must not be generated from the
-core decision or from the provisional label. Final workbook construction is
-allowed only after the independent records, UMAP audit, and internal evidence
-binding all pass validation.
+按需读取：[references/blind-test-protocol.md](references/blind-test-protocol.md)（`--blind-test` 流程与盲测约束；执行盲测时必读）。
 
 ## Release handoff
 
-When the user explicitly approves publication, defer the complete release to
-the one-review marketplace workflow: increment the technical package version,
-synchronize display and marketplace metadata, run registered regressions,
-commit and push a `codex/` branch, create the PR, wait for CI, merge the exact
-head SHA, verify stable `main`, establish a clean stable runtime registration,
-and verify the real cache directories, manifests, and file hashes. Do not edit
-an installed cache as source. The combined authorization may cover all of
-these steps; do not insert a second routine merge or installation review.
-After installation, report only `restart-required`. Declare the slash skill
-active only when a restarted/new task is observed loading the expected
-versioned `SKILL.md` cache path.
+发布请调用 /E05-Skill同步发布（A04-知识库发布 负责知识库同步）。
 
 Never output generic `Cell`, mix ancestors and descendants, infer same-cell
 coexpression from aggregate data, silently discard off-parent clusters, or

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-E03 · Skill规范写作 v0.4.0 — 五大零性能损耗鲁棒性护栏校验与快照回滚引擎
+E03 · Skill规范写作 v0.5.0 — 七大零性能损耗鲁棒性护栏校验与快照回滚引擎
 对应全局快捷口令：
-  - .g (体检) : 运行全套 20 个标准 Skill（或指定 Skill）五大护栏分舱体检
+  - .g (体检) : 运行全套标准 Skill（或指定 Skill）七大护栏分舱体检
   - .u (撤回) : --rollback <skill> 一键物理回滚至改前快照
 
-五大护栏：
-  1. 📏 护栏 1（主文件防肥胖红线）：检查 SKILL.md <= 8 KB（C/E 类严格 Error；历史遗留超 8KB 的 A/B/D 类温和 Warning）
+七大护栏：
+  1. 📏 护栏 1（主文件防肥胖红线）：全仓所有 Skill 的 SKILL.md 一律强制 <= 8 KB，超限硬性报错
   2. 🛡️ 护栏 2（/ 斜杠菜单防消失锁 & 无 BOM UTF-8）：目录名 == SKILL.md name == skills.json & ANTIGRAVITY_SKILLS_MAP，displayName 符合 ^[A-Z]\\d{2} · .+ v\\d+\\.\\d+\\.\\d+$
   3. 🧬 护栏 3（A/B/C/D/E 五大类分舱特化校验）：
      - A/B 生信与绘图舱：校验共享知识库快照哈希一致性与生物学规则基线，不强套工程快捷键
@@ -16,6 +16,8 @@ E03 · Skill规范写作 v0.4.0 — 五大零性能损耗鲁棒性护栏校验�
      - E 治理与调度舱：校验快捷口令统一使用 .前缀 (.? / .u / .d / .g / .s)，无裸单字母劫持，无默认调用付费外援 (dsh/codex)
   4. 🗺️ 护栏 4（三端注册表对齐核验）：检查 ~/.gemini/config/skills/、~/.gemini/config/skills.json、ANTIGRAVITY_SKILLS_MAP 与 skill-pack.json 100% 一致，无孤儿或 _archive_*
   5. ⏪ 护栏 5（改前快照与 1 秒回滚）：支持 --snapshot <skill> 与 --rollback <skill>
+  6. 🔗 护栏 6（全仓反向引用与死链雷达）：校验 SKILL.md / references/ 下相对链接真实存在，且无旧名残留
+  7. 🧭 护栏 7（同文档矛盾检查 & global_pitfalls 巡检）：拦截同文档矛盾断言并按 shared/global_pitfalls.json 巡检全仓
 """
 
 from __future__ import annotations
@@ -247,16 +249,12 @@ def validate_one_skill(
     size_bytes = len(raw_bytes)
     size_kb = round(size_bytes / 1024.0, 2)
 
-    # 护栏 1：主文件防肥胖红线 (<= 8 KB)
+    # 护栏 1：主文件防肥胖红线 (<= 8 KB，全仓 24 个标准 Skill 一律硬性报错)
     if size_bytes <= MAX_SKILL_MD_BYTES:
         checks["G1_size_budget"] = f"PASS ({size_kb} KB <= 8.0 KB)"
     else:
-        if cabin in {"C", "E"}:
-            errors.append(f"[G1 主文件超重] {cn_name} SKILL.md 体积 {size_kb} KB 超过 8.0 KB 红线（C/E 类严禁巨石文件）")
-            checks["G1_size_budget"] = f"FAIL ({size_kb} KB > 8.0 KB)"
-        else:
-            warnings.append(f"[G1 历史大文件提示] {cn_name} SKILL.md 体积 {size_kb} KB (> 8.0 KB)，建议后续按需将细节下沉至 references/")
-            checks["G1_size_budget"] = f"WARN ({size_kb} KB > 8.0 KB, 历史专业生信/算力基线保留)"
+        errors.append(f"[G1 主文件超重] {cn_name} SKILL.md 体积 {size_kb} KB 超过 8.0 KB 硬红线，请将细节下沉至 references/")
+        checks["G1_size_budget"] = f"FAIL ({size_kb} KB > 8.0 KB)"
 
     # 护栏 2：/ 斜杠菜单防消失锁 & UTF-8 无 BOM
     has_bom = raw_bytes.startswith(b"\xef\xbb\xbf")
@@ -352,6 +350,52 @@ def validate_one_skill(
                     errors.append(f"[G3 治理调度舱] {cn_name} SKILL.md 未声明 '{dot_cmd}' 口令")
         checks["G3_cabin_specific"] = "PASS (E 治理调度舱 .前缀口令与免费优先合规)" if not any(e.startswith("[G3") for e in errors) else "FAIL"
 
+    # 护栏 6：全仓反向引用与死链雷达（SKILL.md 与 references/*.md 相对链接真实存在，且无旧名残留）
+    mp_skill_dir = mp_dir / "skills" / plugin_id
+    md_files_to_scan = [mp_skill_md] + (sorted((mp_skill_dir / "references").glob("*.md")) if (mp_skill_dir / "references").is_dir() else [])
+    link_re = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+    retired_always = ("E02-三方专家评审", "E05-多智能体委托", "E06-本机智能体委托", "C01-工作台", "C02-UI视觉设计", "C03-需求对齐追问", "C04-独立体验走查", "C05-桌面应用打包")
+    for md_f in md_files_to_scan:
+        if not md_f.is_file():
+            continue
+        md_raw = md_f.read_bytes()
+        if md_raw.startswith(b"\xef\xbb\xbf"):
+            errors.append(f"[G7 编码违规 PIT-005] {md_f.name} 含有 UTF-8 BOM 头")
+        md_txt = md_raw.decode("utf-8-sig", errors="replace")
+        for m_link in link_re.finditer(md_txt):
+            raw_target = m_link.group(1).strip().split()[0]
+            if not raw_target or raw_target.startswith(("http://", "https://", "mailto:", "file://", "#")) or "<" in raw_target or ">" in raw_target:
+                continue
+            rel_path = raw_target.split("#", 1)[0]
+            if not rel_path:
+                continue
+            if rel_path.startswith("../../../../shared/"):
+                resolved = marketplace_root / rel_path.replace("../../../../", "")
+            else:
+                resolved = (md_f.parent / rel_path).resolve()
+            if not resolved.exists():
+                errors.append(f"[G6 死链] {cn_name} {md_f.name} 引用了不存在的路径: {raw_target}")
+        for old_nm in retired_always:
+            if old_nm in md_txt:
+                errors.append(f"[G6 旧名残留 PIT-002] {cn_name} {md_f.name} 仍包含已废弃旧名: {old_nm}")
+        if "scientific-diagram-016" in md_txt and plugin_id not in {"scientific-diagram-016", "skill-writing", "personal-skill-marketplace-setup"}:
+            errors.append(f"[G6 旧名残留 PIT-002] {cn_name} {md_f.name} 仍硬编码旧名 scientific-diagram-016，请改为按编号前缀调用 B07-机制流程概念图")
+    checks["G6_cross_ref_radar"] = "PASS" if not any(e.startswith("[G6") for e in errors) else "FAIL"
+
+    # 护栏 7：同文档矛盾检查 & global_pitfalls 巡检
+    if plugin_id == "sc-marker-cluster-annotation-auto":
+        if "legacy four-sheet output is invalid" in text or "fixed five-sheet workbook" in text:
+            errors.append(f"[G7 同文档矛盾 PIT-003] {cn_name} 仍残留旧 5-sheet 唯一合法条文，与 4-sheet 标准版冲突")
+    if plugin_id == "server-task-delivery":
+        if "#SBATCH --mem=64G" in text:
+            errors.append(f"[G7 陷阱违规 PIT-001] {cn_name} SKILL.md 仍包含 #SBATCH --mem=64G（openclaw01 RealMemory=1 禁写）")
+        runner_ps1 = mp_skill_dir / "scripts" / "remote_bio_runner.ps1"
+        if runner_ps1.is_file():
+            r_txt = runner_ps1.read_text(encoding="utf-8-sig", errors="replace")
+            if '[string]$Mem = "64G"' in r_txt:
+                errors.append(f"[G7 陷阱违规 PIT-001] {cn_name} remote_bio_runner.ps1 默认仍写死 $Mem = '64G'")
+    checks["G7_pitfalls_and_ssot"] = "PASS" if not any(e.startswith("[G7") for e in errors) else "FAIL"
+
     return {
         "plugin_id": plugin_id,
         "cn_name": cn_name,
@@ -430,11 +474,21 @@ def check_guardrail_4_registry_alignment(marketplace_root: Path, ag_home: Path) 
             elif item.name not in expected_cn and item.name not in ALLOWED_THIRD_PARTY_SKILLS:
                 errors.append(f"[G4 孤儿技能目录] ~/.gemini/config/skills/ 中存在未注册孤儿目录: {item.name}")
 
+    # 4. Check shared/global_pitfalls.json & ~/.gemini/config/skills/shared_global_pitfalls.json (Guardrail 7)
+    mp_pitfalls = marketplace_root / "shared" / "global_pitfalls.json"
+    ag_pitfalls = ag_skills_dir / "shared_global_pitfalls.json"
+    if not mp_pitfalls.is_file():
+        errors.append(f"[G7 陷阱库缺失] 缺少 {mp_pitfalls}")
+    elif not ag_pitfalls.is_file():
+        errors.append(f"[G7 陷阱库未同步] 缺少 {ag_pitfalls}")
+    elif sha256_file(mp_pitfalls) != sha256_file(ag_pitfalls):
+        errors.append(f"[G7 陷阱库失步] {ag_pitfalls} 与 {mp_pitfalls} 哈希不一致，请运行 sync-antigravity")
+
     return errors, warnings
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="E03 五大零损耗鲁棒性护栏校验与快照回滚工具 v0.4.0")
+    parser = argparse.ArgumentParser(description="E03 七大零损耗鲁棒性护栏校验与快照回滚工具 v0.5.0")
     parser.add_argument("--marketplace-root", type=Path, default=None, help="Marketplace 根目录")
     parser.add_argument("--skill", default=None, help="仅校验指定 Skill (英文 plugin_id 或中文名)")
     parser.add_argument("--snapshot", default=None, help="为指定 Skill 创建改前快照")
@@ -494,7 +548,7 @@ def main() -> None:
     if args.json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
-        print(f"# 🛡️ E03 Skill 鲁棒性五护栏分舱体检报告 (v0.4.0 · 口令 `.g`)")
+        print(f"# 🛡️ E03 Skill 鲁棒性七护栏分舱体检报告 (v0.5.0 · 口令 `.g`)")
         print(f"- 权威仓库: {mp_root}")
         print(f"- 本地技能舱: {ag_skills_dir}")
         print(f"- 检查技能数: {len(results)} 个 │ 错误(Error): {len(all_errors)} │ 温和提示(Warning): {len(all_warnings)}\n")
