@@ -1,13 +1,13 @@
 {
   "name": "skill-writing",
-  "version": "0.5.1+codex.20261120072412",
+  "version": "0.5.2+codex.20261124085331",
   "description": "编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验（A~E 五大类标准 Skill 分类法典）",
   "author": {
     "name": "fight"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "E03 · Skill规范写作 v0.5.1",
+    "displayName": "E03 · Skill规范写作 v0.5.2",
     "shortDescription": "编写可 / 调用的双端标准 Skill 与七大零损耗鲁棒性护栏校验",
     "longDescription": "定义 Antigravity 与 Codex 双端统一的 A~E 五大类 20 个标准 Skill 分类法典、命名精炼度标准与 5 大零损耗自动化鲁棒性护栏（validate_skill_robustness.py），联动 E05-Skill同步发布 实现改前快照、分舱体检与三端同步。",
     "developerName": "fight",

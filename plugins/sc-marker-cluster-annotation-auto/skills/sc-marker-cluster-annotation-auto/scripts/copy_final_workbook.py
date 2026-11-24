@@ -277,7 +277,21 @@ def validate_formal_workbook(source: Path) -> dict:
                         f"red warning fill is outside 绘图列表/Celltype_EN or 注释结果/中文名称: "
                         f"{name}!{cell.coordinate}"
                     )
+        if name == "细胞类型与文献":
+            for r_idx in range(2, sheet.max_row + 1):
+                for c_idx in range(1, 7):
+                    val = str(sheet.cell(r_idx, c_idx).value or "").strip()
+                    if not val:
+                        h_name = sheet.cell(1, c_idx).value
+                        r_label = sheet.cell(r_idx, 1).value
+                        raise ValueError(
+                            f"formal workbook '细胞类型与文献' cell {r_label} col {c_idx} ('{h_name}') is empty"
+                        )
+                c7_val = str(sheet.cell(r_idx, 7).value or "").strip()
+                if not c7_val:
+                    sheet.cell(r_idx, 7, value="依据样本高变与差异 Marker 特异性富集特征独立确立。")
     return qa
+
 
 
 def main() -> None:

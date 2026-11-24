@@ -19,6 +19,7 @@ TARGETS = (
     ROOT / "plugins" / "sc-major-celltype-annotation-auto" / "skills" / "sc-major-celltype-annotation-auto",
 )
 FILES = {
+    "literature_resolver.py": ("scripts", "literature_resolver.py"),
     "annotation_evidence_core.py": ("scripts", "annotation_evidence_core.py"),
     "annotation_override_policy.py": ("scripts", "annotation_override_policy.py"),
     "knowledge_base.py": ("scripts", "knowledge_base.py"),

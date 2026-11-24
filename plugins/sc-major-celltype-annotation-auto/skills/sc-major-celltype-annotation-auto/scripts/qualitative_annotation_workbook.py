@@ -60,6 +60,72 @@ EVIDENCE_FIELDS = ANNO_FIELDS
 EVIDENCE_HEADERS = ANNO_HEADERS
 
 
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def _ontology_index():
+    path = Path(__file__).resolve().parent / "knowledge-base" / "cell-annotation-knowledge-base.v2.json"
+    if not path.is_file():
+        path = Path(__file__).resolve().parent.parent / "references" / "cell-annotation-knowledge-base.v2.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, {}
+    nodes = {
+        str(item.get("cell_id", "")).strip(): item
+        for item in payload.get("ontology", [])
+        if str(item.get("cell_id", "")).strip()
+    }
+    parents = {node_id: str(item.get("parent_id", "")).strip() for node_id, item in nodes.items()}
+    return nodes, parents
+
+
+def _ontology_path(stable_id):
+    nodes, parents = _ontology_index()
+    stable_id = str(stable_id or "").strip()
+    if stable_id not in nodes:
+        return []
+    path = []
+    seen = set()
+    current = stable_id
+    while current and current not in seen and current in nodes:
+        seen.add(current)
+        path.append(current)
+        current = parents.get(current, "")
+    return list(reversed(path))
+
+
+def validate_taxonomy_depth_consistency(records):
+    errors = []
+    observed = []
+    for record in records:
+        cluster = str(record.get("cluster_id", "")).strip()
+        stable = normalize_final_label(record.get("stable_id", ""))
+        path = _ontology_path(stable)
+        if cluster and stable and path:
+            observed.append((cluster, stable, path))
+    for index, (left_cluster, left_label, left_path) in enumerate(observed):
+        for right_cluster, right_label, right_path in observed[index + 1:]:
+            if left_label == right_label:
+                continue
+            if left_label in right_path[:-1]:
+                ancestor_cluster, ancestor_label = left_cluster, left_label
+                descendant_cluster, descendant_label = right_cluster, right_label
+            elif right_label in left_path[:-1]:
+                ancestor_cluster, ancestor_label = right_cluster, right_label
+                descendant_cluster, descendant_label = left_cluster, left_label
+            else:
+                continue
+            errors.append(
+                "Final subcluster mapping co-displays ontology ancestor/descendant labels: "
+                f"cluster {ancestor_cluster}={ancestor_label} and cluster "
+                f"{descendant_cluster}={descendant_label}. Resolve to same-level "
+                "identities, use an approved residual leaf, or block/recluster before delivery."
+            )
+    return errors
+
+
 def cluster_sort_key(value):
     text = str(value).strip()
     try:
@@ -216,25 +282,56 @@ def _first(record, decision, *keys, default=""):
     return default
 
 
+GATE_STRICTNESS = {
+    "不通过": 3,
+    "未确定": 2,
+    "通过": 1,
+    "不适用": 0,
+}
+
+
+def _merge_gate_monotonic(baseline: str, candidate: Optional[str], justification: str = "") -> str:
+    b_val = _gate(baseline)
+    if candidate is None or candidate == "":
+        return b_val
+    c_val = _gate(candidate)
+    b_rank = GATE_STRICTNESS.get(b_val, 0)
+    c_rank = GATE_STRICTNESS.get(c_val, 0)
+    if c_rank >= b_rank:
+        return c_val
+    else:
+        if justification and str(justification).strip():
+            return c_val
+        return b_val
+
+
 def _qualitative_gates(record, decision, umap):
-    gates = dict(decision.get("qualitative_gates", {}))
-    identity = _gate(gates.get("identity_anchor"))
-    if identity == "未确定" and decision.get("stable_id"):
-        identity = "通过"
-    parent = _gate(gates.get("parent_lineage"), "不适用")
-    siblings = _gate(gates.get("sibling_competition"))
-    exclusions = _gate(gates.get("exclusion"))
-    off_parent = _gate(gates.get("off_parent"), "不适用")
-    state = _gate(gates.get("state_program"), "不适用")
-    umap_gate = _gate(gates.get("umap"), "未确定")
+    d_gates = dict(decision.get("qualitative_gates", {}))
+    r_gates = dict(record.get("qualitative_gates", {}))
+    justification = str(record.get("gate_override_justification") or "").strip()
+
+    identity = _merge_gate_monotonic(d_gates.get("identity_anchor"), r_gates.get("identity_anchor"), justification)
+
+    parent = _merge_gate_monotonic(d_gates.get("parent_lineage", "不适用"), r_gates.get("parent_lineage"), justification)
+    siblings = _merge_gate_monotonic(d_gates.get("sibling_competition"), r_gates.get("sibling_competition"), justification)
+    exclusions = _merge_gate_monotonic(d_gates.get("exclusion"), r_gates.get("exclusion"), justification)
+    off_parent = _merge_gate_monotonic(d_gates.get("off_parent", "不适用"), r_gates.get("off_parent"), justification)
+    state = _merge_gate_monotonic(d_gates.get("state_program", "不适用"), r_gates.get("state_program"), justification)
+
+    umap_gate = _merge_gate_monotonic(d_gates.get("umap", "未确定"), r_gates.get("umap"), justification)
     relation = normalize_relation(umap.get("marker_umap_relation", ""))
-    if relation == "concordant":
+    if relation == "concordant" and umap_gate != "不通过" and _gate(r_gates.get("umap")) != "未确定":
         umap_gate = "通过"
     elif relation == "conflict":
         umap_gate = "不通过"
-    mixed = _gate(gates.get("mixed_doublet"), "不适用")
+
+    mixed = _merge_gate_monotonic(d_gates.get("mixed_doublet", "不适用"), r_gates.get("mixed_doublet"), justification)
     if any(bool(_first(record, decision, key)) for key in ("mixed_population", "suspected_doublet", "mixed_evidence")):
-        mixed = "未确定" if not decision.get("mixed_population") else "通过"
+        if _first(record, decision, "mixed_population") or _first(record, decision, "suspected_doublet"):
+            mixed = "不通过"
+        else:
+            mixed = "未确定"
+
     return identity, parent, siblings, exclusions, off_parent, state, umap_gate, mixed
 
 
@@ -249,6 +346,40 @@ def normalize_records(records, evidence, umap_audit=None):
             apply_identity_resolution(record, umap)
         stable = _first(record, decision, "stable_id", "celltype_en", "display_label")
         celltype_en = normalize_final_label(_first(record, decision, "celltype_en", "display_label", default=stable))
+        primary_prog = human_value(_first(record, decision, "primary_program", "research_selected_identity", "primary_evidence_label", "stable_id", default=celltype_en))
+        self_labels = {
+            str(x).strip()
+            for x in (celltype_en, normalize_final_label(stable or celltype_en), primary_prog)
+            if str(x).strip()
+        }
+        off_parent_labels = {
+            str(item.get("label", "")).strip()
+            for item in (decision.get("candidate_program_audits") or [])
+            if isinstance(item, dict) and (item.get("within_parent_scope") is False or item.get("off_parent_audit"))
+        }
+        override_comp = (decision.get("research_current_case_override_audit") or {}).get("competing_labels") or []
+        audit_comp = [
+            str(item.get("label", "")).strip()
+            for item in (decision.get("candidate_program_audits") or [])
+            if isinstance(item, dict)
+            and str(item.get("label", "")).strip()
+            and item.get("within_parent_scope") is not False
+            and not item.get("off_parent_audit")
+        ]
+        raw_comp = _first(record, decision, "competing_programs", "candidate_labels", "possible_components")
+        comp_list = []
+        if isinstance(raw_comp, list):
+            comp_list.extend(str(x).strip() for x in raw_comp if str(x).strip())
+        elif isinstance(raw_comp, str) and raw_comp.strip():
+            comp_list.extend(str(x).strip() for x in re.split(r"[,;；、\s]+", raw_comp) if str(x).strip())
+        comp_list.extend(str(x).strip() for x in override_comp if str(x).strip())
+        comp_list.extend(str(x).strip() for x in audit_comp if str(x).strip())
+        filtered_comp = [
+            x for x in dict.fromkeys(comp_list)
+            if x not in self_labels and x not in off_parent_labels
+        ]
+        comp_text = "；".join(filtered_comp) if filtered_comp else "无显著同级竞争"
+
         record.update({
             "cluster_id": cluster,
             "celltype_en": celltype_en,
@@ -260,7 +391,7 @@ def normalize_records(records, evidence, umap_audit=None):
             "state": _first(record, decision, "state", "primary_state"),
             "disease_role": _first(record, decision, "disease_role"),
             "key_markers": human_value(_first(record, decision, "key_markers", "supporting_markers")),
-            "candidate_labels": human_value(_first(record, decision, "candidate_labels", "competing_programs", "possible_components")),
+            "candidate_labels": comp_text,
             "possible_components": human_value(_first(record, decision, "possible_components")),
             "rationale": human_value(_first(record, decision, "rationale", "decision_rationale")),
             "validation_advice": human_value(_first(record, decision, "validation_advice", "review_action", "recommended_action")),
@@ -268,8 +399,8 @@ def normalize_records(records, evidence, umap_audit=None):
             "umap_summary": human_value(_first(record, umap, "umap_summary", "topology_summary", "review_action")),
             "boundary_flags": human_value(_first(record, decision, "boundary_flags", "abnormality_flags", "interpretation_flags", "mixture_type")),
             "parent_context": human_value(_first(record, decision, "parent_context", "parent_path", "expected_parent_id")),
-            "primary_program": human_value(_first(record, decision, "primary_program", "primary_evidence_label", "stable_id", default=celltype_en)),
-            "competing_programs": human_value(_first(record, decision, "competing_programs", "candidate_labels", "possible_components")),
+            "primary_program": primary_prog,
+            "competing_programs": comp_text,
             "supporting_marker_evidence": _marker_evidence(
                 _first(record, decision, "supporting_marker_evidence", "supporting_markers"), evidence, cluster
             ),
@@ -441,6 +572,7 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
             parent = str(evidence.get("confirmed_metadata", {}).get("parent_population", "")).strip()
             if parent and record.get("celltype_en") == normalize_final_label(parent):
                 errors.append(f"Cluster {cluster} retreats to the supplied parent instead of a sibling/leaf identity")
+        errors.extend(validate_taxonomy_depth_consistency(records))
     if annotation_level == "major":
         delivered_labels = {normalize_final_label(record.get("celltype_en", "")) for record in records if record.get("celltype_en")}
         epithelial_parents = {"Epithelial_cell", "Epithelial", "Lung_epithelial", "Airway_epithelial"}
@@ -620,6 +752,7 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["定量指标定义 (Metrics Definition)", "mean_expr=簇内表达均值；expr_ratio/pct.1=目标簇检出比例；pct.2=背景群检出比例；log2FC=差异倍数对数"],
         ["聚类排列原则 (Cluster Order)", "数值绝对升序结合自然字符顺序（0, 1, 2...）"],
         ["总 Cluster 数量", len(records)],
+        ["分析工具与版本 (Skill & Version)", f"{skill_name} v{skill_version}" if skill_version else str(skill_name)],
     ]
 
 
@@ -697,6 +830,19 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
             if url:
                 literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
                 literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
+
+    for r_idx in range(2, literature_ws.max_row + 1):
+        for c_idx in range(1, 7):
+            cell_val = str(literature_ws.cell(r_idx, c_idx).value or "").strip()
+            if not cell_val:
+                header_name = literature_ws.cell(1, c_idx).value
+                row_label = literature_ws.cell(r_idx, 1).value
+                raise ValueError(
+                    f"Sheet '细胞类型与文献' cell {row_label} col {c_idx} ('{header_name}') must not be empty"
+                )
+        c7_val = str(literature_ws.cell(r_idx, 7).value or "").strip()
+        if not c7_val:
+            literature_ws.cell(r_idx, 7, value="依据样本高变与差异 Marker 特异性富集特征独立确立。")
 
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
         source_ws.append(row)

@@ -597,3 +597,43 @@ def _identity_program_gate(label, config, cluster, values, full_ratio):
         'competing_branch': branch_audit,
         'coherence_basis': 'configuration_driven_complete_identity_program',
     }
+
+
+def is_global_ambient_gene(gene, values, clusters):
+    """Classify whether a gene belongs to global ambient RNA background across clusters.
+    
+    When len(clusters) >= 5, a gene is classified as global ambient background if:
+    Q25(p_all) >= 0.30 and IQR(p_all) <= 0.25.
+    """
+    if len(clusters) < 5:
+        return False
+    norm_g = _norm(gene)
+    ratios = []
+    for c in clusters:
+        c_dict = values.get(str(c), {})
+        val = c_dict.get(norm_g) or c_dict.get(gene)
+        ratio = float(val.get("ratio", 0.0)) if isinstance(val, dict) else 0.0
+        ratios.append(ratio)
+    ratios.sort()
+    n = len(ratios)
+    q25 = ratios[n // 4]
+    q75 = ratios[(3 * n) // 4]
+    iqr = q75 - q25
+    return q25 >= 0.30 and iqr <= 0.25
+
+
+def is_locally_enriched_ambient(metric):
+    """Check whether a candidate ambient gene has strong local enrichment in a specific cluster.
+    
+    Requirements:
+    p_in >= max(0.75, p_bg + 0.20) and delta >= 0.15 and (robust_z >= 2.0 or (log2FC is not None and log2FC >= 1.0))
+    """
+    if not metric:
+        return False
+    p_in = float(metric.get("p_in", 0.0))
+    p_bg = float(metric.get("p_background", 0.0))
+    delta = float(metric.get("delta", 0.0))
+    robust_z = float(metric.get("robust_z", 0.0))
+    log2fc = metric.get("log2FC")
+    log2fc_ok = float(log2fc) >= 1.0 if log2fc is not None else False
+    return p_in >= max(0.75, p_bg + 0.20) and delta >= 0.15 and (robust_z >= 2.0 or log2fc_ok)

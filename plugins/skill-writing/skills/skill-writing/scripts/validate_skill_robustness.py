@@ -347,6 +347,12 @@ def validate_one_skill(
                 core_data = json.loads(core_ver_file.read_text(encoding="utf-8"))
                 if snap_data.get("knowledge_base_version") != core_data.get("knowledge_base_version"):
                     errors.append(f"[G3 生信舱] {cn_name} 知识库快照版本与 shared core 不一致")
+            kb_name = "cell-annotation-knowledge-base.v2.json"
+            canonical = core_ver_file.parent / "knowledge-base" / kb_name
+            for refs in (snap_file.parent, ag_dir / "references"):
+                local_kb = refs / kb_name
+                if not canonical.is_file() or not local_kb.is_file() or sha256_file(local_kb) != sha256_file(canonical):
+                    errors.append(f"[G3 PIT-006] KB SSOT hash mismatch: {local_kb}")
         checks["G3_cabin_specific"] = "PASS (A/B 生信绘图基线完好)" if not any(e.startswith("[G3") for e in errors) else "FAIL"
 
     elif cabin == "C":
@@ -431,6 +437,17 @@ def validate_one_skill(
             r_txt = runner_ps1.read_text(encoding="utf-8-sig", errors="replace")
             if '[string]$Mem = "64G"' in r_txt:
                 errors.append(f"[G7 陷阱违规 PIT-001] {cn_name} remote_bio_runner.ps1 默认仍写死 $Mem = '64G'")
+    if plugin_id == "sc-marker-cluster-annotation-auto":
+        import ast
+        for folder in (mp_dir / "skills" / plugin_id, ag_dir):
+            for filename, symbol in (("prepare_annotation.py", "template_record"), ("qualitative_annotation_workbook.py", "validate_taxonomy_depth_consistency")):
+                source = folder / "scripts" / filename
+                try:
+                    functions = {node.name for node in ast.parse(source.read_text(encoding="utf-8")).body if isinstance(node, ast.FunctionDef)}
+                except (OSError, SyntaxError, UnicodeError):
+                    functions = set()
+                if symbol not in functions:
+                    errors.append(f"[G7 PIT-007/008] Missing {symbol}: {source}")
     checks["G7_pitfalls_and_ssot"] = "PASS" if not any(e.startswith("[G7") for e in errors) else "FAIL"
 
     return {

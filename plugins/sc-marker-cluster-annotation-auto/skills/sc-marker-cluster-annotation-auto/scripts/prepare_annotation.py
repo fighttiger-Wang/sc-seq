@@ -151,9 +151,14 @@ def template_record(cluster):
         "lower_level_subtype": "", "research_claim_level": "",
         "expert_review_status": "", "expert_review_basis": "",
         "identity_review_summary": "", "optimization_recommendations": "",
+        "identity_resolution": "specific", "boundary_status": "none",
+        "review_status": "", "downstream_eligible": None,
+        "sibling_consistency_status": "",
         "expert_plot_verdict": "", "approved_plot_label": "",
         "canonical_name": "", "display_name_type": "",
         "expert_name_review": "",
+        "classic_markers": "",
+        "literature_details": [],
         "literature_source": "", "naming_grammar": "",
         "contextually_excluded_naming_markers": [],
         "user_constraint_audit": {},
@@ -171,6 +176,98 @@ def template_record(cluster):
             "umap": "未确定", "mixed_doublet": "不适用"
         },
     }
+
+
+def draft_record(cluster, evidence):
+    record = template_record(cluster)
+    c_str = str(cluster)
+    profile = evidence.get("cluster_profiles", {}).get(c_str, {})
+    decision = evidence.get("qualitative_annotation_evidence", {}).get(c_str, {})
+    metadata = evidence.get("confirmed_metadata", {})
+
+    stable = (
+        decision.get("suggested_identity")
+        or decision.get("stable_id")
+        or decision.get("primary_program")
+        or f"Cluster_{c_str}"
+    )
+    import re
+    def _norm(val):
+        return re.sub(r"[\s/-]+", "_", str(val or "").strip()).strip("_")
+
+    celltype_en = _norm(stable)
+    record["stable_id"] = celltype_en
+    record["celltype_en"] = celltype_en
+    record["canonical_subtype"] = celltype_en
+    record["approved_plot_label"] = celltype_en
+    record["canonical_name"] = celltype_en
+    record["fine_type"] = celltype_en
+
+    # Chinese label fallback
+    cn_name = decision.get("celltype_cn") or decision.get("display_label_cn")
+    if not cn_name:
+        try:
+            from knowledge_base import load_knowledge_base
+            kb_path = evidence.get("source_paths", {}).get("knowledge_base")
+            kb = load_knowledge_base(kb_path) if kb_path else {}
+            for node in kb.get("ontology", []):
+                if node.get("cell_id") == celltype_en and node.get("celltype_cn"):
+                    cn_name = node["celltype_cn"]
+                    break
+        except Exception:
+            pass
+    record["celltype_cn"] = cn_name or celltype_en
+
+    # Parent path & broad type
+    parent_path = decision.get("parent_path") or [metadata.get("parent_population", "Cell")]
+    record["parent_path"] = parent_path
+    record["broad_type"] = parent_path[-1] if parent_path else metadata.get("parent_population", "")
+
+    # Markers
+    top_markers = [str(item.get("gene", "") if isinstance(item, dict) else item) for item in profile.get("top_markers", [])]
+    record["top_marker_gene"] = profile.get("raw_top_marker") or (top_markers[0] if top_markers else "")
+    supporting = decision.get("supporting_markers") or ", ".join(top_markers[:8])
+    if isinstance(supporting, list):
+        supporting = ", ".join(map(str, supporting))
+    record["supporting_markers"] = supporting
+    record["key_markers"] = supporting
+
+    # Candidate labels with within_parent_scope filter &去自指
+    self_labels = {str(x).strip() for x in (celltype_en, stable, record["stable_id"]) if str(x).strip()}
+    candidates = []
+    for a in decision.get("candidate_program_audits", []):
+        if not isinstance(a, dict):
+            continue
+        lbl = str(a.get("label", "")).strip()
+        if (
+            lbl
+            and lbl not in self_labels
+            and a.get("within_parent_scope") is not False
+            and not a.get("off_parent_audit")
+        ):
+            candidates.append(lbl)
+    record["candidate_labels"] = "；".join(dict.fromkeys(candidates)) if candidates else "无显著同级竞争"
+
+    gates = decision.get("qualitative_gates") or {}
+    expected = record["qualitative_gates"]
+    mandatory = {"identity_anchor", "parent_lineage", "sibling_competition", "exclusion", "umap"}
+    clean = all(gates.get(key) == "通过" for key in mandatory) and all(
+        gates.get(key) in {"通过", "不适用"} for key in expected
+    ) and not any(decision.get(key) for key in (
+        "off_parent_detected", "mixed_population", "mixed_evidence", "suspected_doublet", "evidence_gaps"
+    )) and not celltype_en.startswith("Cluster_") and celltype_en.casefold() not in {"multi_cell", "doublet", "contaminant"}
+    record["qualitative_gates"].update(gates)
+    record["review_status"] = "passed" if clean else "conditional"
+    record["downstream_eligible"] = clean
+    record["evidence_gaps"] = decision.get("evidence_gaps", "")
+
+    # Rationale
+    record["rationale"] = f"依据簇特异高表达 Marker（{supporting[:60]}）及本体层级证据综合确立初审建议。"
+    record["expert_review_basis"] = "整合 Marker 表达、同级竞争排除及谱系上下文综合初审。"
+    record["identity_review_summary"] = f"Cluster {c_str} 经初审评估倾向于 {celltype_en}。"
+    record["optimization_recommendations"] = "建议结合 UMAP 拓扑空间分布与亚群特异功能基因复核确认。"
+
+    return record
 
 
 def _blind_qualitative_view(decision):
@@ -411,6 +508,8 @@ def main():
     digest_path.write_text(json.dumps(evidence_digest(evidence, blind_test=bool(args.blind_test)), ensure_ascii=False, indent=2), encoding="utf-8")
     template_path = output_dir / "annotation_records.template.json"
     template_path.write_text(json.dumps([template_record(c) for c in evidence["clusters"]], ensure_ascii=False, indent=2), encoding="utf-8")
+    draft_path = output_dir / "annotation_records.draft.json"
+    draft_path.write_text(json.dumps([draft_record(c, evidence) for c in evidence["clusters"]], ensure_ascii=False, indent=2), encoding="utf-8")
     manifest = {
         "status": "research_required" if requests["requests"] and not normalized_research else "prepared",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -420,6 +519,7 @@ def main():
         "input_shape": evidence["average_shape"], "cluster_count": len(evidence["clusters"]),
         "evidence_pack": str(evidence_path), "evidence_digest": str(digest_path),
         "annotation_template": str(template_path),
+        "annotation_draft": str(draft_path),
         "research_requests": str(requests_path),
         "research_evidence_normalized": str(normalized_research_path) if normalized_research else "",
         "external_candidates": str(external_candidates_path),
@@ -442,6 +542,7 @@ def main():
         "evidence_bytes": evidence_path.stat().st_size, "digest_bytes": digest_path.stat().st_size,
         "evidence_pack": str(evidence_path), "evidence_digest": str(digest_path),
         "annotation_template": str(template_path),
+        "annotation_draft": str(draft_path),
         "research_requests": str(requests_path),
         "research_required_clusters": [item["cluster_id"] for item in requests["requests"]],
         "research_resolved": bool(normalized_research),

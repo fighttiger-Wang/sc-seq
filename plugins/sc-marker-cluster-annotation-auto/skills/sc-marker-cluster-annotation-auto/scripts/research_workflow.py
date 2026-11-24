@@ -608,6 +608,11 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "research_current_case_override_audit": resolution["current_case_override_audit"],
             "formal_identity_binding_allowed": True,
         })
+        decision["research_sources"] = resolution.get("sources", [])
+        if resolution.get("sources"):
+            first_src = resolution["sources"][0]
+            if first_src.get("supported_program"):
+                decision["research_supported_program"] = first_src.get("supported_program")
         decision.setdefault("qualitative_gates", {})
         decision["qualitative_gates"]["identity_anchor"] = "通过"
         decision["qualitative_gates"]["exclusion"] = "通过"

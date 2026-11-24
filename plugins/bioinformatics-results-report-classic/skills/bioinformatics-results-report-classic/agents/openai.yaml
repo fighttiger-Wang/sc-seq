@@ -1,5 +1,5 @@
 interface:
-  display_name: "A06 · 文档解读报告 v0.2.0"
+  display_name: "A06 · 文档解读报告 v0.2.1"
   short_description: "生成论文式经典中文文档报告"
   default_prompt: "Use $bioinformatics-results-report-classic to 生成论文式经典中文文档报告"
 

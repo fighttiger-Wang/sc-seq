@@ -12,6 +12,8 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+import time
+import urllib.request
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -104,6 +106,7 @@ class ReportParser(HTMLParser):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)
+    parser.add_argument("--online-doi", action="store_true", help="Check DOI registrations with Crossref (optional)")
     args = parser.parse_args()
     report = args.report.resolve()
     errors: list[str] = []
@@ -203,6 +206,43 @@ def main() -> int:
             parsed_url = urlparse(url)
             if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
                 errors.append(f"invalid external citation URL: {url}")
+        
+        # Prohibited meta buzzword check
+        title_full = "".join(parsed.title_text)
+        forbidden_title_buzzwords = ["智能解读", "智能报告", "生信小助手", "AI解读", "大模型生成"]
+        for bw in forbidden_title_buzzwords:
+            if bw in title_full:
+                errors.append(f"prohibited meta buzzword found in report title: {bw!r} (must use academic monograph title)")
+                
+        # DOI Crossref verification
+        doi_pattern = re.compile(r"https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/[-._;()/:A-Za-z0-9]+)")
+        checked_dois = set()
+        deadline = time.monotonic() + 60
+        for url in parsed.external_links:
+            if urlparse(url).hostname not in {"doi.org", "dx.doi.org"}:
+                continue
+            match = doi_pattern.fullmatch(url)
+            if not match:
+                errors.append(f"invalid DOI URL: {url}")
+                continue
+            doi = match.group(1)
+            if not args.online_doi or doi in checked_dois:
+                continue
+            checked_dois.add(doi)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                warnings.append(f"DOI unverifiable (time budget): {doi}")
+                continue
+            try:
+                with urllib.request.urlopen(f"https://api.crossref.org/works/{doi}", timeout=min(5, remaining)):
+                    pass
+            except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                    errors.append(f"unregistered DOI (404): {doi}")
+                else:
+                    warnings.append(f"DOI unverifiable ({exc.code}): {doi}")
+            except OSError as exc:
+                warnings.append(f"DOI unverifiable ({exc}): {doi}")
         if parsed.image_sources and parsed.dialogs != 1:
             warnings.append(f"expected one image viewer dialog, found {parsed.dialogs}")
         lower_document = document.lower()

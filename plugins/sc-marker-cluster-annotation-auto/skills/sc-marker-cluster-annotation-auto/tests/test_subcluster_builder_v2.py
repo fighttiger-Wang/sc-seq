@@ -138,6 +138,12 @@ def main():
     lit_cell = workbook["细胞类型与文献"].cell(2, 2)
     assert lit_cell.value == "DOI:10.1000/test.subcluster; PMID:12345678"
     assert lit_cell.hyperlink.target == "https://doi.org/10.1000/test.subcluster"
+    # Enforce non-empty columns 1-7 in 细胞类型与文献
+    for r in range(2, workbook["细胞类型与文献"].max_row + 1):
+        for c in range(1, 8):
+            assert bool(str(workbook["细胞类型与文献"].cell(r, c).value or "").strip()), f"Cell ({r}, {c}) empty"
+    classic_cell = workbook["细胞类型与文献"].cell(2, 5)
+    assert bool(str(classic_cell.value or "").strip()), "Column 5 Classic Markers must not be empty" 
 
     # A label that disagrees with the qualitative core must not be made
     # acceptable by copying the same label into the workbook-facing record.

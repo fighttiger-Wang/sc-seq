@@ -2931,5 +2931,40 @@
     "alias": "corpus luteum cell",
     "alias_type": "synonym",
     "maps_to": "Luteal_cell"
+  },
+  {
+    "cell_id": "Monocyte_derived_macrophage",
+    "language": "en",
+    "alias": "Monocyte_derived_macrophage",
+    "alias_type": "standard_id",
+    "maps_to": "Monocyte_derived_macrophage"
+  },
+  {
+    "cell_id": "Monocyte_derived_macrophage",
+    "language": "cn",
+    "alias": "单核源性巨噬细胞",
+    "alias_type": "standard_cn",
+    "maps_to": "Monocyte_derived_macrophage"
+  },
+  {
+    "cell_id": "Monocyte_derived_macrophage",
+    "language": "en",
+    "alias": "MDM",
+    "alias_type": "abbreviation",
+    "maps_to": "Monocyte_derived_macrophage"
+  },
+  {
+    "cell_id": "Monocyte_derived_macrophage",
+    "language": "en",
+    "alias": "mo-Mac",
+    "alias_type": "abbreviation",
+    "maps_to": "Monocyte_derived_macrophage"
+  },
+  {
+    "cell_id": "Monocyte_derived_macrophage",
+    "language": "en",
+    "alias": "infiltrating macrophage",
+    "alias_type": "synonym",
+    "maps_to": "Monocyte_derived_macrophage"
   }
 ]

@@ -13,6 +13,8 @@ import hashlib
 from pathlib import Path
 
 from qualitative_gate_helpers import (
+    is_global_ambient_gene,
+    is_locally_enriched_ambient,
     CORE_VERSION, DEFAULT_CONFIG, _absolute_program_gate, _identity_branch_gate,
     _identity_program_gate, _major_label, _mutually_exclusive_program_gate, _myeloid_boundary_audit,
     _snapshot_metadata, _validate_runtime_snapshot, gene_metric,
@@ -73,12 +75,33 @@ def _evaluate_panel(label, panel, cluster, values, clusters, thresholds, full_ra
         metric for gene in panel.get("negative", [])
         if (metric := gene_metric(gene, cluster, values, clusters, thresholds, full_ratio)) is not None
     ]
+    provenance = config.get("panel_provenance", {}).get(label, {})
+    within_parent_scope = provenance.get("within_parent_scope", True)
+
+    # Ambient RNA Decoupling for off-parent candidate panels
+    if not within_parent_scope and len(clusters) >= 5:
+        filtered_core = []
+        for item in core_metrics:
+            g = item["gene"]
+            if is_global_ambient_gene(g, values, clusters):
+                if is_locally_enriched_ambient(item):
+                    filtered_core.append(item)
+            else:
+                filtered_core.append(item)
+        core_metrics = filtered_core
+
     required = int(panel.get("required_core_markers", thresholds.get("minimum_core_markers", 2)))
     supported_core = [item for item in core_metrics if item["review"]]
     strong_core = [item for item in core_metrics if item["strong"]]
     supportive = [item for item in supportive_metrics if item["review"]]
     conflicts = [item for item in negative_metrics if item["review"]]
     missing = [gene for gene in panel.get("core", []) if gene.upper() not in {item["gene"] for item in core_metrics}]
+
+    # If off-parent candidate involved ambient genes, require at least 3 core markers
+    if not within_parent_scope and len(clusters) >= 5:
+        has_ambient_anchor = any(is_global_ambient_gene(g, values, clusters) for g in panel.get("core", []))
+        if has_ambient_anchor:
+            required = max(required, 3)
 
     if full_ratio:
         identity_passed = len(supported_core) >= required and len(strong_core) >= min(required, 2)
@@ -217,7 +240,7 @@ def _select_primary(candidates, prior_label=""):
     return primary, trace
 
 
-def _evaluate_states(config, cluster, values, clusters, thresholds, full_ratio, blocked):
+def _evaluate_states(config, cluster, values, clusters, thresholds, full_ratio, blocked, is_immune_lineage=False):
     aliases = {
         "S_phase": "Cycling", "G2M_phase": "Cycling", "interferon": "IFN",
         "activation_APC": "Activated", "exhaustion": "Exhausted", "stress": "Stress",
@@ -227,11 +250,18 @@ def _evaluate_states(config, cluster, values, clusters, thresholds, full_ratio, 
     programs = []
     states = []
     for name, genes in config.get("state_panels", {}).items():
+        if name == "emt" and is_immune_lineage:
+            continue
         metrics = [
             metric for gene in genes
             if gene.upper() not in blocked
             if (metric := gene_metric(gene, cluster, values, clusters, thresholds, full_ratio)) is not None
         ]
+        if len(clusters) >= 5:
+            metrics = [
+                m for m in metrics
+                if not (is_global_ambient_gene(m["gene"], values, clusters) and not is_locally_enriched_ambient(m))
+            ]
         active = [item for item in metrics if item["review"]]
         strong_active = [item for item in active if item["strong"]]
         rule = config.get("state_program_rules", {}).get(name, {})
@@ -470,19 +500,43 @@ def enrich_evidence(
             primary["major_label"] if major_identity_first else primary["label"]
         )
 
+        is_immune = (
+            resolved_parent in {"Myeloid", "Myeloid_cell", "T_cell", "B_cell", "NK_cell", "Immune"}
+            or any(x in parent_population for x in ["Myeloid", "T_cell", "B_cell", "NK", "Immune", "Leukocyte"])
+            or any(any(x in str(p) for x in ["Myeloid", "T_cell", "B_cell", "NK", "Immune"]) for p in primary.get("parent_path", []))
+        )
         state_programs, state_list = _evaluate_states(
             config, cluster, values, clusters, thresholds, full_ratio,
             set(cluster_rules["conflict_markers"]),
+            is_immune_lineage=is_immune,
         )
         specialized_subtypes = _evaluate_specialized_subtypes(
             config, primary, cluster, values, clusters, thresholds, full_ratio,
             set(cluster_rules["conflict_markers"]),
         )
         parent_gate = primary["parent_lineage_gate"]
-        off_parent_candidates = [
-            item for item in candidates
-            if item["parent_lineage_gate"] == "不通过" and item["program_gate"] == "通过"
-        ]
+        off_cfg = config.get("off_parent_audit", {})
+        min_core_rev = int(off_cfg.get("minimum_core_review", 2))
+        min_core_str = int(off_cfg.get("minimum_core_strong", 1))
+        
+        def _is_valid_off_parent(item):
+            if item["parent_lineage_gate"] != "不通过" or item["program_gate"] != "通过":
+                return False
+            if len(item.get("supporting_core", [])) < min_core_rev or len(item.get("strong_core", [])) < min_core_str:
+                return False
+            # Lineage fidelity guard: T-cell off-parent requires pan-T CD3 anchor detection
+            if item.get("major_label") == "T_cell":
+                t_anchors = {"CD3D", "CD3E", "CD3G", "TRAC", "TRBC1", "TRBC2"}
+                c_genes = values.get(str(cluster), {})
+                has_t_anchor = any(
+                    float(c_genes.get(g, {}).get("ratio", 0.0)) >= thresholds["minimum_detection_floor"]
+                    for g in t_anchors
+                )
+                if not has_t_anchor:
+                    return False
+            return True
+
+        off_parent_candidates = [item for item in candidates if _is_valid_off_parent(item)]
         off_parent = bool(primary.get("off_parent_audit") or off_parent_candidates)
         off_parent_gate = "通过" if off_parent and primary["program_gate"] == "通过" else "不适用"
         sibling_gate = "未确定" if unresolved_rivals else "通过"

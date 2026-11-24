@@ -1,10 +1,10 @@
 ---
 name: bioinformatics-results-report-classic
-displayName: A06 · 文档解读报告 v0.2.0
-description: A06 · 文档解读报告 v0.2.0：解读既有统计结果并生成经典论文式单文件 HTML 报告 Interpret completed bioinformatics result folders and generate a literature-grounded, self-contained Chinese HTML report in a centered classic scientific-document layout. Use for cell proportion/ROE, differential expression, enrichment, cell communication, or pseudotime results when a paper-like report is preferred; do not use for statistical recalculation or Seurat/Scanpy object analysis.
+displayName: A06 · 文档解读报告 v0.2.1
+description: A06 · 文档解读报告 v0.2.1：解读既有统计结果并生成经典论文式单文件 HTML 报告 Interpret completed bioinformatics result folders and generate a literature-grounded, self-contained Chinese HTML report in a centered classic scientific-document layout. Use for cell proportion/ROE, differential expression, enrichment, cell communication, or pseudotime results when a paper-like report is preferred; do not use for statistical recalculation or Seurat/Scanpy object analysis.
 ---
 
-# A06 · 文档解读报告 v0.2.0
+# A06 · 文档解读报告 v0.2.1
 
 Turn a completed local result folder into a professional Chinese report without exceeding the statistical evidence supplied by the user. The defining presentation is a centered, paper-like scientific document rather than a dashboard.
 
