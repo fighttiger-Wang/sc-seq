@@ -1,5 +1,5 @@
 interface:
-  display_name: "A02 · 大类谱系注释 v0.9.3"
+  display_name: "A02 · 大类谱系注释 v0.9.4"
   short_description: "跨全细胞或混合谱系自动完成大类注释、审计与原目录交付"
   default_prompt: "Use $sc-major-celltype-annotation-auto to 跨全细胞或混合谱系自动完成大类注释、审计与原目录交付"
 

@@ -125,16 +125,29 @@ def main():
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
     workbook = load_workbook(output)
-    assert workbook.sheetnames == ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
-    assert [workbook["注释与详细证据"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
-    result_headers = {cell.value: cell.column for cell in workbook["注释与详细证据"][1]}
-    assert "质量评分" not in result_headers and "置信度" not in result_headers
-    assert workbook["注释与详细证据"].cell(3, result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
-    marker_text = workbook["注释与详细证据"].cell(3, result_headers["支持 Marker 证据"]).value
-    assert "FGFBP2(mean=4.67, ratio=70.20%" in marker_text
+    assert workbook.sheetnames == ["注释结果总览", "质控与深度审计", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    assert [workbook["注释结果总览"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
+    assert [workbook["质控与深度审计"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
+    summary_headers = {cell.value: cell.column for cell in workbook["注释结果总览"][1]}
+    audit_headers = {cell.value: cell.column for cell in workbook["质控与深度审计"][1]}
+    for hdr_map in (summary_headers, audit_headers):
+        assert "质量评分" not in hdr_map and "置信度" not in hdr_map
+        assert "验证建议" not in hdr_map and "下游处理建议" not in hdr_map
+    assert workbook["注释结果总览"].cell(3, summary_headers["中文名称"]).fill.fgColor.rgb == "FFFDE8E8"
+    assert workbook["注释结果总览"].cell(3, summary_headers["质控结论"]).value == "建议复核"
+    assert workbook["注释结果总览"].cell(3, summary_headers["质控结论"]).fill.fgColor.rgb == "FFFDE8E8"
+    assert workbook["注释结果总览"].cell(2, summary_headers["质控结论"]).value == "保留"
+    assert workbook["注释结果总览"].cell(2, summary_headers["质控结论"]).fill.fgColor.rgb == "FFE6F4EA"
+    core_text = workbook["注释结果总览"].cell(3, summary_headers["核心定量摘要"]).value
+    assert "FGFBP2(mean=4.7, log2FC=1.7, 70.2%/14.3%)" in core_text
+    assert "mean=NA" not in core_text
+    marker_text = workbook["质控与深度审计"].cell(3, audit_headers["完整支持 Marker 定量"]).value
+    assert "FGFBP2(mean=4.67, log2FC=1.74, pct=70.20%/14.30%)" in marker_text
+    assert "mean=NA" not in marker_text and "ratio=" not in marker_text
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
-    assert workbook["注释与详细证据"]["A1"].font.name == "Cambria"
-    assert workbook["注释与详细证据"]["A1"].font.sz == 11
+    assert all(not cell.alignment.wrap_text for sheet in workbook.worksheets for row in sheet.iter_rows() for cell in row)
+    assert workbook["注释结果总览"]["A1"].font.name == "Cambria"
+    assert workbook["注释结果总览"]["A1"].font.sz == 11
     lit_cell = workbook["细胞类型与文献"].cell(2, 2)
     assert lit_cell.value == "DOI:10.1000/test.subcluster; PMID:12345678"
     assert lit_cell.hyperlink.target == "https://doi.org/10.1000/test.subcluster"
@@ -295,18 +308,18 @@ def main():
         raise RuntimeError(completed.stdout + completed.stderr)
     myeloid_book = load_workbook(myeloid_output)
     anno_rows = {
-        str(myeloid_book["注释与详细证据"].cell(row, 1).value): myeloid_book["注释与详细证据"].cell(row, 3).value
-        for row in range(2, myeloid_book["注释与详细证据"].max_row + 1)
+        str(myeloid_book["注释结果总览"].cell(row, 1).value): myeloid_book["注释结果总览"].cell(row, 3).value
+        for row in range(2, myeloid_book["注释结果总览"].max_row + 1)
     }
     anno_row_numbers = {
-        str(myeloid_book["注释与详细证据"].cell(row, 1).value): row
-        for row in range(2, myeloid_book["注释与详细证据"].max_row + 1)
+        str(myeloid_book["注释结果总览"].cell(row, 1).value): row
+        for row in range(2, myeloid_book["注释结果总览"].max_row + 1)
     }
     assert anno_rows == {"A1": "Classical_monocyte", "B2": "DC3"}
-    result_headers = {cell.value: cell.column for cell in myeloid_book["注释与详细证据"][1]}
-    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).value == "经典单核细胞"
-    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["B2"], result_headers["Celltype_EN"]).value == "DC3"
-    assert myeloid_book["注释与详细证据"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).fill.fgColor.rgb == "FFF8696B"
+    result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果总览"][1]}
+    assert myeloid_book["注释结果总览"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).value == "经典单核细胞"
+    assert myeloid_book["注释结果总览"].cell(anno_row_numbers["B2"], result_headers["Celltype_EN"]).value == "DC3"
+    assert myeloid_book["注释结果总览"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).fill.fgColor.rgb == "FFFDE8E8"
 
     # Mixed-depth ontology labels preserve the evidence-supported leaf instead
     # of hiding it under a co-occurring registered parent.
@@ -406,7 +419,7 @@ def main():
         "--destination", str(delivery_dir),
     ], capture_output=True, encoding="utf-8", errors="replace")
     assert legacy_copy.returncode != 0
-    assert "violates the four-sheet contract" in (legacy_copy.stderr + legacy_copy.stdout)
+    assert "violates the five-sheet contract" in (legacy_copy.stderr + legacy_copy.stdout)
     print(json.dumps({"status": "pass", "checks": 28, "output": str(output)}, ensure_ascii=False))
 
 

@@ -24,18 +24,31 @@ GATE_VALUES = {"通过", "不通过", "未确定", "不适用"}
 PLOT_LABEL = re.compile(r"^[A-Za-z0-9_]+$")
 INVALID_LABEL = re.compile(r"[^A-Za-z0-9_]+")
 
-ANNO_HEADERS = [
-    "Cluster", "中文名称", "Celltype_EN", "细胞谱系", "发育/成熟阶段",
-    "细胞状态", "组织/疾病相关角色", "关键 Marker", "支持 Marker 证据",
-    "冲突/缺失 Marker", "主要身份程序", "主要竞争候选", "定性门控审计",
-    "UMAP 判断摘要", "异常/边界标记", "可能组成", "判定依据与论证", "证据缺口",
+SUMMARY_SHEET = "注释结果总览"
+AUDIT_SHEET = "质控与深度审计"
+COLOR_SHEET = "细胞配色"
+LITERATURE_SHEET = "细胞类型与文献"
+SOURCE_SHEET = "说明与数据来源"
+EXPECTED_SHEETS = [SUMMARY_SHEET, AUDIT_SHEET, COLOR_SHEET, LITERATURE_SHEET, SOURCE_SHEET]
+
+SUMMARY_HEADERS = [
+    "Cluster", "中文名称", "Celltype_EN", "大类谱系", "细胞状态",
+    "质控结论", "关键 Marker", "核心定量摘要", "UMAP 拓扑位置", "核心判定依据",
 ]
-ANNO_FIELDS = [
-    "cluster_id", "celltype_cn", "celltype_en", "broad_type", "developmental_stage",
-    "state", "disease_role", "key_markers", "supporting_marker_evidence",
-    "conflict_missing_markers", "primary_program", "candidate_labels",
-    "gate_audit_summary", "umap_summary", "boundary_flags", "possible_components",
-    "rationale", "evidence_gaps",
+SUMMARY_FIELDS = [
+    "cluster_id", "celltype_cn", "celltype_en", "broad_type", "state",
+    "qc_verdict", "key_markers_short", "core_marker_metrics", "umap_summary", "rationale",
+]
+
+AUDIT_HEADERS = [
+    "Cluster", "中文名称", "Celltype_EN", "质控结论", "定性门控审计",
+    "主要竞争候选(Top3)", "完整支持 Marker 定量", "阴性排除验证",
+    "异常/边界标记", "可能组成", "证据缺口与复核说明",
+]
+AUDIT_FIELDS = [
+    "cluster_id", "celltype_cn", "celltype_en", "qc_verdict", "gate_audit_summary",
+    "candidate_labels", "supporting_marker_evidence", "exclusion_summary",
+    "boundary_flags_display", "possible_components", "evidence_gaps",
 ]
 
 COLOR_HEADERS = ["细胞类型", "色号"]
@@ -51,13 +64,26 @@ LITERATURE_HEADERS = [
 ]
 SOURCE_HEADERS = ["项目", "内容"]
 
+# Styling palette constants (no wrap, fixed compact height)
+HEADER_FILL_RGB = "FF1F4E79"
+HEADER_FONT_RGB = "FFFFFF"
+ZEBRA_FILL_RGB = "FFF7F9FC"
+BORDER_GRAY_RGB = "FFE2E8F0"
+WARN_FILL_RGB = "FFFDE8E8"
+WARN_FONT_RGB = "9C0006"
+PASS_FILL_RGB = "FFE6F4EA"
+PASS_FONT_RGB = "137333"
+LEGACY_RED_RGBS = {"FFF8696B", "F8696B", "FFFDE8E8", "FDE8E8"}
+
 # Backward-compatibility aliases
 PLOT_FIELDS = ["cluster_id", "celltype_en"]
 PLOT_HEADERS = ["Cluster", "Celltype_EN"]
-RESULT_FIELDS = ANNO_FIELDS
-RESULT_HEADERS = ANNO_HEADERS
-EVIDENCE_FIELDS = ANNO_FIELDS
-EVIDENCE_HEADERS = ANNO_HEADERS
+ANNO_HEADERS = SUMMARY_HEADERS
+ANNO_FIELDS = SUMMARY_FIELDS
+RESULT_FIELDS = SUMMARY_FIELDS
+RESULT_HEADERS = SUMMARY_HEADERS
+EVIDENCE_FIELDS = AUDIT_FIELDS
+EVIDENCE_HEADERS = AUDIT_HEADERS
 
 
 from functools import lru_cache
@@ -190,9 +216,9 @@ def _metric_value(item, *names):
     return None
 
 
-def _number_text(value, percent=False):
+def _number_text(value, percent=False, decimals=2):
     if value in (None, ""):
-        return "NA"
+        return None
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -200,26 +226,104 @@ def _number_text(value, percent=False):
     if percent:
         if abs(number) <= 1.0:
             number *= 100.0
-        return f"{number:.2f}%"
-    return f"{number:.2f}"
+        return f"{number:.{decimals}f}%"
+    return f"{number:.{decimals}f}"
 
 
-def format_marker_metric(item):
+def _to_pct_float(value):
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if abs(number) <= 1.0:
+        number *= 100.0
+    return number
+
+
+def format_marker_metric(item, compact=False):
     if isinstance(item, str):
         return item.strip()
     gene = str(_metric_value(item, "gene", "Gene", "GeneName") or "").strip()
     if not gene:
         return human_value(item)
     mean = _metric_value(item, "mean_expr", "mean", "Target_Cluster_mean", "avg_expr")
-    ratio = _metric_value(item, "expr_ratio", "ratio", "detection_ratio", "p_in", "pct.1", "pct1")
+    ratio = _metric_value(item, "expr_ratio", "ratio", "detection_ratio")
     log2fc = _metric_value(item, "log2FC", "avg_log2FC", "avg_logFC")
     pct1 = _metric_value(item, "pct.1", "pct1", "p_in")
     pct2 = _metric_value(item, "pct.2", "pct2", "p_background", "background")
-    return (
-        f"{gene}(mean={_number_text(mean)}, ratio={_number_text(ratio, True)}, "
-        f"log2FC={_number_text(log2fc)}, pct.1={_number_text(pct1, True)}, "
-        f"pct.2={_number_text(pct2, True)})"
-    )
+
+    dec = 1 if compact else 2
+    parts = []
+    mean_txt = _number_text(mean, percent=False, decimals=dec)
+    if mean_txt is not None:
+        parts.append(f"mean={mean_txt}")
+    fc_txt = _number_text(log2fc, percent=False, decimals=dec)
+    if fc_txt is not None:
+        parts.append(f"log2FC={fc_txt}")
+
+    r_pct = _to_pct_float(ratio)
+    p1_pct = _to_pct_float(pct1)
+    p1_eff = pct1 if pct1 not in (None, "") else ratio
+    p1_txt = _number_text(p1_eff, percent=True, decimals=dec)
+    p2_txt = _number_text(pct2, percent=True, decimals=dec)
+
+    if r_pct is not None and p1_pct is not None and abs(r_pct - p1_pct) > 0.5 and not compact:
+        r_txt = _number_text(ratio, percent=True, decimals=dec)
+        if r_txt is not None:
+            parts.append(f"ratio={r_txt}")
+        if p2_txt is not None:
+            parts.append(f"pct={_number_text(pct1, True, dec)}/{p2_txt}")
+        else:
+            parts.append(f"pct.1={_number_text(pct1, True, dec)}")
+    elif p1_txt is not None and p2_txt is not None:
+        parts.append(f"{p1_txt}/{p2_txt}" if compact else f"pct={p1_txt}/{p2_txt}")
+    elif p1_txt is not None:
+        parts.append(p1_txt if compact else f"pct={p1_txt}")
+    elif p2_txt is not None:
+        parts.append(f"bg={p2_txt}" if compact else f"pct.2={p2_txt}")
+
+    return f"{gene}({', '.join(parts)})" if parts else gene
+
+
+def _gene_list(value):
+    if value in (None, ""):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        items = []
+        for item in value:
+            if isinstance(item, dict):
+                items.append(item)
+            else:
+                items.extend(_gene_list(item))
+        return items
+    if isinstance(value, dict):
+        return [value]
+    text = str(value).strip()
+    if text.startswith(("[", "{")):
+        try:
+            return _gene_list(json.loads(text))
+        except json.JSONDecodeError:
+            pass
+    return [item.strip() for item in re.split(r"[,;；、]+", text) if item.strip()]
+
+
+def _short_key_markers(value, max_genes=6):
+    seen = set()
+    out = []
+    for item in _gene_list(value):
+        gene = str(_metric_value(item, "gene", "Gene", "GeneName") or "").strip() if isinstance(item, dict) else str(item).strip()
+        if not gene:
+            continue
+        key = gene.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(gene)
+        if max_genes and len(out) >= max_genes:
+            break
+    return ", ".join(out)
 
 
 def _profile_markers(evidence, cluster):
@@ -237,15 +341,29 @@ def _marker_lookup(evidence, cluster):
     return lookup
 
 
-def _marker_evidence(value, evidence, cluster):
+def _marker_evidence(value, evidence, cluster, compact=False, max_genes=None):
     lookup = _marker_lookup(evidence, cluster)
+    seen = set()
     rendered = []
-    for item in _as_list(value):
+    for item in _gene_list(value):
         if isinstance(item, dict):
-            rendered.append(format_marker_metric(item))
-            continue
-        gene = str(item).strip()
-        rendered.append(format_marker_metric(lookup.get(gene.upper(), gene)))
+            gene = str(_metric_value(item, "gene", "Gene", "GeneName") or "").strip()
+            key = gene.upper() if gene else repr(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            rendered.append(format_marker_metric(item, compact=compact))
+        else:
+            gene = str(item).strip()
+            if not gene:
+                continue
+            key = gene.upper()
+            if key in seen:
+                continue
+            seen.add(key)
+            rendered.append(format_marker_metric(lookup.get(key, gene), compact=compact))
+        if max_genes and len(rendered) >= max_genes:
+            break
     return "；".join(item for item in rendered if item)
 
 
@@ -377,6 +495,93 @@ def _active_state_program_text(record, decision):
     return ""
 
 
+BOUNDARY_FLAG_LABELS = {
+    "none": "正常纯群",
+    "normal": "正常纯群",
+    "正常纯群": "正常纯群",
+    "suspected_doublet": "疑似双细胞",
+    "mixed_population": "混合/双细胞群",
+    "off_parent_contamination": "跨谱系污染",
+    "off_parent_detected": "跨谱系混入",
+    "off_parent_reassignment": "跨谱系混入",
+    "off_parent": "跨谱系混入",
+    "ambient_rna": "背景游离RNA干扰",
+    "ambient": "背景游离RNA干扰",
+    "background_interference": "背景游离RNA干扰",
+    "low_quality": "低质量细胞",
+    "debris": "细胞碎片",
+    "lineage_boundary": "谱系边界群",
+    "abnormal_state": "异常状态",
+    "mixed_evidence": "混合特征待复核",
+}
+
+
+def _humanize_boundary_flags(raw_value):
+    text = human_value(raw_value)
+    if not text:
+        return "正常纯群"
+    tokens = [tok.strip() for tok in re.split(r"[,;；、|]+", str(text)) if tok.strip()]
+    if not tokens:
+        return "正常纯群"
+    mapped = []
+    for tok in tokens:
+        low = tok.lower()
+        label = BOUNDARY_FLAG_LABELS.get(low)
+        if not label:
+            for k, v in BOUNDARY_FLAG_LABELS.items():
+                if k in low and k not in {"none", "normal"}:
+                    label = v
+                    break
+        mapped.append(label or tok)
+    deduped = list(dict.fromkeys(mapped))
+    if len(deduped) > 1 and "正常纯群" in deduped:
+        deduped = [x for x in deduped if x != "正常纯群"]
+    return "；".join(deduped) if deduped else "正常纯群"
+
+
+def _top_competing_candidates(record, decision, celltype_en, stable, primary_prog, limit=3):
+    self_labels = {
+        str(x).strip()
+        for x in (celltype_en, normalize_final_label(stable or celltype_en), primary_prog)
+        if str(x).strip()
+    }
+    audits = [item for item in (decision.get("candidate_program_audits") or []) if isinstance(item, dict)]
+    off_parent_labels = {
+        str(item.get("label", "")).strip()
+        for item in audits
+        if item.get("within_parent_scope") is False or item.get("off_parent_audit")
+    }
+    override_comp = (decision.get("research_current_case_override_audit") or {}).get("competing_labels") or []
+    raw_comp = _first(record, decision, "competing_programs", "candidate_labels")
+
+    explicit = []
+    if isinstance(raw_comp, list):
+        explicit.extend(str(x).strip() for x in raw_comp if str(x).strip())
+    elif isinstance(raw_comp, str) and raw_comp.strip():
+        explicit.extend(str(x).strip() for x in re.split(r"[,;；、/\s]+", raw_comp) if str(x).strip())
+    explicit.extend(str(x).strip() for x in override_comp if str(x).strip())
+
+    # Only include KB audits that genuinely showed anchor support or passed/uncertain sibling gate
+    plausible = []
+    for item in audits:
+        lbl = str(item.get("label", "")).strip()
+        if not lbl or item.get("within_parent_scope") is False or item.get("off_parent_audit"):
+            continue
+        p_gate = _gate(item.get("program_gate"), default="未确定")
+        hits = int(item.get("matched_anchor_count", 0) or len(item.get("supporting_core") or []) or len(item.get("anchor_hits") or []) or 0)
+        if p_gate in {"通过", "未确定"} or hits >= 1:
+            plausible.append((1 if p_gate == "通过" else 0, hits, lbl))
+    plausible.sort(key=lambda t: (t[0], t[1]), reverse=True)
+
+    combined = explicit + [lbl for _, _, lbl in plausible]
+    ignore_vals = {"无", "无显著同级竞争", "无明确竞争候选"}
+    filtered = [
+        x for x in dict.fromkeys(combined)
+        if x not in self_labels and x not in off_parent_labels and x not in ignore_vals
+    ]
+    return "；".join(filtered[:limit]) if filtered else "无显著同级竞争"
+
+
 def normalize_records(records, evidence, umap_audit=None):
     normalized = []
     for raw in records:
@@ -389,38 +594,11 @@ def normalize_records(records, evidence, umap_audit=None):
         stable = _first(record, decision, "stable_id", "celltype_en", "display_label")
         celltype_en = normalize_final_label(_first(record, decision, "celltype_en", "display_label", default=stable))
         primary_prog = human_value(_first(record, decision, "primary_program", "research_selected_identity", "primary_evidence_label", "stable_id", default=celltype_en))
-        self_labels = {
-            str(x).strip()
-            for x in (celltype_en, normalize_final_label(stable or celltype_en), primary_prog)
-            if str(x).strip()
-        }
-        off_parent_labels = {
-            str(item.get("label", "")).strip()
-            for item in (decision.get("candidate_program_audits") or [])
-            if isinstance(item, dict) and (item.get("within_parent_scope") is False or item.get("off_parent_audit"))
-        }
-        override_comp = (decision.get("research_current_case_override_audit") or {}).get("competing_labels") or []
-        audit_comp = [
-            str(item.get("label", "")).strip()
-            for item in (decision.get("candidate_program_audits") or [])
-            if isinstance(item, dict)
-            and str(item.get("label", "")).strip()
-            and item.get("within_parent_scope") is not False
-            and not item.get("off_parent_audit")
-        ]
-        raw_comp = _first(record, decision, "competing_programs", "candidate_labels", "possible_components")
-        comp_list = []
-        if isinstance(raw_comp, list):
-            comp_list.extend(str(x).strip() for x in raw_comp if str(x).strip())
-        elif isinstance(raw_comp, str) and raw_comp.strip():
-            comp_list.extend(str(x).strip() for x in re.split(r"[,;；、\s]+", raw_comp) if str(x).strip())
-        comp_list.extend(str(x).strip() for x in override_comp if str(x).strip())
-        comp_list.extend(str(x).strip() for x in audit_comp if str(x).strip())
-        filtered_comp = [
-            x for x in dict.fromkeys(comp_list)
-            if x not in self_labels and x not in off_parent_labels
-        ]
-        comp_text = "；".join(filtered_comp) if filtered_comp else "无显著同级竞争"
+        comp_text = _top_competing_candidates(record, decision, celltype_en, stable, primary_prog, limit=3)
+
+        raw_key_markers = human_value(_first(record, decision, "key_markers", "supporting_markers"))
+        raw_support_source = _first(record, decision, "supporting_marker_evidence", "supporting_markers", "key_markers")
+        raw_boundary = human_value(_first(record, decision, "boundary_flags", "abnormality_flags", "interpretation_flags", "mixture_type"))
 
         record.update({
             "cluster_id": cluster,
@@ -432,22 +610,23 @@ def normalize_records(records, evidence, umap_audit=None):
             "developmental_stage": _first(record, decision, "developmental_stage"),
             "state": _first(record, decision, "state", "primary_state"),
             "disease_role": _first(record, decision, "disease_role"),
-            "key_markers": human_value(_first(record, decision, "key_markers", "supporting_markers")),
+            "key_markers": raw_key_markers,
+            "key_markers_short": _short_key_markers(raw_key_markers, max_genes=6),
             "candidate_labels": comp_text,
             "possible_components": human_value(_first(record, decision, "possible_components")),
             "rationale": human_value(_first(record, decision, "rationale", "decision_rationale")),
             "validation_advice": human_value(_first(record, decision, "validation_advice", "review_action", "recommended_action")),
             "handling_advice": human_value(_first(record, decision, "handling_advice", "downstream_handling", "review_action", "recommended_action")),
             "umap_summary": human_value(_first(record, umap, "umap_summary", "topology_summary", "review_action")),
-            "boundary_flags": human_value(_first(record, decision, "boundary_flags", "abnormality_flags", "interpretation_flags", "mixture_type")),
+            "boundary_flags": raw_boundary,
             "parent_context": human_value(_first(record, decision, "parent_context", "parent_path", "expected_parent_id")),
             "primary_program": primary_prog,
             "competing_programs": comp_text,
-            "supporting_marker_evidence": _marker_evidence(
-                _first(record, decision, "supporting_marker_evidence", "supporting_markers"), evidence, cluster
-            ),
+            "supporting_marker_evidence": _marker_evidence(raw_support_source, evidence, cluster, compact=False),
+            "core_marker_metrics": _marker_evidence(raw_support_source, evidence, cluster, compact=True, max_genes=3),
             "conflicting_marker_evidence": _marker_evidence(
-                _first(record, decision, "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"), evidence, cluster
+                _first(record, decision, "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"),
+                evidence, cluster, compact=True,
             ),
             "missing_markers": human_value(_first(record, decision, "missing_markers", "evidence_gaps")),
             "off_parent_audit": human_value(_first(record, decision, "off_parent_audit", "off_parent_candidate", "tissue_context_review")),
@@ -457,19 +636,6 @@ def normalize_records(records, evidence, umap_audit=None):
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),
         })
-        conflicting_text = _marker_evidence(
-            _first(record, decision, "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"), evidence, cluster
-        )
-        missing_text = human_value(_first(record, decision, "missing_markers", "evidence_gaps"))
-        if conflicting_text and missing_text and conflicting_text != "无" and missing_text != "无" and conflicting_text != missing_text:
-            conflict_missing = f"冲突: {conflicting_text}；缺失: {missing_text}"
-        elif conflicting_text and conflicting_text != "无":
-            conflict_missing = conflicting_text
-        elif missing_text and missing_text != "无":
-            conflict_missing = missing_text
-        else:
-            conflict_missing = "无"
-        record["conflict_missing_markers"] = conflict_missing
 
         gates = _qualitative_gates(record, decision, umap)
         gate_names = [
@@ -498,11 +664,14 @@ def normalize_records(records, evidence, umap_audit=None):
         if not record.get("disease_role"):
             record["disease_role"] = "常规组织驻留"
         if not record.get("key_markers"):
-            record["key_markers"] = record.get("supporting_markers") or ""
+            record["key_markers"] = human_value(record.get("supporting_markers")) or ""
+        if not record.get("key_markers_short"):
+            record["key_markers_short"] = _short_key_markers(record.get("key_markers"), max_genes=6)
         if not record.get("candidate_labels"):
-            record["candidate_labels"] = record.get("competing_programs") or "无明确竞争候选"
+            record["candidate_labels"] = record.get("competing_programs") or "无显著同级竞争"
         if not record.get("boundary_flags"):
             record["boundary_flags"] = record.get("off_parent_audit") or "正常纯群"
+        record["boundary_flags_display"] = _humanize_boundary_flags(record["boundary_flags"])
         if not record.get("possible_components"):
             record["possible_components"] = record.get("mixed_doublet_explanation") or "纯单核群"
         if not record.get("evidence_gaps"):
@@ -510,6 +679,32 @@ def normalize_records(records, evidence, umap_audit=None):
 
         record["_decision"] = decision
         record["_umap"] = umap
+
+        is_warn = _warning(record)
+        record["_is_warning"] = is_warn
+        if not is_warn:
+            record["qc_verdict"] = "保留"
+        elif (
+            record.get("downstream_eligible") is False
+            or str(record.get("celltype_en", "")).startswith("Multi_cell")
+            or any(bool(_first(record, decision, k)) for k in ("suspected_doublet", "mixed_population", "debris", "low_quality", "off_parent_detected"))
+            or any(k in str(record.get("boundary_flags", "")).lower() for k in ("doublet", "debris", "off_parent", "mixed_population"))
+        ):
+            record["qc_verdict"] = "建议过滤"
+        else:
+            record["qc_verdict"] = "建议复核"
+
+        raw_excl = _marker_evidence(
+            _first(record, decision, "exclusion_markers", "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"),
+            evidence, cluster, compact=True,
+        )
+        if raw_excl and raw_excl != "无":
+            prefix = "异常/排除参照" if is_warn else "已排除"
+            record["exclusion_summary"] = f"{prefix}: {raw_excl}"
+        else:
+            record["exclusion_summary"] = "无异常冲突"
+        record["conflict_missing_markers"] = record["exclusion_summary"]
+
         normalized.append(record)
     return sorted(normalized, key=lambda item: cluster_sort_key(item["cluster_id"]))
 
@@ -600,8 +795,6 @@ def validate(records, clusters, evidence, umap_audit=None, annotation_level="maj
     for record in records:
         cluster = record.get("cluster_id", "")
         for field in ("celltype_cn", "celltype_en", "rationale"):
-            if not str(record.get(field, "")).strip():
-                errors.append(f"Cluster {cluster} lacks required qualitative field: {field}")
             if not str(record.get(field, "")).strip():
                 errors.append(f"Cluster {cluster} lacks required qualitative field: {field}")
         if not PLOT_LABEL.fullmatch(str(record.get("celltype_en", ""))):
@@ -750,40 +943,18 @@ def _literature_rows(records, evidence):
 
 
 def _source_rows(evidence, annotation_level, records, skill_name, skill_version):
-    metadata = evidence.get("confirmed_metadata", {})
-    paths = evidence.get("source_paths", {})
-    policy = evidence.get("annotation_evidence_policy", {})
-    filenames = [Path(str(value)).name for value in paths.values() if str(value).strip()]
-    constraints = metadata.get("annotation_constraints") or policy.get("user_constraints") or "无"
-
-    palette_pool = [
-        "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B",
-        "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF", "#AEC7E8", "#FFBB78",
-        "#98DF8A", "#FF9896", "#C5B0D5", "#C49C94", "#F7B6D2", "#C7C7C7",
-        "#DBDB8D", "#9EDAE5", "#393B79", "#5254A3", "#6B6ECF", "#9C9EDE",
-        "#637939", "#8CA252", "#B5CF6B", "#CEDB9C", "#8C6D31", "#BD9E39",
-    ]
-    palette_items = []
-    hex_list = []
-    for idx, r in enumerate(records):
-        cid = str(r.get("cluster_id", idx))
-        plot_lbl = r.get("approved_plot_label") or r.get("celltype_plot") or r.get("celltype_en") or f"C{cid}"
-        c_hex = palette_pool[idx % len(palette_pool)]
-        hex_list.append(c_hex)
-        palette_items.append(f"Cluster {cid} ({plot_lbl}): {c_hex}")
-    palette_desc = "; ".join(palette_items)
-    cols_joined = '", "'.join(hex_list)
-    r_code = (
-        'library(readxl); library(Seurat); library(ggplot2); '
-        'anno <- read_excel("cluster注释信息.xlsx"); '
-        'seurat_obj$celltype <- anno$Celltype_EN[match(seurat_obj$seurat_clusters, anno$Cluster)]; '
-        f'cols_vector <- c("{cols_joined}"); '
-        'DimPlot(seurat_obj, group.by="celltype", cols=cols_vector, label=TRUE, pt.size=0.8) + theme_classic()'
-    )
-
-def _source_rows(evidence, annotation_level, records, skill_name, skill_version):
     metadata = evidence.get("confirmed_metadata", {}) or {}
-    filenames = evidence.get("source_paths", {}).values()
+    policy = evidence.get("annotation_evidence_policy", {}) or {}
+    raw_paths = (evidence.get("source_paths") or {}).values()
+    filenames = [Path(str(v)).name for v in raw_paths if str(v).strip()]
+    project_qc_notes = (
+        metadata.get("project_qc_notes")
+        or metadata.get("dataset_background_notes")
+        or metadata.get("annotation_constraints")
+        or policy.get("user_constraints")
+        or next((str(r.get("project_qc_notes") or "").strip() for r in records if str(r.get("project_qc_notes") or "").strip()), "")
+        or "无"
+    )
     return [
         ["项目名称", metadata.get("project_name", "") or evidence.get("project_name", "") or "单细胞注释分析交付"],
         ["物种 (Species)", metadata.get("species", "")],
@@ -791,29 +962,40 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["注释层级与范围 (Level)", annotation_level],
         ["父群背景 (Parent Population)", metadata.get("parent_population", "") or "不适用"],
         ["输入数据源文件 (Input Files)", "；".join(dict.fromkeys(filenames))],
-        ["定量指标定义 (Metrics Definition)", "mean_expr=簇内表达均值；expr_ratio/pct.1=目标簇检出比例；pct.2=背景群检出比例；log2FC=差异倍数对数"],
+        ["项目共性背景与质控说明", project_qc_notes],
+        ["定量指标定义 (Metrics Definition)", "mean=簇内表达均值；log2FC=差异倍数对数；pct=目标簇检出比例/背景群检出比例（缺省指标自动省略，不输出NA）"],
+        ["表格结构与标色说明", "Sheet1《注释结果总览》供快速审阅与汇报；Sheet2《质控与深度审计》保留完整门控与定量明细；浅绿底色=保留，浅红底色=疑似双细胞/跨谱系污染/待复核。"],
         ["聚类排列原则 (Cluster Order)", "数值绝对升序结合自然字符顺序（0, 1, 2...）"],
         ["总 Cluster 数量", len(records)],
         ["分析工具与版本 (Skill & Version)", f"{skill_name} v{skill_version}" if skill_version else str(skill_name)],
     ]
 
 
-def _style_sheet(ws, widths, freeze, row_height=24):
+def _style_sheet(ws, widths, freeze, row_height=24, center_cols=None):
+    center_set = set(center_cols or ())
     ws.freeze_panes = freeze
     ws.sheet_view.showGridLines = False
     ws.auto_filter.ref = None
-    header_fill = PatternFill("solid", fgColor="D9E1F2")
-    thin = Side(style="thin", color="D9D9D9")
+    header_fill = PatternFill("solid", fgColor=HEADER_FILL_RGB)
+    zebra_fill = PatternFill("solid", fgColor=ZEBRA_FILL_RGB)
+    header_bottom = Side(style="medium", color="163A59")
+    thin = Side(style="thin", color=BORDER_GRAY_RGB)
     for cell in ws[1]:
         cell.fill = header_fill
-        cell.font = Font(name="Cambria", size=11, bold=True, color="1F4E79")
+        cell.font = Font(name="Cambria", size=11, bold=True, color=HEADER_FONT_RGB)
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
+        cell.border = Border(bottom=header_bottom)
     ws.row_dimensions[1].height = 26
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        ws.row_dimensions[row[0].row].height = row_height
+        row_idx = row[0].row
+        ws.row_dimensions[row_idx].height = row_height
+        use_zebra = (row_idx % 2 == 1)
         for cell in row:
-            cell.font = Font(name="Cambria", size=11)
-            cell.alignment = Alignment(vertical="top", wrap_text=False, shrink_to_fit=False)
+            cell.font = Font(name="Cambria", size=11, color="1E293B")
+            horiz = "center" if cell.column in center_set else "left"
+            cell.alignment = Alignment(horizontal=horiz, vertical="center", wrap_text=False, shrink_to_fit=False)
+            if use_zebra:
+                cell.fill = zebra_fill
             cell.border = Border(bottom=thin)
     for index, width in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(index)].width = width
@@ -825,19 +1007,22 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     validate(records, clusters, evidence, umap_audit, annotation_level)
 
     wb = Workbook()
-    anno_ws = wb.active
-    anno_ws.title = "注释与详细证据"
-    colors_ws = wb.create_sheet("细胞配色")
-    literature_ws = wb.create_sheet("细胞类型与文献")
-    source_ws = wb.create_sheet("说明与数据来源")
+    summary_ws = wb.active
+    summary_ws.title = SUMMARY_SHEET
+    audit_ws = wb.create_sheet(AUDIT_SHEET)
+    colors_ws = wb.create_sheet(COLOR_SHEET)
+    literature_ws = wb.create_sheet(LITERATURE_SHEET)
+    source_ws = wb.create_sheet(SOURCE_SHEET)
 
-    anno_ws.append(ANNO_HEADERS)
+    summary_ws.append(SUMMARY_HEADERS)
+    audit_ws.append(AUDIT_HEADERS)
     colors_ws.append(COLOR_HEADERS)
     literature_ws.append(LITERATURE_HEADERS)
     source_ws.append(SOURCE_HEADERS)
 
     for record in records:
-        anno_ws.append([human_value(record.get(field, "")) for field in ANNO_FIELDS])
+        summary_ws.append([human_value(record.get(field, "")) for field in SUMMARY_FIELDS])
+        audit_ws.append([human_value(record.get(field, "")) for field in AUDIT_FIELDS])
 
     palette_pool = [
         "#4DAF4A", "#377EB8", "#E41A1C", "#984EA3", "#FF7F00", "#FFFF33",
@@ -889,10 +1074,17 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
         source_ws.append(row)
 
-    _style_sheet(anno_ws, [10, 22, 22, 18, 18, 18, 22, 28, 48, 36, 28, 28, 38, 36, 20, 28, 44, 28], "D2", 24)
-    _style_sheet(colors_ws, [28, 18], "A2", 22)
-    _style_sheet(literature_ws, [26, 36, 55, 22, 38, 50, 68], "B2", 24)
-    _style_sheet(source_ws, [30, 88], "A2", 24)
+    _style_sheet(summary_ws, [10, 26, 28, 16, 22, 12, 34, 58, 36, 64], "D2", 24, center_cols={1, 4, 6})
+    _style_sheet(audit_ws, [10, 26, 28, 12, 44, 34, 64, 32, 18, 34, 48], "D2", 24, center_cols={1, 4, 9})
+    _style_sheet(colors_ws, [28, 18], "A2", 22, center_cols={2})
+    _style_sheet(literature_ws, [26, 36, 55, 22, 38, 50, 68], "B2", 24, center_cols=set())
+    _style_sheet(source_ws, [30, 92], "A2", 24, center_cols=set())
+
+    link_font = Font(name="Cambria", size=11, color="0563C1", underline="single")
+    for r_idx in range(2, literature_ws.max_row + 1):
+        link_cell = literature_ws.cell(r_idx, 2)
+        if link_cell.hyperlink:
+            link_cell.font = link_font
 
     for row_idx in range(2, colors_ws.max_row + 1):
         cell_hex = str(colors_ws.cell(row_idx, 2).value or "").strip()
@@ -908,33 +1100,46 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
                 c_cell = colors_ws.cell(row_idx, 2)
                 c_cell.fill = color_fill
                 c_cell.font = Font(name="Cambria", size=11, bold=True, color=font_c)
-                c_cell.alignment = Alignment(horizontal="center", vertical="center")
+                c_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
             except Exception:
                 pass
 
-    red_fill = PatternFill("solid", fgColor="FFF8696B")
+    warn_fill = PatternFill("solid", fgColor=WARN_FILL_RGB)
+    warn_font = Font(name="Cambria", size=11, bold=True, color=WARN_FONT_RGB)
+    pass_fill = PatternFill("solid", fgColor=PASS_FILL_RGB)
+    pass_font = Font(name="Cambria", size=11, bold=True, color=PASS_FONT_RGB)
     for row_index, record in enumerate(records, 2):
-        if _warning(record):
-            anno_ws.cell(row_index, 2).fill = red_fill
+        if record.get("_is_warning", _warning(record)):
+            for ws_target, col_idxs in ((summary_ws, (2, 6)), (audit_ws, (2, 4))):
+                for c_idx in col_idxs:
+                    cell = ws_target.cell(row_index, c_idx)
+                    cell.fill = warn_fill
+                    cell.font = warn_font
+        else:
+            for ws_target, c_idx in ((summary_ws, 6), (audit_ws, 4)):
+                cell = ws_target.cell(row_index, c_idx)
+                cell.fill = pass_fill
+                cell.font = pass_font
 
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
     check = load_workbook(output, read_only=False, data_only=False)
-    expected_sheets = ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    expected_sheets = list(EXPECTED_SHEETS)
     if check.sheetnames != expected_sheets:
         raise RuntimeError(f"Workbook sheet verification failed: {check.sheetnames}")
     for sheet, headers in (
-        ("注释与详细证据", ANNO_HEADERS),
-        ("细胞配色", COLOR_HEADERS),
-        ("细胞类型与文献", LITERATURE_HEADERS),
-        ("说明与数据来源", SOURCE_HEADERS),
+        (SUMMARY_SHEET, SUMMARY_HEADERS),
+        (AUDIT_SHEET, AUDIT_HEADERS),
+        (COLOR_SHEET, COLOR_HEADERS),
+        (LITERATURE_SHEET, LITERATURE_HEADERS),
+        (SOURCE_SHEET, SOURCE_HEADERS),
     ):
         if [cell.value for cell in check[sheet][1]] != headers:
             raise RuntimeError(f"{sheet} header verification failed")
         if check[sheet].auto_filter.ref is not None:
             raise RuntimeError(f"{sheet} must not enable autofilter")
-    for sheet in ("注释与详细证据",):
+    for sheet in (SUMMARY_SHEET, AUDIT_SHEET):
         order = [str(check[sheet].cell(row, 1).value) for row in range(2, len(records) + 2)]
         if order != clusters:
             raise RuntimeError(f"{sheet} cluster order mismatch: {order} != {clusters}")
@@ -950,7 +1155,8 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         "cluster_order_policy": "numeric_ascending_then_natural_alphanumeric",
         "qualitative_gate_values": sorted(GATE_VALUES), "aggregate_scores_exported": False,
         "confidence_exported": False, "deprecated_input_fields_ignored": deprecated,
-        "red_fill_column": "中文名称", "auto_filter_enabled": False,
+        "red_fill_column": "中文名称", "red_fill_rgb": WARN_FILL_RGB,
+        "auto_filter_enabled": False,
         "fixed_row_height": True, "wrap_text": False, "shrink_to_fit": False,
         "source_files_unchanged": True,
     }

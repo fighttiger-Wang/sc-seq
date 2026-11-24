@@ -88,7 +88,10 @@ def next_available(path: Path) -> Path:
 
 def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: Path) -> Path:
     wb_source = load_workbook(source_workbook_path, data_only=True)
-    target_sheet = "注释与详细证据" if "注释与详细证据" in wb_source.sheetnames else "注释结果"
+    target_sheet = next(
+        (name for name in ("注释结果总览", "注释与详细证据", "注释结果") if name in wb_source.sheetnames),
+        "注释结果总览",
+    )
     if target_sheet not in wb_source.sheetnames:
         raise ValueError(f"Source workbook lacks '{target_sheet}' sheet: {source_workbook_path}")
     src_sheet = wb_source[target_sheet]
@@ -102,7 +105,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
         raise ValueError(f"Required column missing in '{target_sheet}' sheet: {exc}")
 
     records = []
-    red_rgb = {"FFF8696B", "F8696B"}
+    red_rgb = {"FFFDE8E8", "FDE8E8", "FFF8696B", "F8696B"}
     for r in range(2, src_sheet.max_row + 1):
         cluster_val = src_sheet.cell(r, col_cluster).value
         if cluster_val is None:
@@ -127,47 +130,53 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
     headers = ["Cluster", "Celltype_EN", "中文名称"]
     ws.append(headers)
 
-    font_header = Font(name="Cambria", size=11, bold=True)
-    font_data = Font(name="Cambria", size=11)
-    align_center = Alignment(horizontal="center", vertical="center")
-    align_left = Alignment(horizontal="left", vertical="center")
-    thin_border = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
-    )
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    red_fill = PatternFill(start_color="FFF8696B", end_color="FFF8696B", fill_type="solid")
+    font_header = Font(name="Cambria", size=11, bold=True, color="FFFFFF")
+    font_data = Font(name="Cambria", size=11, color="1E293B")
+    font_warn = Font(name="Cambria", size=11, bold=True, color="9C0006")
+    align_center = Alignment(horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=False)
+    align_left = Alignment(horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=False)
+    thin_border = Border(bottom=Side(style="thin", color="E2E8F0"))
+    header_border = Border(bottom=Side(style="medium", color="163A59"))
+    header_fill = PatternFill(start_color="FF1F4E79", end_color="FF1F4E79", fill_type="solid")
+    zebra_fill = PatternFill(start_color="FFF7F9FC", end_color="FFF7F9FC", fill_type="solid")
+    red_fill = PatternFill(start_color="FFFDE8E8", end_color="FFFDE8E8", fill_type="solid")
 
+    ws.sheet_view.showGridLines = False
     ws.row_dimensions[1].height = 24
     for col_idx in range(1, 4):
         cell = ws.cell(1, col_idx)
         cell.font = font_header
         cell.alignment = align_center
         cell.fill = header_fill
-        cell.border = thin_border
+        cell.border = header_border
 
     for r_idx, (c_val, en_val, cn_val, is_warning) in enumerate(records, 2):
-        ws.row_dimensions[r_idx].height = 20
+        ws.row_dimensions[r_idx].height = 22
+        use_zebra = (r_idx % 2 == 1)
+
         c_cell = ws.cell(r_idx, 1, value=int(c_val) if c_val.isdigit() else c_val)
         c_cell.font = font_data
         c_cell.alignment = align_center
         c_cell.border = thin_border
+        if use_zebra:
+            c_cell.fill = zebra_fill
 
         en_cell = ws.cell(r_idx, 2, value=en_val)
-        en_cell.font = font_data
+        en_cell.font = font_warn if is_warning else font_data
         en_cell.alignment = align_left
         en_cell.border = thin_border
 
         cn_cell = ws.cell(r_idx, 3, value=cn_val)
-        cn_cell.font = font_data
+        cn_cell.font = font_warn if is_warning else font_data
         cn_cell.alignment = align_left
         cn_cell.border = thin_border
 
         if is_warning:
             en_cell.fill = red_fill
             cn_cell.fill = red_fill
+        elif use_zebra:
+            en_cell.fill = zebra_fill
+            cn_cell.fill = zebra_fill
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = None

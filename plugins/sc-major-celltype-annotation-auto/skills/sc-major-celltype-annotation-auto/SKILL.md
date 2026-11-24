@@ -99,10 +99,10 @@ definitions, and sources. Record versions, hashes, counter, input paths, cluster
 order, context, and UMAP audit. Deliver only the timestamped Excel workbook and
 the companion cluster reference table (`cluster注释信息.xlsx`) to the supplied E-drive input directory.
 Internal evidence/QA JSON sidecars remain in the E-drive workspace build directory and are not copied
-to the input directory unless explicitly requested. Use the approved subcluster workbook as
-the formatting baseline: Cambria 11, content-fit frozen columns, fixed long-text
-widths, wrapping and shrink-to-fit disabled, sample freeze panes, and red fill
-`#F8696B` only on the Chinese-name cell.
+to the input directory unless explicitly requested. Use the 5-sheet layered workbook
+(`注释结果总览`, `质控与深度审计`, `细胞配色`, `细胞类型与文献`, `说明与数据来源`) as the formatting
+baseline: Cambria 11, frozen columns, fixed widths and compact row heights (24pt) with
+wrapping and shrink-to-fit disabled, soft coral `#FDE8E8` highlight on `中文名称` and `质控结论`.
 
 ### 交付目录纯净与环境调用硬约束 (Delivery Purity & Execution Integrity)
 

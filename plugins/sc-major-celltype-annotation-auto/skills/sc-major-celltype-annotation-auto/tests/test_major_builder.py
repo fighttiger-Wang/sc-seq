@@ -55,10 +55,11 @@ def main():
     if completed.returncode:
         raise RuntimeError(completed.stdout + completed.stderr)
     workbook = load_workbook(output)
-    assert workbook.sheetnames == ["注释与详细证据", "细胞配色", "细胞类型与文献", "说明与数据来源"]
-    assert [workbook["注释与详细证据"].cell(row, 1).value for row in range(2, 5)] == ["0", "2", "10"]
-    headers = [cell.value for cell in workbook["注释与详细证据"][1]]
-    assert "质量评分" not in headers and "置信度" not in headers and "验证建议" not in headers and "下游处理建议" not in headers
+    assert workbook.sheetnames == ["注释结果总览", "质控与深度审计", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    for sheet_name in ("注释结果总览", "质控与深度审计"):
+        assert [workbook[sheet_name].cell(row, 1).value for row in range(2, 5)] == ["0", "2", "10"]
+        headers = [cell.value for cell in workbook[sheet_name][1]]
+        assert "质量评分" not in headers and "置信度" not in headers and "验证建议" not in headers and "下游处理建议" not in headers
     assert workbook["细胞配色"].max_row == 4
     assert all(sheet.auto_filter.ref is None for sheet in workbook.worksheets)
     assert all(not cell.alignment.wrap_text for sheet in workbook.worksheets for row in sheet.iter_rows() for cell in row)
