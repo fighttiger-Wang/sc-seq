@@ -566,6 +566,30 @@ def _top_competing_candidates(record, decision, celltype_en, stable, primary_pro
             if item.get("within_parent_scope") is False or item.get("off_parent_audit")
         }
     )
+    # Require passing gate or multi-gene core evidence (>=2); never pad single-gene hits or unmatched fallbacks.
+    audit_evidence = {}
+    plausible = []
+    for item in audits:
+        lbl = str(item.get("label", "")).strip()
+        if not lbl:
+            continue
+        p_gate = _gate(item.get("program_gate"), default="未确定")
+        strong_hits = len(item.get("strong_core") or [])
+        core_hits = len(item.get("supporting_core") or [])
+        anchor_hits = int(item.get("matched_anchor_count", 0) or len(item.get("anchor_hits") or []) or 0)
+        evidence_hits = max(strong_hits, core_hits, anchor_hits)
+        passed = (p_gate == "通过")
+        prev = audit_evidence.get(lbl.lower())
+        if prev is None or (passed, evidence_hits) > prev:
+            audit_evidence[lbl.lower()] = (passed, evidence_hits)
+
+        is_off = (item.get("within_parent_scope") is False or bool(item.get("off_parent_audit")))
+        if is_off and not is_cross_lineage:
+            continue
+        if passed or evidence_hits >= 2:
+            plausible.append((1 if passed else 0, strong_hits, evidence_hits, lbl))
+    plausible.sort(key=lambda t: (t[0], t[1], t[2]), reverse=True)
+
     override_comp = (decision.get("research_current_case_override_audit") or {}).get("competing_labels") or []
     raw_comp = _first(record, decision, "competing_programs", "candidate_labels")
 
@@ -574,25 +598,14 @@ def _top_competing_candidates(record, decision, celltype_en, stable, primary_pro
         explicit.extend(str(x).strip() for x in raw_comp if str(x).strip())
     elif isinstance(raw_comp, str) and raw_comp.strip():
         explicit.extend(str(x).strip() for x in re.split(r"[,;；、/\s]+", raw_comp) if str(x).strip())
-    explicit.extend(str(x).strip() for x in override_comp if str(x).strip())
-
-    # Require actual matched markers or passed gate; never pad zero-evidence "未确定" nodes.
-    plausible = []
-    for item in audits:
-        lbl = str(item.get("label", "")).strip()
-        if not lbl:
-            continue
-        is_off = (item.get("within_parent_scope") is False or bool(item.get("off_parent_audit")))
-        if is_off and not is_cross_lineage:
-            continue
-        p_gate = _gate(item.get("program_gate"), default="未确定")
-        strong_hits = len(item.get("strong_core") or [])
-        core_hits = len(item.get("supporting_core") or [])
-        anchor_hits = int(item.get("matched_anchor_count", 0) or len(item.get("anchor_hits") or []) or 0)
-        evidence_hits = max(strong_hits, core_hits, anchor_hits)
-        if p_gate == "通过" or evidence_hits >= 1:
-            plausible.append((1 if p_gate == "通过" else 0, strong_hits, evidence_hits, lbl))
-    plausible.sort(key=lambda t: (t[0], t[1], t[2]), reverse=True)
+    if not explicit:
+        for lbl in override_comp:
+            cand_s = str(lbl).strip()
+            if not cand_s:
+                continue
+            ov_pass, ov_hits = audit_evidence.get(cand_s.lower(), (False, 0))
+            if ov_pass or ov_hits >= 2:
+                explicit.append(cand_s)
 
     combined = explicit + [lbl for _, _, _, lbl in plausible]
     ignore_vals = {"无", "无显著同级竞争", "无明确竞争候选"}
@@ -626,6 +639,8 @@ def normalize_records(records, evidence, umap_audit=None):
 
         raw_key_markers = human_value(_first(record, decision, "key_markers", "supporting_markers"))
         raw_support_source = _first(record, decision, "supporting_marker_evidence", "supporting_markers", "key_markers")
+        raw_excl_source = _first(record, decision, "exclusion_markers", "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict")
+        excl_formatted = _marker_evidence(raw_excl_source, evidence, cluster, compact=True)
         raw_boundary = human_value(_first(record, decision, "boundary_flags", "abnormality_flags", "interpretation_flags", "mixture_type"))
 
         record.update({
@@ -652,10 +667,7 @@ def normalize_records(records, evidence, umap_audit=None):
             "competing_programs": comp_text,
             "supporting_marker_evidence": _marker_evidence(raw_support_source, evidence, cluster, compact=False),
             "core_marker_metrics": _marker_evidence(raw_support_source, evidence, cluster, compact=True, max_genes=3),
-            "conflicting_marker_evidence": _marker_evidence(
-                _first(record, decision, "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"),
-                evidence, cluster, compact=True,
-            ),
+            "conflicting_marker_evidence": excl_formatted,
             "missing_markers": human_value(_first(record, decision, "missing_markers", "evidence_gaps")),
             "off_parent_audit": human_value(_first(record, decision, "off_parent_audit", "off_parent_candidate", "tissue_context_review")),
             "developmental_program": human_value(_first(record, decision, "developmental_program", "developmental_stage")),
@@ -722,13 +734,9 @@ def normalize_records(records, evidence, umap_audit=None):
         else:
             record["qc_verdict"] = "建议复核"
 
-        raw_excl = _marker_evidence(
-            _first(record, decision, "exclusion_markers", "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict"),
-            evidence, cluster, compact=True,
-        )
-        if raw_excl and raw_excl != "无":
+        if excl_formatted and excl_formatted != "无":
             prefix = "跨谱系冲突" if is_warn else "已排除"
-            record["exclusion_summary"] = f"{prefix}: {raw_excl}"
+            record["exclusion_summary"] = f"{prefix}: {excl_formatted}"
         else:
             record["exclusion_summary"] = "无异常冲突"
         record["conflict_missing_markers"] = record["exclusion_summary"]

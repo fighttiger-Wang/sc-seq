@@ -424,8 +424,9 @@ def main():
     assert legacy_copy.returncode != 0
     assert "violates the five-sheet contract" in (legacy_copy.stderr + legacy_copy.stdout)
 
-    # Cross-lineage doublet clusters keep matched off-parent competitors (e.g. Cardiomyocyte)
-    # and zero-evidence "未确定" KB nodes are never padded into competing candidates.
+    # Cross-lineage doublet clusters keep matched off-parent competitors (e.g. Cardiomyocyte),
+    # single-gene "未确定" hits & unmatched fallback override labels are excluded, and
+    # exclusion_summary keeps comma formatting intact without double splitting.
     comp_records = [
         {
             "cluster_id": "7",
@@ -435,6 +436,7 @@ def main():
             "downstream_eligible": False,
             "mixed_population": True,
             "competing_programs": "Tissue_resident_macrophage",
+            "conflicting_markers": "TNNT2",
         },
         {
             "cluster_id": "11",
@@ -447,13 +449,20 @@ def main():
     ]
     comp_evidence = {
         "clusters": ["7", "11"],
+        "cluster_profiles": {
+            "7": {"top_markers": [{"gene": "TNNT2", "log2FC": 2.51, "pct1": 0.966, "pct2": 0.602}]},
+            "11": {"top_markers": []},
+        },
         "qualitative_annotation_evidence": {
-            "7": {"candidate_program_audits": [
-                {"label": "Cardiomyocyte", "program_gate": "通过", "within_parent_scope": False, "off_parent_audit": True, "supporting_core": [{"gene": "TNNT2"}]},
-                {"label": "Classical_monocyte", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": []},
-            ]},
+            "7": {
+                "research_current_case_override_audit": {"competing_labels": ["Classical_monocyte", "Multi_cell_Cardiomyocyte_Mac"]},
+                "candidate_program_audits": [
+                    {"label": "Cardiomyocyte", "program_gate": "通过", "within_parent_scope": False, "off_parent_audit": True, "supporting_core": [{"gene": "TNNT2"}]},
+                    {"label": "Classical_monocyte", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": []},
+                ],
+            },
             "11": {"candidate_program_audits": [
-                {"label": "Mast_cell", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": []},
+                {"label": "Mast_cell", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": [{"gene": "KIT"}]},
             ]},
         },
     }
@@ -461,8 +470,9 @@ def main():
     assert "Cardiomyocyte" in comp_norm["7"]["candidate_labels"]
     assert "Classical_monocyte" not in comp_norm["7"]["candidate_labels"]
     assert "Mast_cell" not in comp_norm["11"]["candidate_labels"]
+    assert "TNNT2(log2FC=2.5, 96.6%/60.2%)" in comp_norm["7"]["exclusion_summary"]
 
-    print(json.dumps({"status": "pass", "checks": 31, "output": str(output)}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 33, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
