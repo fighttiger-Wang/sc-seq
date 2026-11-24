@@ -54,7 +54,7 @@ def main():
     skill = repo / "plugins" / "sc-marker-cluster-annotation-auto" / "skills" / "sc-marker-cluster-annotation-auto" if repo else bundled_skill
     evidence = {
         "clusters": ["3", "0", "1"], "average_shape": [8, 3], "average_reader": "test",
-        "confirmed_metadata": {"species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster", "parent_population": "T_NK"},
+        "confirmed_metadata": {"species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster", "parent_population": "T_NK", "annotation_constraints": {"exclude_labels": [], "conflict_markers": []}},
         "source_paths": {"cell_avg_exp": "avg_expr_matrix.tsv", "marker_table": "Markergene_list.xlsx"},
         "cluster_profiles": {
             "0": {"top_markers": [{"gene": "CCR7", "mean_expr": 2.4, "pct1": 0.7, "pct2": 0.2, "log2FC": 1.4}]},
@@ -79,6 +79,7 @@ def main():
         "review_action": "Validate with complementary markers and UMAP topology.",
         "literature_details": [{"doi": "10.1000/test.subcluster", "pmid": "12345678", "title": "Curated T/NK atlas reference"}],
         "lower_level_subtype": "Naive_like_gdT" if cluster == "0" else "",
+        "project_qc_notes": "测试共性质控说明" if cluster == "0" else "",
     } for cluster, cn, en, marker in rows]
     for record in records:
         record.update({
@@ -156,7 +157,9 @@ def main():
         for c in range(1, 8):
             assert bool(str(workbook["细胞类型与文献"].cell(r, c).value or "").strip()), f"Cell ({r}, {c}) empty"
     classic_cell = workbook["细胞类型与文献"].cell(2, 5)
-    assert bool(str(classic_cell.value or "").strip()), "Column 5 Classic Markers must not be empty" 
+    assert bool(str(classic_cell.value or "").strip()), "Column 5 Classic Markers must not be empty"
+    s5_map = {str(workbook["说明与数据来源"].cell(r, 1).value or "").strip(): str(workbook["说明与数据来源"].cell(r, 2).value or "").strip() for r in range(2, workbook["说明与数据来源"].max_row + 1)}
+    assert s5_map.get("项目共性背景与质控说明") == "测试共性质控说明"
 
     # A label that disagrees with the qualitative core must not be made
     # acceptable by copying the same label into the workbook-facing record.

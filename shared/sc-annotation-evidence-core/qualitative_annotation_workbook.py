@@ -947,15 +947,19 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
     policy = evidence.get("annotation_evidence_policy", {}) or {}
     raw_paths = (evidence.get("source_paths") or {}).values()
     filenames = [Path(str(v)).name for v in raw_paths if str(v).strip()]
+    record_qc_notes = next(
+        (human_value(r.get("project_qc_notes")) for r in records if human_value(r.get("project_qc_notes"))),
+        "",
+    )
     project_qc_notes = (
-        metadata.get("project_qc_notes")
-        or metadata.get("dataset_background_notes")
-        or metadata.get("annotation_constraints")
-        or policy.get("user_constraints")
-        or next((str(r.get("project_qc_notes") or "").strip() for r in records if str(r.get("project_qc_notes") or "").strip()), "")
+        human_value(metadata.get("project_qc_notes"))
+        or human_value(metadata.get("dataset_background_notes"))
+        or record_qc_notes
+        or human_value(metadata.get("annotation_constraints"))
+        or human_value(policy.get("user_constraints"))
         or "无"
     )
-    return [
+    rows = [
         ["项目名称", metadata.get("project_name", "") or evidence.get("project_name", "") or "单细胞注释分析交付"],
         ["物种 (Species)", metadata.get("species", "")],
         ["组织/器官来源 (Tissue)", metadata.get("tissue", "")],
@@ -969,6 +973,7 @@ def _source_rows(evidence, annotation_level, records, skill_name, skill_version)
         ["总 Cluster 数量", len(records)],
         ["分析工具与版本 (Skill & Version)", f"{skill_name} v{skill_version}" if skill_version else str(skill_name)],
     ]
+    return [[k, v if k == "总 Cluster 数量" else human_value(v)] for k, v in rows]
 
 
 def _style_sheet(ws, widths, freeze, row_height=24, center_cols=None):
