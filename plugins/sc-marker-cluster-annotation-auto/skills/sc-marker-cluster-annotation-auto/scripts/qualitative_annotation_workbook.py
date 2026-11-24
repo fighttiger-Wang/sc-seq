@@ -320,7 +320,13 @@ def _qualitative_gates(record, decision, umap):
 
     umap_gate = _merge_gate_monotonic(d_gates.get("umap", "未确定"), r_gates.get("umap"), justification)
     relation = normalize_relation(umap.get("marker_umap_relation", ""))
-    if relation == "concordant" and umap_gate != "不通过" and _gate(r_gates.get("umap")) != "未确定":
+    r_umap_raw = r_gates.get("umap")
+    explicit_uncertain = (
+        r_umap_raw is not None
+        and str(r_umap_raw).strip() != ""
+        and _gate(r_umap_raw) == "未确定"
+    )
+    if relation == "concordant" and umap_gate != "不通过" and not explicit_uncertain:
         umap_gate = "通过"
     elif relation == "conflict":
         umap_gate = "不通过"
@@ -333,6 +339,42 @@ def _qualitative_gates(record, decision, umap):
             mixed = "未确定"
 
     return identity, parent, siblings, exclusions, off_parent, state, umap_gate, mixed
+
+
+def _active_state_program_text(record, decision):
+    r_sp = record.get("state_program")
+    if isinstance(r_sp, str) and r_sp.strip():
+        return r_sp.strip()
+    if isinstance(r_sp, list) and r_sp:
+        if all(isinstance(x, dict) for x in r_sp):
+            act = [
+                str(x.get("program") or "").strip()
+                for x in r_sp
+                if _gate(x.get("status") or x.get("gate")) == "通过" and str(x.get("program") or "").strip()
+            ]
+            if act:
+                return "；".join(dict.fromkeys(act))
+        else:
+            vals = [str(x).strip() for x in r_sp if str(x).strip()]
+            if vals:
+                return "；".join(dict.fromkeys(vals))
+    d_sl = decision.get("state_list")
+    if isinstance(d_sl, list) and d_sl:
+        vals = [str(x).strip() for x in d_sl if str(x).strip()]
+        if vals:
+            return "；".join(dict.fromkeys(vals))
+    elif isinstance(d_sl, str) and d_sl.strip():
+        return d_sl.strip()
+    d_sp = decision.get("state_program")
+    if isinstance(d_sp, list) and d_sp:
+        act = [
+            str(x.get("program") or "").strip()
+            for x in d_sp
+            if isinstance(x, dict) and _gate(x.get("status") or x.get("gate")) == "通过" and str(x.get("program") or "").strip()
+        ]
+        if act:
+            return "；".join(dict.fromkeys(act))
+    return ""
 
 
 def normalize_records(records, evidence, umap_audit=None):
@@ -410,7 +452,7 @@ def normalize_records(records, evidence, umap_audit=None):
             "missing_markers": human_value(_first(record, decision, "missing_markers", "evidence_gaps")),
             "off_parent_audit": human_value(_first(record, decision, "off_parent_audit", "off_parent_candidate", "tissue_context_review")),
             "developmental_program": human_value(_first(record, decision, "developmental_program", "developmental_stage")),
-            "state_program": human_value(_first(record, decision, "state_program", "state_list")),
+            "state_program": _active_state_program_text(record, decision),
             "cross_island_audit": human_value(_first(record, umap, "cross_island_audit", "same_label_topology", "separation_explanation", "separation_evidence")),
             "mixed_doublet_explanation": human_value(_first(record, decision, "mixed_doublet_explanation", "mixture_type", "possible_components")),
             "evidence_gaps": human_value(_first(record, decision, "evidence_gaps", "missing_markers")),

@@ -435,7 +435,7 @@ def normalize_lookup_key(celltype: str) -> str:
         return "Macrophage"
     if "monocyte" in s.lower() or s.startswith("Mono_"):
         return "Monocyte"
-    if "dendritic" in s.lower() or s.endswith("_DC") or s.startswith("DC_") or has_token("cdc"):
+    if "dendritic" in s.lower() or s.endswith("_DC") or s.startswith("DC_") or has_token("cdc") or has_token("cdc1") or has_token("cdc2") or has_token("pdc"):
         return "Dendritic_cell"
     if "plasma" in s.lower():
         return "Plasma_cell"
@@ -504,8 +504,17 @@ def _lookup_kb_panel(celltype_en: str, species: str = "Mammalian") -> Optional[D
     ev_ids = [e.strip() for e in (best_match.get("evidence_ids") or "").split(";") if e.strip()]
     src_obj = None
     for eid in ev_ids:
-        if eid in sources_map and (sources_map[eid].get("doi") or sources_map[eid].get("title")):
-            src_obj = sources_map[eid]
+        src_cand = sources_map.get(eid)
+        if not src_cand:
+            continue
+        if str(eid).strip().upper() == "SRC_CURRENT_CONFIG":
+            continue
+        if str(src_cand.get("authority_gate", "")).strip().lower() == "no":
+            continue
+        if str(src_cand.get("source_type", "")).strip().lower() == "current_skill":
+            continue
+        if src_cand.get("doi") or src_cand.get("title"):
+            src_obj = src_cand
             break
 
     return {
@@ -583,8 +592,10 @@ def resolve_celltype_literature(
 
     # 1. Custom override passed from external verified retrieval or records
     if custom_override and (custom_override.get("doi") or custom_override.get("pmid") or custom_override.get("title")):
-        doi = str(custom_override.get("doi", "")).strip()
-        pmid = str(custom_override.get("pmid", "")).strip()
+        raw_doi = str(custom_override.get("doi", "")).strip()
+        doi = re.sub(r"^(?:doi\s*[:：]?\s*|https?://(?:dx\.)?doi\.org/)", "", raw_doi, flags=re.IGNORECASE).strip()
+        raw_pmid = str(custom_override.get("pmid", "")).strip()
+        pmid = re.sub(r"^(?:pmid\s*[:：]?\s*|https?://pubmed\.ncbi\.nlm\.nih\.gov/)", "", raw_pmid, flags=re.IGNORECASE).strip("/")
         parts = []
         if doi:
             parts.append(f"DOI:{doi}")
@@ -641,7 +652,7 @@ def resolve_celltype_literature(
 
     # 3. Match from Knowledge Base panel
     kb_panel = _lookup_kb_panel(celltype_en, species)
-    if kb_panel and kb_panel.get("markers"):
+    if kb_panel and kb_panel.get("markers") and kb_panel.get("source"):
         src = kb_panel.get("source") or {}
         doi = src.get("doi", "")
         year = src.get("year", "")
@@ -723,10 +734,26 @@ def build_7column_literature_rows(
         cand_override = None
         if decision and decision.get("research_sources"):
             first_src = decision["research_sources"][0]
+            raw_id = str(first_src.get("doi_or_pmid_or_url", "")).strip()
+            doi_val, pmid_val, url_val = "", "", ""
+            doi_m = re.search(r"(10\.\d{4,9}/[-._;()/:A-Za-z0-9]+)", raw_id)
+            pmid_m = re.search(r"(?:pmid\s*[:：]?\s*|pubmed\.ncbi\.nlm\.nih\.gov/)(\d+)", raw_id, re.I)
+            if doi_m:
+                doi_val = doi_m.group(1)
+                url_val = f"https://doi.org/{doi_val}"
+            elif pmid_m:
+                pmid_val = pmid_m.group(1)
+                url_val = f"https://pubmed.ncbi.nlm.nih.gov/{pmid_val}/"
+            elif raw_id.isdigit():
+                pmid_val = raw_id
+                url_val = f"https://pubmed.ncbi.nlm.nih.gov/{pmid_val}/"
+            elif raw_id.startswith("http"):
+                url_val = raw_id
             cand_override = {
                 "title": first_src.get("title", ""),
-                "doi": first_src.get("doi_or_pmid_or_url", "") if str(first_src.get("doi_or_pmid_or_url", "")).startswith("10.") else "",
-                "pmid": first_src.get("doi_or_pmid_or_url", "") if not str(first_src.get("doi_or_pmid_or_url", "")).startswith("10.") else "",
+                "doi": doi_val,
+                "pmid": pmid_val,
+                "url": url_val,
                 "classic_markers": first_src.get("supported_program", ""),
                 "species_tissue": f"{first_src.get('species', resolved_species)} / {first_src.get('tissue', resolved_tissue)}",
                 "rationale": first_src.get("adoption_or_rejection_reason", "经开放世界文献检索与多基因证据链验证通过。"),

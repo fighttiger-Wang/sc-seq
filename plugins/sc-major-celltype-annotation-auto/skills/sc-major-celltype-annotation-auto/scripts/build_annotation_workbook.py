@@ -1,12 +1,41 @@
 #!/usr/bin/env python3
 """Build the standardized qualitative major-celltype annotation workbook."""
 
+import json
+import re
 import sys
 from pathlib import Path
 
 
 SKILL_NAME = "sc-major-celltype-annotation-auto"
-SKILL_VERSION = "0.3.3"
+
+
+def _plugin_version(start):
+    parents = [Path(start).resolve(), *Path(start).resolve().parents]
+    for parent in parents:
+        manifest = parent / ".codex-plugin" / "plugin.json"
+        if manifest.is_file():
+            try:
+                data = json.loads(manifest.read_text(encoding="utf-8"))
+                ver = str(data.get("version", "")).split("+", 1)[0].strip()
+                if ver:
+                    return ver
+            except (OSError, json.JSONDecodeError):
+                pass
+    for parent in parents:
+        skill_md = parent / "SKILL.md"
+        if skill_md.is_file():
+            try:
+                head = "\n".join(skill_md.read_text(encoding="utf-8").splitlines()[:15])
+                match = re.search(r"\bv(\d+\.\d+\.\d+)\b", head)
+                if match:
+                    return match.group(1)
+            except OSError:
+                pass
+    return "0.9.3"
+
+
+SKILL_VERSION = _plugin_version(Path(__file__))
 
 
 def _load_shared():

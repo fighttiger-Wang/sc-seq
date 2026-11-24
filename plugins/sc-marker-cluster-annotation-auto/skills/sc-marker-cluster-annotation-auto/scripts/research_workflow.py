@@ -52,11 +52,19 @@ def sha256_file(path):
 
 
 def plugin_version(start):
-    for parent in [Path(start).resolve(), *Path(start).resolve().parents]:
+    parents = [Path(start).resolve(), *Path(start).resolve().parents]
+    for parent in parents:
         manifest = parent / ".codex-plugin" / "plugin.json"
         if manifest.is_file():
             data = json.loads(manifest.read_text(encoding="utf-8"))
             return str(data.get("version", "unknown")).split("+", 1)[0]
+    for parent in parents:
+        skill_md = parent / "SKILL.md"
+        if skill_md.is_file():
+            head = "\n".join(skill_md.read_text(encoding="utf-8").splitlines()[:15])
+            match = re.search(r"\bv(\d+\.\d+\.\d+)\b", head)
+            if match:
+                return match.group(1)
     return "unknown"
 
 
@@ -557,6 +565,7 @@ def validate_and_apply_research_evidence(evidence, requests, research_path):
             "status": status,
             "candidate_label": candidate,
             "label_basis": label_basis,
+            "sources": sources,
             "current_case_support_markers": markers,
             "ratio_verified_support_markers": sorted(ratio_supported),
             "source_evidence_ids": identifiers,
