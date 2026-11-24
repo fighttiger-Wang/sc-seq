@@ -10,11 +10,11 @@
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.9.4+codex.20261124120003"
+      "version": "0.9.5+codex.20261124121615"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.12.3+codex.20261124120003"
+      "version": "0.12.4+codex.20261124121616"
     },
     {
       "id": "annotation-knowledge-release",

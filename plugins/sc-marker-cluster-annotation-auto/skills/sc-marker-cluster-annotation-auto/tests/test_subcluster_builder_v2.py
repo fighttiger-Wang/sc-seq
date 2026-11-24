@@ -423,7 +423,46 @@ def main():
     ], capture_output=True, encoding="utf-8", errors="replace")
     assert legacy_copy.returncode != 0
     assert "violates the five-sheet contract" in (legacy_copy.stderr + legacy_copy.stdout)
-    print(json.dumps({"status": "pass", "checks": 28, "output": str(output)}, ensure_ascii=False))
+
+    # Cross-lineage doublet clusters keep matched off-parent competitors (e.g. Cardiomyocyte)
+    # and zero-evidence "未确定" KB nodes are never padded into competing candidates.
+    comp_records = [
+        {
+            "cluster_id": "7",
+            "stable_id": "Multi_cell_Cardiomyocyte_Mac",
+            "celltype_en": "Multi_cell_Cardiomyocyte_Mac",
+            "celltype_cn": "心肌-巨噬双细胞污染",
+            "downstream_eligible": False,
+            "mixed_population": True,
+            "competing_programs": "Tissue_resident_macrophage",
+        },
+        {
+            "cluster_id": "11",
+            "stable_id": "cDC1",
+            "celltype_en": "cDC1",
+            "celltype_cn": "常规1型树突状细胞",
+            "downstream_eligible": True,
+            "competing_programs": "Cardiac_cDC2",
+        },
+    ]
+    comp_evidence = {
+        "clusters": ["7", "11"],
+        "qualitative_annotation_evidence": {
+            "7": {"candidate_program_audits": [
+                {"label": "Cardiomyocyte", "program_gate": "通过", "within_parent_scope": False, "off_parent_audit": True, "supporting_core": [{"gene": "TNNT2"}]},
+                {"label": "Classical_monocyte", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": []},
+            ]},
+            "11": {"candidate_program_audits": [
+                {"label": "Mast_cell", "program_gate": "未确定", "within_parent_scope": True, "supporting_core": []},
+            ]},
+        },
+    }
+    comp_norm = {r["cluster_id"]: r for r in contract.normalize_records(comp_records, comp_evidence)}
+    assert "Cardiomyocyte" in comp_norm["7"]["candidate_labels"]
+    assert "Classical_monocyte" not in comp_norm["7"]["candidate_labels"]
+    assert "Mast_cell" not in comp_norm["11"]["candidate_labels"]
+
+    print(json.dumps({"status": "pass", "checks": 31, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -540,17 +540,32 @@ def _humanize_boundary_flags(raw_value):
 
 
 def _top_competing_candidates(record, decision, celltype_en, stable, primary_prog, limit=3):
+    raw_bflag = str(_first(record, decision, "boundary_flags", "abnormality_flags", "mixture_type") or "").lower()
+    is_cross_lineage = (
+        str(celltype_en or "").startswith("Multi_cell")
+        or record.get("downstream_eligible") is False
+        or any(bool(_first(record, decision, k)) for k in (
+            "suspected_doublet", "mixed_population", "off_parent_detected", "off_parent_reassignment"
+        ))
+        or any(k in raw_bflag for k in ("doublet", "off_parent", "mixed_population"))
+    )
     self_labels = {
         str(x).strip()
         for x in (celltype_en, normalize_final_label(stable or celltype_en), primary_prog)
         if str(x).strip()
     }
+    self_lower = {x.lower() for x in self_labels}
+    if str(celltype_en or "").lower() == "plasmacytoid_dc":
+        self_lower.add("pdc")
+
     audits = [item for item in (decision.get("candidate_program_audits") or []) if isinstance(item, dict)]
-    off_parent_labels = {
-        str(item.get("label", "")).strip()
-        for item in audits
-        if item.get("within_parent_scope") is False or item.get("off_parent_audit")
-    }
+    off_parent_labels = (
+        set() if is_cross_lineage else {
+            str(item.get("label", "")).strip()
+            for item in audits
+            if item.get("within_parent_scope") is False or item.get("off_parent_audit")
+        }
+    )
     override_comp = (decision.get("research_current_case_override_audit") or {}).get("competing_labels") or []
     raw_comp = _first(record, decision, "competing_programs", "candidate_labels")
 
@@ -561,25 +576,38 @@ def _top_competing_candidates(record, decision, celltype_en, stable, primary_pro
         explicit.extend(str(x).strip() for x in re.split(r"[,;；、/\s]+", raw_comp) if str(x).strip())
     explicit.extend(str(x).strip() for x in override_comp if str(x).strip())
 
-    # Only include KB audits that genuinely showed anchor support or passed/uncertain sibling gate
+    # Require actual matched markers or passed gate; never pad zero-evidence "未确定" nodes.
     plausible = []
     for item in audits:
         lbl = str(item.get("label", "")).strip()
-        if not lbl or item.get("within_parent_scope") is False or item.get("off_parent_audit"):
+        if not lbl:
+            continue
+        is_off = (item.get("within_parent_scope") is False or bool(item.get("off_parent_audit")))
+        if is_off and not is_cross_lineage:
             continue
         p_gate = _gate(item.get("program_gate"), default="未确定")
-        hits = int(item.get("matched_anchor_count", 0) or len(item.get("supporting_core") or []) or len(item.get("anchor_hits") or []) or 0)
-        if p_gate in {"通过", "未确定"} or hits >= 1:
-            plausible.append((1 if p_gate == "通过" else 0, hits, lbl))
-    plausible.sort(key=lambda t: (t[0], t[1]), reverse=True)
+        strong_hits = len(item.get("strong_core") or [])
+        core_hits = len(item.get("supporting_core") or [])
+        anchor_hits = int(item.get("matched_anchor_count", 0) or len(item.get("anchor_hits") or []) or 0)
+        evidence_hits = max(strong_hits, core_hits, anchor_hits)
+        if p_gate == "通过" or evidence_hits >= 1:
+            plausible.append((1 if p_gate == "通过" else 0, strong_hits, evidence_hits, lbl))
+    plausible.sort(key=lambda t: (t[0], t[1], t[2]), reverse=True)
 
-    combined = explicit + [lbl for _, _, lbl in plausible]
+    combined = explicit + [lbl for _, _, _, lbl in plausible]
     ignore_vals = {"无", "无显著同级竞争", "无明确竞争候选"}
-    filtered = [
-        x for x in dict.fromkeys(combined)
-        if x not in self_labels and x not in off_parent_labels and x not in ignore_vals
-    ]
-    return "；".join(filtered[:limit]) if filtered else "无显著同级竞争"
+    off_parent_lower = {x.lower() for x in off_parent_labels}
+    seen_lower = set()
+    filtered = []
+    for cand in combined:
+        low = cand.lower()
+        if low in seen_lower or low in self_lower or low in off_parent_lower or cand in ignore_vals:
+            continue
+        seen_lower.add(low)
+        filtered.append(cand)
+        if len(filtered) >= limit:
+            break
+    return "；".join(filtered) if filtered else "无显著同级竞争"
 
 
 def normalize_records(records, evidence, umap_audit=None):
@@ -699,7 +727,7 @@ def normalize_records(records, evidence, umap_audit=None):
             evidence, cluster, compact=True,
         )
         if raw_excl and raw_excl != "无":
-            prefix = "异常/排除参照" if is_warn else "已排除"
+            prefix = "跨谱系冲突" if is_warn else "已排除"
             record["exclusion_summary"] = f"{prefix}: {raw_excl}"
         else:
             record["exclusion_summary"] = "无异常冲突"
