@@ -4,7 +4,7 @@
 Autonomous Adversarial Closed-Loop Controller for E06 · 红蓝对抗闭环 v1.2.0
 特性：
 1. 默认 1 号双周期异构王牌阵容：[9B] Codex GPT-6.2 Sol ⚔ [4A] Gemini 4 Neon High
-2. 自动读取最新 ~/.codex/models_cache.json 感知 Codex Free/受限状态，并按三大独立内置池跨池接力
+2. 读取本机 ~/.codex/models_cache.json 检查 Codex 模型，按 Gemini 与 Claude+GPT-OSS 两大共享池跨池接力
 3. 按量付费 DeepSeek (8A/8B) 永不自动调用，仅前两级异常且传 --user-confirmed 时才允许执行（附半价时段提示）
 """
 
@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -24,32 +25,28 @@ FAST_CACHE_FILE = SCRIPT_DIR / "models_fast_cache.json"
 BJ_TZ = timezone(timedelta(hours=8))
 
 QUOTA_BUCKETS: dict[str, set[str]] = {
-    "neon_5h": {
-        "neon", "neon_5h",
-        "gemini-pro-orchestrator-neon", "gemini-4-neon-xhigh", "gemini-4-neon-high",
-        "gemini-4-neon-medium", "gemini-4-neon-low", "gemini-4-hydrogen-xhigh",
-        "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gemini-4-hydrogen-low",
-        "gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.8-flash-low",
+    "gemini_shared": {
+        "gemini_shared", "neon", "neon_5h", "argon", "argon_weekly",
+        "gemini-4-carbon-*", "gemini-4-neon-*", "gemini-4-hydrogen-*",
+        "gemini-4-argon-*", "gemini-3.8-flash-*",
+        "gemini-pro-orchestrator", "gemini-pro-orchestrator-argon", "gemini-pro-orchestrator-neon",
     },
-    "claude_5h": {
-        "claude", "claude_5h",
-        "claude-opus-5-5-high", "claude-opus-5-5-medium", "claude-opus-5-5-low",
-        "claude-sonnet-5-5-high", "claude-sonnet-5-5-medium", "claude-sonnet-5-5-low",
-        "gpt-oss-120b-medium",
-    },
-    "argon_weekly": {
-        "argon", "argon_weekly",
-        "gemini-4-argon-high", "gemini-4-argon-medium", "gemini-4-argon-low",
-        "gemini-pro-orchestrator-g1-pro",
-    },
+    "claude_shared": {"claude_shared", "claude", "claude_5h", "claude-opus-*", "claude-sonnet-*", "gpt-oss-120b*"},
 }
+
+
+def quota_bucket(slug: str) -> str | None:
+    return next((bucket for bucket, patterns in QUOTA_BUCKETS.items()
+                 if any(fnmatchcase(slug, pattern) for pattern in patterns)), None)
+
+
+def model_exhausted(slug: str, exhausted: set[str]) -> bool:
+    return slug in exhausted or quota_bucket(slug) in exhausted
 
 
 def expand_exhausted(raw_set: set[str]) -> set[str]:
     expanded = {x.strip().lower() for x in raw_set if x.strip()}
-    for members in QUOTA_BUCKETS.values():
-        if expanded & members:
-            expanded.update(members)
+    expanded.update(bucket for slug in tuple(expanded) if (bucket := quota_bucket(slug)))
     return expanded
 
 
@@ -109,7 +106,7 @@ def load_critic_config(workspace_path: Path) -> dict[str, Any]:
         ],
         "active_code": "4A",
         "active_runner": "native",
-        "active_model_name": "Gemini 4 Neon High (Neon池)",
+        "active_model_name": "Gemini 4 Neon High (Gemini 共享池)",
         "active_model_slug": "gemini-4-neon-high",
         "critic_fallback_chain": [
             "gemini-4-neon-high",
@@ -141,10 +138,10 @@ def resolve_chain_model(
                 continue
             return "codex", cand, (idx > 0 or primary_runner != "codex")
         else:
-            if cand_l in exhausted:
+            if model_exhausted(cand_l, exhausted):
                 continue
             return "native", cand, (idx > 0 or primary_runner != "native")
-    return primary_runner, primary, True
+    raise RuntimeError(f"没有可用的免费模型：{primary}；请查看实时 quotas")
 
 
 def run_cmd(cmd: list[str], timeout: int = 900) -> tuple[int, str, str]:

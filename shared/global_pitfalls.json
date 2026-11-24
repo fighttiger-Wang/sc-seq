@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-20",
+  "updatedAt": "2026-11-24",
   "pitfalls": [
     {
       "id": "PIT-001",
@@ -48,6 +48,13 @@
     {"id": "PIT-006", "title": "知识库双端一致性", "scope": ["A02", "A03"], "rule": "双端知识库版本与字节哈希必须符合共享 SSOT。"},
     {"id": "PIT-007", "title": "注释模板记录契约", "scope": ["A03"], "rule": "模板状态必须为空，资格必须为 null；草稿仅在门控完整通过且无污染或证据缺口时放行。"},
     {"id": "PIT-008", "title": "分类深度与门控单调性", "scope": ["A02", "A03"], "rule": "禁止祖先与后代同屏交付；人工记录只能收紧，放宽必须明确举证。"},
-    {"id": "PIT-009", "title": "文献与环境 RNA", "scope": ["A02", "A03"], "rule": "结构化来源优先；环境基因仅在局部高度富集时计入跨谱系或状态判断。"}
+    {"id": "PIT-009", "title": "文献与环境 RNA", "scope": ["A02", "A03"], "rule": "结构化来源优先；环境基因仅在局部高度富集时计入跨谱系或状态判断。"},
+    {
+      "id": "PIT-010",
+      "title": "E06/E07 模型与 DSH 切模协议",
+      "scope": ["E06", "E07"],
+      "forbidden_patterns": ["deepseek-reasoner", "deepseek-chat", "DeepSeek-R1", "DeepSeek-V3", "gemini-pro-orchestrator-g1-pro"],
+      "rule": "E06/E07 禁止硬编码已过时的 DeepSeek-R1/V3 或失效的 gemini-pro-orchestrator-g1-pro；DeepSeek Harness (dsh) 真实模型为 deepseek-v4-pro / deepseek-flash 且必须通过 --patch 覆盖 agent-default-model，不得使用无效参数 -m。"
+    }
   ]
 }

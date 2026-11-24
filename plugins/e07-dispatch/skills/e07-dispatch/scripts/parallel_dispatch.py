@@ -5,7 +5,7 @@ E07 · 三级阶梯智能派发与跨池额度接力中心 v1.2.0
 核心特性：
 1. 三级阶梯架构：
    - Tier 1 (Codex 周期订阅优先池 9A~9D)：独立重型后台任务优先吃满；自动同步 models_cache.json 感知 Free/受限状态并支持冷却熔断
-   - Tier 2 (客户端内置三大独立池 1A~4A)：Neon 5h 池 / Claude 5h 池 / Argon 周池，同池共耗尽，跨池自动接力
+   - Tier 2 (客户端内置两大共享池 1A~4A)：Gemini / Claude+GPT-OSS，同池共耗尽，跨池自动接力
    - Tier 3 (DeepSeek 按量付费咨询席 8A/8B)：永不自动调用，仅前两级不可用或降智时先询问并提示半价空闲时段（除工作日 09:00-12:00/14:00-18:00 外及周末/法定节假日全天半价）
 2. 动态扫描 LOCALAPPDATA\\OpenAI\\Codex\\bin\\*\\codex.exe 最新版，防止客户端升级换目录断联
 3. 零外部套娃：内置模型直接秒回 subagent / swarm 调度指令 JSON（耗时 < 0.05s）
@@ -22,8 +22,11 @@ import sys
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
+
+import model_radar
 
 CURRENT_DIR = Path(__file__).resolve().parent
 ENV_CONFIG_FILE = CURRENT_DIR / "local_env.json"
@@ -35,110 +38,38 @@ BJ_TZ = timezone(timedelta(hours=8))
 
 # 客户端内置三大真实独立配额桶（同桶共享额度，不得在同桶内互为保底）
 QUOTA_BUCKETS: dict[str, set[str]] = {
-    "neon_5h": {
-        "neon",
-        "neon_5h",
-        "gemini-pro-orchestrator-neon",
-        "gemini-4-neon-xhigh",
-        "gemini-4-neon-high",
-        "gemini-4-neon-medium",
-        "gemini-4-neon-low",
-        "gemini-4-hydrogen-xhigh",
-        "gemini-4-hydrogen-high",
-        "gemini-4-hydrogen-medium",
-        "gemini-4-hydrogen-low",
-        "gemini-3.8-flash-high",
-        "gemini-3.8-flash-medium",
-        "gemini-3.8-flash-low",
+    "gemini_shared": {
+        "gemini_shared", "neon", "neon_5h", "argon", "argon_weekly",
+        "gemini-4-carbon-*", "gemini-4-neon-*", "gemini-4-hydrogen-*",
+        "gemini-4-argon-*", "gemini-3.8-flash-*",
+        "gemini-pro-orchestrator", "gemini-pro-orchestrator-argon", "gemini-pro-orchestrator-neon",
     },
-    "claude_5h": {
-        "claude",
-        "claude_5h",
-        "claude-opus-5-5-high",
-        "claude-opus-5-5-medium",
-        "claude-opus-5-5-low",
-        "claude-sonnet-5-5-high",
-        "claude-sonnet-5-5-medium",
-        "claude-sonnet-5-5-low",
-        "gpt-oss-120b-medium",
-    },
-    "argon_weekly": {
-        "argon",
-        "argon_weekly",
-        "gemini-4-argon-high",
-        "gemini-4-argon-medium",
-        "gemini-4-argon-low",
-        "gemini-pro-orchestrator-g1-pro",
-    },
+    "claude_shared": {"claude_shared", "claude", "claude_5h", "claude-opus-*", "claude-sonnet-*", "gpt-oss-120b*"},
 }
 
+
+def quota_bucket(slug: str) -> str | None:
+    return next((bucket for bucket, patterns in QUOTA_BUCKETS.items()
+                 if any(fnmatchcase(slug, pattern) for pattern in patterns)), None)
+
+
+def model_exhausted(slug: str, exhausted: set[str]) -> bool:
+    return slug in exhausted or quota_bucket(slug) in exhausted
+
 # 全局统一模型矩阵（E06 与 E07 100% 共用同一套代号）
-MODEL_MATRIX: dict[str, dict[str, Any]] = {
-    # Tier 1: OpenAI Codex 周期订阅优先池
-    "9A": {
-        "code": "9A",
-        "pool": "9",
-        "pool_name": "🥇 Codex 周期订阅池 (Tier 1 优先)",
-        "tier": "codex_subscription",
-        "runner": "codex",
-        "name": "GPT-6.2 Astra (旗舰架构/深审)",
-        "slug": "gpt-6.2-astra",
-        "native_fallback_code": "3A",
-        "quota_default": "周期订阅",
-        "fallback_chain": ["gpt-6.2-astra", "gpt-6.2-sol"],
-        "desc": "复杂工程/跨模块架构重构/深度红方挑刺旗舰",
-    },
-    "9B": {
-        "code": "9B",
-        "pool": "9",
-        "pool_name": "🥇 Codex 周期订阅池 (Tier 1 优先)",
-        "tier": "codex_subscription",
-        "runner": "codex",
-        "name": "GPT-6.2 Sol (主力编码首选)",
-        "slug": "gpt-6.2-sol",
-        "native_fallback_code": "2A",
-        "quota_default": "周期订阅",
-        "fallback_chain": ["gpt-6.2-sol", "gpt-6.1-sol"],
-        "desc": "主力高速编码、功能开发与 E06 蓝方施工首选",
-    },
-    "9C": {
-        "code": "9C",
-        "pool": "9",
-        "pool_name": "🥇 Codex 周期订阅池 (Tier 1 优先)",
-        "tier": "codex_subscription",
-        "runner": "codex",
-        "name": "GPT-6.1 Terra (视觉理解/UI审查)",
-        "slug": "gpt-6.1-terra",
-        "native_fallback_code": "2B",
-        "quota_default": "周期订阅",
-        "fallback_chain": ["gpt-6.1-terra", "gpt-6.2-sol"],
-        "desc": "视觉理解、前端 UI 截图审查与均衡工程",
-    },
-    "9D": {
-        "code": "9D",
-        "pool": "9",
-        "pool_name": "🥇 Codex 周期订阅池 (Tier 1 优先)",
-        "tier": "codex_subscription",
-        "runner": "codex",
-        "name": "GPT-6 Luna (轻量高速批量)",
-        "slug": "gpt-6-luna",
-        "native_fallback_code": "1A",
-        "quota_default": "周期订阅",
-        "fallback_chain": ["gpt-6-luna", "gpt-6.2-sol"],
-        "desc": "轻量高速批量后台任务",
-    },
-    # Tier 2: 客户端内置三大独立池（跨池接力）
+NATIVE_MODELS: dict[str, dict[str, Any]] = {
+    # Tier 2: 客户端内置两大共享池（跨池接力）
     "1A": {
         "code": "1A",
         "pool": "1",
         "pool_name": "⚡ 极速跑腿池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "neon_5h",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Gemini 3.8 Flash (Neon池)",
+        "name": "Gemini 3.8 Flash (Gemini 共享池)",
         "slug": "gemini-3.8-flash-medium",
         "subagent_model": "flash",
-        "quota_default": "Neon 5h池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-3.8-flash-medium",
             "gemini-3.8-flash-low",
@@ -153,26 +84,26 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "pool": "1",
         "pool_name": "⚡ 极速跑腿池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "neon_5h",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen Low (Neon池)",
+        "name": "Gemini 4 Hydrogen Low (Gemini 共享池)",
         "slug": "gemini-4-hydrogen-low",
         "subagent_model": "flash",
-        "quota_default": "Neon 5h池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-4-hydrogen-low",
             "gemini-3.8-flash-medium",
             "claude-sonnet-5-5-low",
             "gemini-4-argon-low",
         ],
-        "desc": "Neon 池极速替补 · 轻量高并发跑腿",
+        "desc": "Gemini 共享池极速替补 · 轻量高并发跑腿",
     },
     "1C": {
         "code": "1C",
         "pool": "1",
         "pool_name": "⚡ 极速跑腿池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "claude_5h",
+        "bucket": "claude_shared",
         "runner": "native",
         "name": "Claude Sonnet 5.5 Low (Claude池)",
         "slug": "claude-sonnet-5-5-low",
@@ -191,7 +122,7 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "pool": "2",
         "pool_name": "💻 写代码工匠池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "claude_5h",
+        "bucket": "claude_shared",
         "runner": "native",
         "name": "Claude Sonnet 5.5 (Claude池)",
         "slug": "claude-sonnet-5-5-medium",
@@ -203,52 +134,52 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "gemini-4-hydrogen-medium",
             "gemini-4-argon-medium",
         ],
-        "desc": "内置编码首选（默认 medium 省配额）➔ 跨 Neon ➔ Argon 周池",
+        "desc": "内置编码首选（默认 medium 省配额）➔ 跨 Gemini 共享池",
     },
     "2B": {
         "code": "2B",
         "pool": "2",
         "pool_name": "💻 写代码工匠池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "neon_5h",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen (Neon池)",
+        "name": "Gemini 4 Hydrogen (Gemini 共享池)",
         "slug": "gemini-4-hydrogen-medium",
         "subagent_model": "pro",
-        "quota_default": "Neon 5h池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-4-hydrogen-medium",
             "gemini-4-hydrogen-high",
             "claude-sonnet-5-5-medium",
             "gemini-4-argon-medium",
         ],
-        "desc": "Neon 池敏捷全栈编码主力 ➔ 跨 Claude ➔ Argon 周池",
+        "desc": "Gemini 共享池敏捷全栈编码主力 ➔ 跨 Claude 共享池",
     },
     "3A": {
         "code": "3A",
         "pool": "3",
         "pool_name": "🏗️ 统筹与架构池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "argon_weekly",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Gemini 4 Argon (Argon周池)",
+        "name": "Gemini 4 Argon (Gemini 共享池)",
         "slug": "gemini-4-argon-medium",
         "subagent_model": "pro",
-        "quota_default": "Argon 周池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-4-argon-medium",
             "gemini-4-argon-high",
             "claude-opus-5-5-medium",
             "gemini-pro-orchestrator-neon",
         ],
-        "desc": "Argon 周池全局视野统筹 ➔ 跨 Claude ➔ Neon 池",
+        "desc": "Gemini 共享池全局视野统筹 ➔ 跨 Claude 共享池",
     },
     "3B": {
         "code": "3B",
         "pool": "3",
         "pool_name": "🏗️ 统筹与架构池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "claude_5h",
+        "bucket": "claude_shared",
         "runner": "native",
         "name": "Claude Opus 5.5 (Claude池)",
         "slug": "claude-opus-5-5-medium",
@@ -260,71 +191,74 @@ MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "gemini-4-argon-medium",
             "gemini-pro-orchestrator-neon",
         ],
-        "desc": "Claude 池顶层设计与文档规范 ➔ 跨 Argon ➔ Neon 池",
+        "desc": "Claude 池顶层设计与文档规范 ➔ 跨 Gemini 共享池",
     },
     "3C": {
         "code": "3C",
         "pool": "3",
         "pool_name": "🏗️ 统筹与架构池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "neon_5h",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Orchestrator (Neon池)",
+        "name": "Orchestrator (Gemini 共享池)",
         "slug": "gemini-pro-orchestrator-neon",
         "subagent_model": "pro",
-        "quota_default": "Neon 5h池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-pro-orchestrator-neon",
             "gemini-4-argon-medium",
             "claude-opus-5-5-medium",
         ],
-        "desc": "Neon 池双阶段统筹（强模型规划 + 轻模型执行）",
+        "desc": "Gemini 共享池双阶段统筹（强模型规划 + 轻模型执行）",
     },
     "4A": {
         "code": "4A",
         "pool": "4",
         "pool_name": "🔍 深度挑刺推理池 (Tier 2 内置)",
         "tier": "native_free",
-        "bucket": "neon_5h",
+        "bucket": "gemini_shared",
         "runner": "native",
-        "name": "Gemini 4 Neon High (Neon池)",
+        "name": "Gemini 4 Neon High (Gemini 共享池)",
         "slug": "gemini-4-neon-high",
         "subagent_model": "pro",
-        "quota_default": "Neon 5h池",
+        "quota_default": "Gemini 共享池",
         "fallback_chain": [
             "gemini-4-neon-high",
             "gemini-4-neon-xhigh",
             "claude-opus-5-5-high",
             "gemini-4-argon-high",
         ],
-        "desc": "红方挑刺首选（Neon 池）➔ 跨 Claude Opus ➔ Argon 周池",
-    },
-    # Tier 3: 按量付费咨询席（永不自动调用）
-    "8A": {
-        "code": "8A",
-        "pool": "8",
-        "pool_name": "💰 DeepSeek 按量付费咨询席 (Tier 3 永不自动调)",
-        "tier": "payg_ask_first",
-        "runner": "dsh",
-        "name": "DeepSeek-R1 / Reasoner",
-        "slug": "deepseek-reasoner",
-        "quota_default": "按量付费API",
-        "fallback_chain": ["deepseek-reasoner", "deepseek-chat"],
-        "desc": "即时按量深度推理 · 仅异常时询问用户（含空闲半价时段提示）",
-    },
-    "8B": {
-        "code": "8B",
-        "pool": "8",
-        "pool_name": "💰 DeepSeek 按量付费咨询席 (Tier 3 永不自动调)",
-        "tier": "payg_ask_first",
-        "runner": "dsh",
-        "name": "DeepSeek-V3 / Chat",
-        "slug": "deepseek-chat",
-        "quota_default": "按量付费API",
-        "fallback_chain": ["deepseek-chat"],
-        "desc": "即时按量通用分析 · 仅异常时询问用户（含空闲半价时段提示）",
+        "desc": "红方挑刺首选（Gemini 共享池）➔ 跨 Claude 共享池",
     },
 }
+
+
+def model_matrix() -> dict[str, dict[str, Any]]:
+    policy = model_radar.load_policy()
+    try:
+        codex_models = model_radar.read_codex_models()
+    except (OSError, ValueError, KeyError, TypeError):
+        codex_models = {}
+    matrix = dict(NATIVE_MODELS)
+    for role in model_radar.resolve_codex_roles(policy, codex_models).values():
+        code = role["code"]
+        matrix[code] = {
+            "code": code, "pool": "9", "pool_name": "Codex 周期订阅池",
+            "tier": "codex_subscription", "runner": role["runner"],
+            "name": role["display_name"], "slug": role["slug"],
+            "native_fallback_code": role["fallback_native_code"], "quota_default": "周期订阅",
+            "fallback_chain": role["fallback_chain"], "desc": role["desc"],
+        }
+    for code, model in policy["dsh_defaults"]["models"].items():
+        role = policy["roles"][model["role"]]
+        matrix[code] = {
+            "code": code, "pool": "8", "pool_name": "DeepSeek 官方 API 按量咨询席",
+            "tier": role["tier"], "runner": role["runner"], "provider": role["provider"],
+            "name": model["display_name"], "slug": role["model_id"], "quota_default": "按量先问",
+            "fallback_chain": [role["model_id"]], "desc": model["desc"],
+        }
+    return matrix
+
 
 POOL_DEFAULTS = {
     "1": "1A",
@@ -354,17 +288,14 @@ SLUG_TO_SUBAGENT_MODEL = {
     "gemini-4-neon-high": "pro",
     "gemini-4-neon-xhigh": "pro",
     "gemini-pro-orchestrator-neon": "pro",
-    "gemini-pro-orchestrator-g1-pro": "pro",
     "gpt-oss-120b-medium": "inherit",
 }
 
 
 def expand_exhausted_buckets(raw_exhausted: set[str]) -> set[str]:
-    """根据三大真实独立池扩展耗尽集合，确保同池不原地撞墙。"""
+    """根据两大共享池扩展耗尽集合，确保同池不原地撞墙。"""
     expanded = {x.strip().lower() for x in raw_exhausted if x.strip()}
-    for _bucket_name, members in QUOTA_BUCKETS.items():
-        if expanded & members:
-            expanded.update(members)
+    expanded.update(bucket for slug in tuple(expanded) if (bucket := quota_bucket(slug)))
     return expanded
 
 
@@ -397,7 +328,9 @@ def load_env_config() -> dict[str, Any]:
 
 def get_tasks_dir() -> Path:
     cfg = load_env_config()
-    td = Path(cfg.get("tasks_dir", Path.home() / ".gemini" / "antigravity" / "scratch" / "e07_tasks"))
+    td = model_radar.tasks_dir()
+    if not os.environ.get("E07_TASKS_DIR") and cfg.get("tasks_dir"):
+        td = Path(cfg["tasks_dir"])
     td.mkdir(parents=True, exist_ok=True)
     return td
 
@@ -526,6 +459,8 @@ def load_fast_codex_cache(force_refresh: bool = False) -> dict[str, Any]:
         "valid_codex_slugs": [m["slug"] for m in fast_models],
         "codex_models": fast_models,
     }
+    if not force_refresh:
+        return payload
     try:
         FAST_CACHE_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
@@ -533,7 +468,7 @@ def load_fast_codex_cache(force_refresh: bool = False) -> dict[str, Any]:
     return payload
 
 
-def probe_local_models(force: bool = False) -> dict[str, Any]:
+def probe_local_models(force: bool = False, *, persist: bool = False) -> dict[str, Any]:
     fast_codex = load_fast_codex_cache(force_refresh=force)
     codex_bin = discover_codex_binary()
     cooldown = get_codex_cooldown()
@@ -546,10 +481,13 @@ def probe_local_models(force: bool = False) -> dict[str, Any]:
         "codex_cooldown": cooldown,
         "codex_valid_slugs": fast_codex.get("valid_codex_slugs", []),
         "quota_buckets": {k: sorted(v) for k, v in QUOTA_BUCKETS.items()},
-        "matrix": MODEL_MATRIX,
+        "matrix": model_matrix(),
     }
+    if not persist:
+        return probe_result
     try:
-        MODELS_CACHE_FILE.write_text(json.dumps(probe_result, ensure_ascii=False, indent=2), encoding="utf-8")
+        saved = model_radar.read_json(MODELS_CACHE_FILE) if MODELS_CACHE_FILE.exists() else {}
+        MODELS_CACHE_FILE.write_text(json.dumps({**saved, **probe_result}, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
     return probe_result
@@ -559,9 +497,10 @@ def resolve_choice(choice_code: str) -> dict[str, Any]:
     raw = (choice_code or "9B").strip().upper()
     if raw in POOL_DEFAULTS:
         raw = POOL_DEFAULTS[raw]
-    if raw not in MODEL_MATRIX:
+    matrix = model_matrix()
+    if raw not in matrix:
         raw = "2B"
-    return dict(MODEL_MATRIX[raw])
+    return dict(matrix[raw])
 
 
 def resolve_with_quota_fallback(item: dict[str, Any], exhausted_slugs: set[str]) -> dict[str, Any]:
@@ -571,10 +510,10 @@ def resolve_with_quota_fallback(item: dict[str, Any], exhausted_slugs: set[str])
     selected_slug = primary_slug
     fallback_triggered = False
 
-    if primary_slug.lower() in exhausted_slugs:
+    if model_exhausted(primary_slug.lower(), exhausted_slugs):
         fallback_triggered = True
         for candidate in chain:
-            if candidate.lower() not in exhausted_slugs:
+            if not model_exhausted(candidate.lower(), exhausted_slugs):
                 selected_slug = candidate
                 break
 
@@ -605,7 +544,7 @@ def _build_native_payload(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     half_price, bj_time = is_deepseek_half_price_window()
-    all_exhausted = resolved["selected_model_slug"].lower() in exhausted_set
+    all_exhausted = model_exhausted(resolved["selected_model_slug"].lower(), exhausted_set)
     payload: dict[str, Any] = {
         "status": status,
         "dispatch_mode": dispatch_mode,
@@ -636,6 +575,10 @@ def _build_native_payload(
             "brief": prompt,
         },
     }
+    if all_exhausted:
+        payload["status"] = "NATIVE_QUOTA_EXHAUSTED"
+        payload.pop("invoke_subagent_args")
+        payload.pop("swarm_add_args")
     if extra:
         payload.update(extra)
     return payload
@@ -672,7 +615,7 @@ def dispatch_task(
         else f"当前处于工作日高峰原价时段（北京时间 {bj_time}；周一至周五 09:00–12:00、14:00–18:00 为高峰，若当天为中国法定节假日则全天半价）"
     )
 
-    # Tier 2: 客户端内置三大独立池
+    # Tier 2: 客户端内置两大共享池
     if item["tier"] == "native_free":
         resolved = resolve_with_quota_fallback(item, exhausted_set)
         return _build_native_payload(resolved, prompt, workspace, exhausted_set)
@@ -682,17 +625,16 @@ def dispatch_task(
         fallback_reason: str | None = None
         codex_bin = discover_codex_binary()
         cooldown = get_codex_cooldown()
-        fast_cache = load_fast_codex_cache(force_refresh=refresh)
-        valid_slugs = {s.lower() for s in fast_cache.get("valid_codex_slugs", [])}
 
-        if "codex" in exhausted_set or item["slug"].lower() in exhausted_set:
+        model_slug = next((slug for slug in item["fallback_chain"] if slug not in exhausted_set), None)
+        if not item["slug"]:
+            fallback_reason = "codex_role_unavailable_in_cache"
+        elif "codex" in exhausted_set or not model_slug:
             fallback_reason = "codex_exhausted_or_free"
         elif cooldown.get("active"):
             fallback_reason = f"codex_cooldown ({cooldown.get('remaining_minutes')}m remaining: {cooldown.get('reason')})"
         elif not codex_bin:
             fallback_reason = "codex_binary_not_found"
-        elif valid_slugs and item["slug"].lower() not in valid_slugs:
-            fallback_reason = f"codex_model_unavailable_in_cache ({item['slug']} missing, likely Free tier)"
 
         if fallback_reason:
             fb_code = item.get("native_fallback_code", "2A")
@@ -714,7 +656,6 @@ def dispatch_task(
             )
 
         sub_env = _build_subprocess_env(cfg, codex_bin=codex_bin)
-        model_slug = item["slug"]
     else:
         # Tier 3: 按量付费 DeepSeek 咨询席（永不自动调用，必须询问用户）
         if not dry_run and not user_confirmed:
@@ -734,7 +675,9 @@ def dispatch_task(
         sub_env = _build_subprocess_env(cfg)
         model_slug = item["slug"]
 
-    py_bin = cfg.get("python_interpreter", sys.executable)
+    py_bin = cfg.get("python_interpreter")
+    if not py_bin or not Path(py_bin).is_file():
+        py_bin = sys.executable
     runner = item["runner"]
     cmd = [
         py_bin,
@@ -749,6 +692,8 @@ def dispatch_task(
         "--model",
         model_slug,
     ]
+    if runner == "dsh":
+        cmd.extend(["--dsh-provider", item["provider"]])
     if role:
         cmd.extend(["--role", role])
     if refresh:
@@ -774,9 +719,10 @@ def dispatch_task(
             }
         is_payg = item["tier"] == "payg_ask_first"
         return {
-            "status": "PAYG_EXTERNAL_DRY_RUN" if is_payg else "CODEX_SUBSCRIPTION_DRY_RUN",
+            "status": ("PAYG_EXTERNAL_DRY_RUN" if is_payg else "CODEX_SUBSCRIPTION_DRY_RUN")
+            if proc.returncode == 0 else "DELEGATE_DRY_RUN_FAILED",
             "dispatch_mode": "payg_ask_first" if is_payg else "codex_subscription",
-            "paid_external_triggered": is_payg,
+            "paid_external_triggered": False,
             "ask_user_required": (is_payg and not user_confirmed),
             "deepseek_half_price_window": half_price if is_payg else None,
             "beijing_time": bj_time,
@@ -894,7 +840,8 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
         running_tasks = list_active_tasks()
     half_price, bj_time = is_deepseek_half_price_window()
     cd = probe.get("codex_cooldown", {})
-    codex_ok = bool(probe.get("codex_binary")) and not cd.get("active")
+    matrix = probe["matrix"]
+    codex_ok = bool(probe.get("codex_binary")) and not cd.get("active") and any(matrix[code]["slug"] for code in ("9A", "9B", "9C", "9D"))
     codex_state = (
         f"🟢 就绪 ({len(probe.get('codex_valid_slugs', []))} 模型)"
         if codex_ok
@@ -917,20 +864,20 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
 
     hud = f"""┌────────────────────────────────────────────────────────────────────────────┐
 │ 📍 流水线全景进度: [E07 · 三级阶梯派发与跨池接力中心 v1.2.0]               │
-│    [🟢 轻量直办] │ [🥇 Tier1 Codex 周期] ➔ [🥈 Tier2 三内置池] ➔ [🥉 问DeepSeek]│
+│    [🟢 轻量直办] │ [🥇 Tier1 Codex 周期] ➔ [🥈 Tier2 两共享池] ➔ [🥉 问DeepSeek]│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ 💡 活跃监控 & 三级阶梯可用性:                                              │
 {chr(10).join(task_lines)}
 │    • 🥇 Tier 1 · OpenAI Codex 周期订阅池 [{codex_state}]:
-│      👉★[9B] GPT-6.2 Sol (主力编码) │ [9A] GPT-6.2 Astra (旗舰架构/深审)  │
-│         [9C] GPT-6.1 Terra (视觉UI) │ [9D] GPT-6 Luna (轻量高速批量)       │
-│    • 🥈 Tier 2 · 客户端内置三大独立池（Codex Free/耗尽自动接力 · 跨池顺延）:│
-│         [1] ⚡ 极速跑腿: [1A] 3.8 Flash(Neon) ➔ [1B] Hydrogen Low ➔ [1C] Sonnet Low│
-│         [2] 💻 写代码池: [2A] Sonnet 5.5(Claude) ➔ [2B] Hydrogen(Neon) ➔ [3A] Argon│
-│         [3] 🏗️ 统筹架构: [3A] Argon(周池) ➔ [3B] Opus 5.5(Claude) ➔ [3C] Orch(Neon)│
-│         [4] 🔍 深度挑刺: [4A] Neon High(Neon) ➔ [3B] Opus High ➔ [3A] Argon High   │
+│      [9B] {matrix['9B']['name']}（主力） │ [9A] {matrix['9A']['name']}（旗舰）
+│      [9C] {matrix['9C']['name']}（视觉） │ [9D] {matrix['9D']['name']}（批量）
+│    • 🥈 Tier 2 · 客户端内置两大共享池（Codex Free/耗尽自动接力 · 跨池顺延）:│
+│      [1] 跑腿：Gemini [1A/1B] ↔ Claude [1C]
+│      [2] 编码：Claude [2A] ↔ Gemini [2B]
+│      [3] 架构：Gemini [3A/3C] ↔ Claude [3B]
+│      [4] 审查：Gemini [4A] ↔ Claude [3B]
 │    • 🥉 Tier 3 · DeepSeek 按量咨询席（🔒永不自动调，异常先问 · {ds_window_tag}）:
-│         [8A] DeepSeek-R1/Reasoner   │ [8B] DeepSeek-V3/Chat                │
+│      [8A] {matrix['8A']['name']} │ [8B] {matrix['8B']['name']}
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ⌨️ 全局 .前缀零撞车快捷口令（释放裸字母 A/B/C/D 给选择题）:                │
 │    • [9A~9D] Tier1 Codex │ [1A~4A] Tier2 内置 │ [8A/8B] 确认后按量 DeepSeek│
@@ -940,6 +887,8 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
 
 
 def main() -> None:
+    if sys.argv[1:2] == ["radar"]:
+        raise SystemExit(model_radar.main(sys.argv[2:]))
     parser = argparse.ArgumentParser(description="E07 三级阶梯派发与跨池接力中心 v1.2.0")
     subparsers = parser.add_subparsers(dest="subcommand")
 
@@ -950,8 +899,8 @@ def main() -> None:
     probe_p = subparsers.add_parser("probe", help="输出模型矩阵与快速缓存")
     probe_p.add_argument("--force", action="store_true", help="强制刷新")
 
-    disp_p = subparsers.add_parser("dispatch", help="按统一代号派发任务（支持 Tier1->Tier2 回退、三池跨池顺延与 Tier3 确认门禁）")
-    disp_p.add_argument("--choice", default="9B", help="模型代号 (9A~9D Codex周期; 1A~4A 内置三池; 8A/8B DeepSeek按量)")
+    disp_p = subparsers.add_parser("dispatch", help="按统一代号派发任务（支持 Tier1->Tier2 回退、两池跨池顺延与 Tier3 确认门禁）")
+    disp_p.add_argument("--choice", default="9B", help="模型代号 (9A~9D Codex周期; 1A~4A 内置两池; 8A/8B DeepSeek按量)")
     disp_p.add_argument("--prompt", required=True, help="任务描述")
     disp_p.add_argument("--workspace", default=os.getcwd(), help="工作区路径")
     disp_p.add_argument("--role", default=None, help="角色")
@@ -971,11 +920,12 @@ def main() -> None:
     coll_p = subparsers.add_parser("collect", help="收集后台任务结果")
     coll_p.add_argument("--task-id", required=True)
 
+    subparsers.add_parser("radar", help="运行模型变化雷达")
     args = parser.parse_args()
     if args.subcommand == "hud":
         print_hud(new_request=args.request, force_refresh=args.refresh)
     elif args.subcommand == "probe":
-        print(json.dumps(probe_local_models(force=args.force), ensure_ascii=False, indent=2))
+        print(json.dumps(probe_local_models(force=args.force, persist=True), ensure_ascii=False, indent=2))
     elif args.subcommand == "cooldown":
         out = clear_codex_cooldown() if args.clear else set_codex_cooldown(args.minutes, args.reason)
         print(json.dumps(out, ensure_ascii=False, indent=2))
@@ -991,6 +941,8 @@ def main() -> None:
             user_confirmed=args.user_confirmed,
         )
         print(json.dumps(res, ensure_ascii=False, indent=2))
+        if res["status"] == "DELEGATE_DRY_RUN_FAILED":
+            raise SystemExit(1)
     elif args.subcommand == "status":
         out = get_task_status(args.task_id) if args.task_id else list_active_tasks()
         print(json.dumps(out, ensure_ascii=False, indent=2))

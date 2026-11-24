@@ -1,5 +1,5 @@
 interface:
-  display_name: "E06 · 红蓝对抗闭环 v1.2.1"
+  display_name: "E06 · 红蓝对抗闭环 v1.2.2"
   short_description: "专职双脑红蓝对抗闭环器（内置 0 额外付费异构王牌对攻 + 额度自动接力）"
   default_prompt: "Use $local-agent-delegate to 启动双脑红蓝对抗闭环"
 

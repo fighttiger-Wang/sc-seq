@@ -1,61 +1,38 @@
 ---
 name: e07-dispatch
-displayName: E07 · 派发 v1.2.1
-description: E07 · 派发 v1.2.1：三级阶梯智能工种派发与跨池额度接力中心。独立重型任务优先吃满周期订阅 OpenAI Codex（9A Astra/9B Sol/9C Terra/9D Luna）；Codex Free/耗尽及本端专属工具任务自动切回客户端三大独立内置池（Neon/Claude/Argon）跨池接力；DeepSeek 按量付费（8A/8B）永不自动调用，仅异常/降智时先征询并提示半价时段；快捷口令 .?（面板/选模）与 .s（状态）。
+displayName: E07 · 派发 v1.2.2
+description: E07 · 派发 v1.2.2：Gemini 4 Neon Medium 前台省电遥控，后台优先用 Codex 5h 池派发注释、Skill 维护及 Lucky Note App 大任务；客户端两共享池接力；DeepSeek 官方 API 按量先问。支持模型变化雷达及 .? / .s。
 ---
 
-# E07 · 派发 v1.2.1
+# E07 · 派发 v1.2.2
 
-`SKILL_DIR` = `C:\Users\fight\.gemini\config\skills\E07-派发`  
-`<python>` = `C:\Users\fight\.codex\cache\ngs-analysis-workbench\venvs\0.2.10\Scripts\python.exe`
+## 前台省电，后台精准派单
 
-## 一、 核心调度契约与职责边界
+固定用 **Gemini 4 Neon Medium** 做前台遥控器：只做意图对齐、轻量直办、本端专属工具与验收；后台重活优先派 **Codex 5h 滚动池**，保护前台 Gemini 配额。`routing_policy.json` 是岗位选择和业务规则的唯一策略表。
 
-1. **职责边界**：
-   - **`E07-派发`（本 Skill）**：日常单轨/多轨三级阶梯派发与跨池额度接力（输入 `.?` 或 `面板`/`选模` 默认呼出）。
-   - **`E06-红蓝对抗闭环`**：通用软件/App 代码双脑死磕（默认 `9B Codex GPT-6.2 Sol ⚔ 4A Gemini 4 Neon High`）。
-   - **`E02-生信三方评审`**：单细胞注释与生信 SOP 红蓝绿三方专家评审。
-2. **轻重分流 & 本端工具保留**：`≤ 3 步/10 秒` 小事主会话秒办；需本端专属工具（内置浏览器/3D 分子/交互 Swarm）的任务留内置池；独立重型后台任务优先走 **Tier 1 Codex 周期订阅**。
-3. **三级阶梯模型池与跨池接力链**：
-   - **🥇 Tier 1 · Codex 周期订阅优先池 `[9]`**：`9A` GPT-6.2 Astra（旗舰架构/深审）、`9B` GPT-6.2 Sol（主力编码）、`9C` GPT-6.1 Terra（视觉/UI审查）、`9D` GPT-6 Luna（轻量批量）。自动校验 `models_cache.json` 与冷却状态，处于 Free 受限或触发 `429` 时自动转入 Tier 2。
-   - **🥈 Tier 2 · 客户端三大独立内置池 `[1]~[4]`**（同池共享额度，**严禁同池互为保底**，耗尽时跨池顺延）：
-     - **Neon 5h 池**：`Orchestrator (Neon)`、`Gemini 4 Neon`、`Gemini 4 Hydrogen`、`Gemini 3.8 Flash`
-     - **Claude 5h 池**：`Claude Opus 5.5`、`Claude Sonnet 5.5`、`GPT-OSS 120B`
-     - **Argon 周池**：`Gemini 4 Argon`、`Orchestrator (Argon)`
-     - **`[1]` ⚡ 极速跑腿**：`1A` 3.8 Flash *(Neon)* ➔ `1B` Hydrogen Low *(Neon)* ➔ `1C` Sonnet Low *(Claude)*
-     - **`[2]` 💻 写代码**：`2A` Sonnet 5.5 *(Claude)* ➔ `2B` Hydrogen *(Neon)* ➔ `3A` Argon *(Argon)*
-     - **`[3]` 🏗️ 统筹架构**：`3A` Argon *(Argon)* ➔ `3B` Opus 5.5 *(Claude)* ➔ `3C` Orch(Neon) *(Neon)*
-     - **`[4]` 🔍 深度挑刺**：`4A` Neon High *(Neon)* ➔ `3B` Opus High *(Claude)* ➔ `3A` Argon High *(Argon)*
-   - **🥉 Tier 3 · DeepSeek 按量咨询席 `[8]`（永不自动调用）**：`8A` DeepSeek-R1/Reasoner │ `8B` DeepSeek-V3/Chat。仅在前两级不可用或明显性能下降时，**先向用户确认并提示当前是否处于空闲半价时段**（空闲半价时段为除工作日周一至周五不含中国法定节假日 `09:00–12:00`、`14:00–18:00` 高峰期外的全部时段，含周末及法定节假日全天；加 `--user-confirmed` 启动）。
+- **A02/A03 注释**：A02 用主力 `9B` 中档，不在前台读原始大表；A03 默认用主力 `9B` 高档跑全场（1x 成本 / 500K 窗口），仅将少数争议亚群的小切片交旗舰 `9A` 中档点穴终审。**不修改 A02/A03 技能**。
+- **Skill 维护**：精准限定目标目录，常规脚本改动派主力中档，跨 Skill 架构或协议改造派旗舰中档。
+- **Lucky Note App**：单文件 ≤50 行微调和浏览器预览留前台；>50 行或多文件改造拆单派 Codex，完工后回前台浏览器验收。
+- **熔断与验收**：两轮无进展即熔断，停止该任务并升级或换厂商。超过 180 秒先抽检日志、差异或中间产物，不凭口头宣称继续空等。完成须核对可验证证据。
 
-## 二、 三级阶梯派发 HUD 看板（输入 `.?` 或 `面板`/`选模` 秒呼出）
+## 三级额度路由
+
+- **Tier 1：Codex 订阅**。`9A` 旗舰、`9B` 主力、`9C` 视觉、`9D` 批量；从本机 `~/.codex/models_cache.json` 按系列和版本解析可见模型，不写死版本。Free/冷却/岗位不可用时转 Tier 2。
+- **Tier 2：客户端两大共享池**。`gemini_shared` 覆盖 Carbon、Neon、Hydrogen、Argon、3.8 Flash 和 Orchestrator；`claude_shared` 覆盖 Claude Opus/Sonnet 和 GPT-OSS 120B。以客户端实时 `quotas` 为准；同池别名不是跨池替补。`1A/1B/2B/3A/3C/4A` 属 Gemini，`1C/2A/3B` 属 Claude+GPT-OSS。
+- **Tier 3：官方 API 按量先问**。`8A` DeepSeek-V4-Pro (`deepseek-v4-pro`)，`8B` DeepSeek-V4.1-Flash (`deepseek-flash`)，默认 `deepseek-official`，由 dsh `--patch` 切模。永不自动调用；仅前两级异常或明显退化时核实当前费率及半价规则、询问用户，明确同意后才加 `--user-confirmed`。
+
+## 看板与雷达
+
+`.?` / `面板` / `选模` 呼出当前焦点看板，`.s` / `状态` 看后台进度和实时额度；E06 或 C06 当值时只响应当前焦点。裸字母和数字只用于答选择题。通用软件红蓝闭环用 E06，生信三方评审用 E02。
+
+从本技能的 `scripts/` 目录运行：
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│ 📍 流水线全景进度: [E07 · 三级阶梯派发与跨池接力中心]                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│ 🥇 Tier 1 · Codex 周期订阅池（独立重型后台首选，Free/耗尽自动退 Tier 2）:  │
-│    👉★[9B] GPT-6.2 Sol (主力编码) │ [9A] GPT-6.2 Astra (旗舰架构/深审)     │
-│       [9C] GPT-6.1 Terra (视觉UI) │ [9D] GPT-6 Luna (轻量高速批量)         │
-│ 🥈 Tier 2 · 客户端三大独立内置池（支持跨池自动接力）:                      │
-│       [1] ⚡ 极速跑腿: [1A] 3.8 Flash(Neon) ➔ [1B] Hydrogen Low ➔ [1C] Sonnet Low│
-│       [2] 💻 写代码池: [2A] Sonnet 5.5(Claude) ➔ [2B] Hydrogen(Neon) ➔ [3A] Argon│
-│       [3] 🏗️ 统筹架构: [3A] Argon(周池) ➔ [3B] Opus 5.5(Claude) ➔ [3C] Orch(Neon)│
-│       [4] 🔍 深度挑刺: [4A] Neon High(Neon) ➔ [3B] Opus High ➔ [3A] Argon High   │
-│ 🥉 Tier 3 · DeepSeek 按量付费咨询席（🔒永不自动调，非工作日09-12/14-18均半价）: │
-│       [8A] DeepSeek-R1/Reasoner   │ [8B] DeepSeek-V3/Chat                  │
-├────────────────────────────────────────────────────────────────────────────┤
-│ ⌨️ 快捷口令: [9A~9D]Codex │ [1A~4A]内置 │ [8A/8B]问后按量 │ [.s/状态] │ [.?/面板]│
-└────────────────────────────────────────────────────────────────────────────┘
+python parallel_dispatch.py hud
+python parallel_dispatch.py dispatch --choice 9B --prompt "重构" --dry-run
+python parallel_dispatch.py dispatch --choice 8A --prompt "审计" --user-confirmed --dry-run
+python model_radar.py
+python parallel_dispatch.py radar --json --no-save --native-models-json <path>
 ```
 
-> **零撞车铁律**：所有裸单字母 `A/B/C/D` 与裸数字 `1~9` 100% 归当前面板选择题使用，严禁拦截裸单字母 `b / d / r / u / g / s`！
-
-## 三、 命令速查
-
-```powershell
-& <python> "$SKILL_DIR\scripts\parallel_dispatch.py" hud
-& <python> "$SKILL_DIR\scripts\parallel_dispatch.py" dispatch --choice 9B --prompt "重构" --dry-run
-& <python> "$SKILL_DIR\scripts\parallel_dispatch.py" dispatch --choice 9B --prompt "回退测试" --exhausted "codex,claude-sonnet-5-5-medium"
-& <python> "$SKILL_DIR\scripts\parallel_dispatch.py" dispatch --choice 8A --prompt "审计" --dry-run
-```
+`model_radar.py` 对比上次基线，报告上下架、档位变化、14 天内计划下线及超过 30 天未复核的半价规则。默认基线位于 `~/.gemini/antigravity/scratch/e07_tasks/radar_snapshot.json`；`--quiet-if-unchanged` 无变化静默；`--no-save` 只读。

@@ -95,11 +95,11 @@
     },
     {
       "id": "local-agent-delegate",
-      "version": "1.2.1+codex.20261120021418"
+      "version": "1.2.2+codex.20261124143646"
     },
     {
       "id": "e07-dispatch",
-      "version": "1.2.1+codex.20261120021415"
+      "version": "1.2.2+codex.20261124143554"
     }
   ],
   "sharedPaths": [

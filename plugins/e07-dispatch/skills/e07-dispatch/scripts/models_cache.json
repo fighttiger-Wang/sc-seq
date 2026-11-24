@@ -14,9 +14,10 @@
       "type": "cli",
       "binary": "E:\\A001-软件安装\\deepseek\\resources\\runtime\\cli\\bin\\dsh.cmd",
       "ready": true,
+      "provider": "deepseek-official",
       "models": [
-        "deepseek-reasoner (V4-Pro)",
-        "deepseek-chat (V4.1-Flash)"
+        "deepseek-v4-pro (DeepSeek-V4-Pro)",
+        "deepseek-flash (DeepSeek-V4.1-Flash)"
       ],
       "desc": "极速逻辑拆解、单点脚本与差异分析"
     },

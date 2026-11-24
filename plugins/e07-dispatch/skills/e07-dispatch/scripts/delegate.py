@@ -297,7 +297,6 @@ DEFAULT_DSH_CAPABILITIES: dict[str, bool | str | None] = {
     "resume": True,
     "permission_flag": True,
     "approval_flag": True,
-    "model_flag": True,
     "probe_error": None,
 }
 
@@ -319,7 +318,6 @@ def probe_dsh_capabilities(path: str, *, force_refresh: bool = False) -> dict[st
             "resume": False,
             "permission_flag": False,
             "approval_flag": False,
-            "model_flag": False,
             "probe_error": str(exc),
         }
     text = f"{proc.stdout}\n{proc.stderr}"
@@ -328,7 +326,6 @@ def probe_dsh_capabilities(path: str, *, force_refresh: bool = False) -> dict[st
         "resume": "--session-id" in text,
         "permission_flag": "--permission-mode" in text,
         "approval_flag": "--approval-policy" in text,
-        "model_flag": True,
         "probe_error": None if proc.returncode == 0 else f"headless --help exited {proc.returncode}",
     }
 
@@ -664,6 +661,7 @@ def build_invocation(
     mode: str,
     dsh_capabilities: dict[str, Any] | None,
     model: str | None = None,
+    dsh_patch: Path | None = None,
 ) -> tuple[list[str], str | None, dict[str, str]]:
     env: dict[str, str] = {}
     stdin_input: str | None = None
@@ -759,8 +757,9 @@ def build_invocation(
             raise DelegateError("This DSH headless installation lacks --session-id; upgrade DSH to resume sessions")
         cmd = [binary, "--profile", "headless"]
         if model:
-            cmd.extend(["-m", model])
-            env["DSH_MODEL"] = model
+            if dsh_patch is None:
+                raise DelegateError("DSH model selection requires a --patch file")
+            cmd.extend(["--patch", str(dsh_patch)])
         permission = "read-only" if mode == "read" else "danger-full-access"
         if capabilities.get("permission_flag"):
             cmd.extend(["--permission-mode", permission])
@@ -1046,6 +1045,33 @@ def execute_run(
         if runner == "dsh"
         else None
     )
+    model = getattr(args, "model", None)
+    patch_path = None
+    patch_preview = None
+    try:
+        if runner == "dsh" and model:
+            provider = getattr(args, "dsh_provider", "deepseek-official")
+            patch_preview = (
+                "- id: agent-default-model\n"
+                '  name: "@deepseek-ai/dsh-agent-default-model"\n'
+                "  config:\n"
+                f"    provider: {provider}\n"
+                f"    model: {json.dumps(model)}\n"
+            )
+            state_dir.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".yml",
+                                             dir=state_dir, delete=False) as handle:
+                patch_path = Path(handle.name)
+                handle.write(patch_preview)
+        return execute_invocation(args, state_dir, runner, workspace, prompt, binary_info,
+                                  capabilities, model, patch_path, patch_preview)
+    finally:
+        if patch_path is not None:
+            patch_path.unlink(missing_ok=True)
+
+
+def execute_invocation(args, state_dir, runner, workspace, prompt, binary_info,
+                       capabilities, model, patch_path, patch_preview) -> int:
     command, stdin_input, env_updates = build_invocation(
         runner,
         binary_info["path"],
@@ -1054,7 +1080,8 @@ def execute_run(
         args.session,
         args.mode,
         capabilities,
-        getattr(args, "model", None),
+        model,
+        patch_path,
     )
     safe_command = redact_command(command, prompt)
 
@@ -1070,6 +1097,8 @@ def execute_run(
             "stdin": stdin_input is not None,
             "environment_overrides": env_updates,
         }
+        if patch_preview is not None:
+            payload["dsh_patch_preview"] = patch_preview
         emit(payload)
         return 0
 
@@ -1240,6 +1269,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--role-slot", type=int, default=1, help="Which saved choice to use for diagnose (1 or 2)")
     run.add_argument("--file", action="append")
     run.add_argument("--session")
+    run.add_argument("--dsh-provider", choices=("deepseek-official", "deepseek-account"),
+                     default="deepseek-official", help="Provider for DSH model selection")
     run.add_argument("--model", help="Specific model name (e.g. o3-mini, gpt-4o)")
     run.add_argument("--refresh", action="store_true", help="Force re-probing CLI capabilities instead of using fast cache")
     run.add_argument("--timeout", type=int, default=DEFAULT_RUN_TIMEOUT)

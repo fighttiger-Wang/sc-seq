@@ -6,7 +6,7 @@ Critic & Lineup Manager for E06 · 红蓝对抗闭环 v1.2.0
 1. 与 E07 100% 共用三级阶梯统一模型代号矩阵（9A~9D Codex周期订阅 ➔ 1A~4A 客户端内置三独立池 ➔ 8A/8B DeepSeek按量咨询）
 2. 默认 1 号阵容为双周期异构王牌：[9B] Codex GPT-6.2 Sol ⚔ [4A] Gemini 4 Neon High
    （Codex 处于 Free 或耗尽时，蓝方自动退回客户端内置 [2A] Claude Sonnet 5.5 ➔ [2B] Gemini 4 Hydrogen）
-3. 支持三大独立内置配额池跨池接力（Neon 5h / Claude 5h / Argon 周池），绝不误触发按量付费 DeepSeek
+3. 客户端 Gemini 与 Claude+GPT-OSS 两大共享池跨池接力，绝不自动调用按量付费 DeepSeek
 """
 
 from __future__ import annotations
@@ -71,14 +71,14 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
         "fallback_chain": ["gpt-6-luna", "gemini-3.8-flash-medium", "gemini-4-hydrogen-low"],
         "desc": "轻量高速批量任务",
     },
-    # Tier 2: 客户端内置三大独立池
+    # Tier 2: 客户端内置两大共享池
     "1A": {
         "code": "1A",
         "pool": "1",
-        "pool_name": "⚡ 极速跑腿池 (Neon池)",
+        "pool_name": "⚡ 极速跑腿池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 3.8 Flash (Neon池)",
+        "name": "Gemini 3.8 Flash (Gemini 共享池)",
         "slug": "gemini-3.8-flash-medium",
         "quota": "Neon 5h池",
         "fallback_chain": ["gemini-3.8-flash-medium", "gemini-4-hydrogen-low", "claude-sonnet-5-5-low"],
@@ -87,10 +87,10 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
     "1B": {
         "code": "1B",
         "pool": "1",
-        "pool_name": "⚡ 极速跑腿池 (Neon池)",
+        "pool_name": "⚡ 极速跑腿池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen Low (Neon池)",
+        "name": "Gemini 4 Hydrogen Low (Gemini 共享池)",
         "slug": "gemini-4-hydrogen-low",
         "quota": "Neon 5h池",
         "fallback_chain": ["gemini-4-hydrogen-low", "gemini-3.8-flash-medium", "claude-sonnet-5-5-low"],
@@ -118,15 +118,15 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
         "slug": "claude-sonnet-5-5-medium",
         "quota": "Claude 5h池",
         "fallback_chain": ["claude-sonnet-5-5-medium", "claude-sonnet-5-5-high", "gemini-4-hydrogen-medium", "gemini-4-argon-medium"],
-        "desc": "内置编码首选（跨 Neon ➔ Argon 周池）",
+        "desc": "内置编码首选（Claude 共享池 ➔ Gemini 共享池）",
     },
     "2B": {
         "code": "2B",
         "pool": "2",
-        "pool_name": "💻 写代码工匠池 (Neon池)",
+        "pool_name": "💻 写代码工匠池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Hydrogen (Neon池)",
+        "name": "Gemini 4 Hydrogen (Gemini 共享池)",
         "slug": "gemini-4-hydrogen-medium",
         "quota": "Neon 5h池",
         "fallback_chain": ["gemini-4-hydrogen-medium", "gemini-4-hydrogen-high", "claude-sonnet-5-5-medium", "gemini-4-argon-medium"],
@@ -135,12 +135,12 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
     "3A": {
         "code": "3A",
         "pool": "3",
-        "pool_name": "🏗️ 统筹与架构池 (Argon周池)",
+        "pool_name": "🏗️ 统筹与架构池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Argon (Argon周池)",
+        "name": "Gemini 4 Argon (Gemini 共享池)",
         "slug": "gemini-4-argon-medium",
-        "quota": "Argon 周池",
+        "quota": "Gemini 共享池",
         "fallback_chain": ["gemini-4-argon-medium", "gemini-4-argon-high", "claude-opus-5-5-medium", "gemini-pro-orchestrator-neon"],
         "desc": "超长上下文宏观架构主力",
     },
@@ -159,10 +159,10 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
     "3C": {
         "code": "3C",
         "pool": "3",
-        "pool_name": "🏗️ 统筹与架构池 (Neon池)",
+        "pool_name": "🏗️ 统筹与架构池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Orchestrator (Neon池)",
+        "name": "Orchestrator (Gemini 共享池)",
         "slug": "gemini-pro-orchestrator-neon",
         "quota": "Neon 5h池",
         "fallback_chain": ["gemini-pro-orchestrator-neon", "gemini-4-argon-medium", "claude-opus-5-5-medium"],
@@ -171,10 +171,10 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
     "4A": {
         "code": "4A",
         "pool": "4",
-        "pool_name": "🔍 深度挑刺推理池 (Neon池)",
+        "pool_name": "🔍 深度挑刺推理池 (Gemini 共享池)",
         "tier": "native_free",
         "runner": "native",
-        "name": "Gemini 4 Neon High (Neon池)",
+        "name": "Gemini 4 Neon High (Gemini 共享池)",
         "slug": "gemini-4-neon-high",
         "quota": "Neon 5h池",
         "fallback_chain": ["gemini-4-neon-high", "gemini-4-neon-xhigh", "claude-opus-5-5-high", "gemini-4-argon-high"],
@@ -187,10 +187,10 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
         "pool_name": "💰 DeepSeek 按量咨询席 (Tier 3)",
         "tier": "payg_ask_first",
         "runner": "dsh",
-        "name": "DeepSeek-R1 / Reasoner",
-        "slug": "deepseek-reasoner",
+        "name": "DeepSeek-V4-Pro",
+        "slug": "deepseek-v4-pro",
         "quota": "按量付费API",
-        "fallback_chain": ["deepseek-reasoner", "deepseek-chat"],
+        "fallback_chain": ["deepseek-v4-pro"],
         "desc": "按量付费红方外援（需先向用户确认）",
     },
     "8B": {
@@ -199,10 +199,10 @@ UNIFIED_MODELS: dict[str, dict[str, Any]] = {
         "pool_name": "💰 DeepSeek 按量咨询席 (Tier 3)",
         "tier": "payg_ask_first",
         "runner": "dsh",
-        "name": "DeepSeek-V3 / Chat",
-        "slug": "deepseek-chat",
+        "name": "DeepSeek-V4.1-Flash",
+        "slug": "deepseek-flash",
         "quota": "按量付费API",
-        "fallback_chain": ["deepseek-chat"],
+        "fallback_chain": ["deepseek-flash"],
         "desc": "按量付费通用审查外援（需先向用户确认）",
     },
 }
@@ -227,7 +227,7 @@ ROSTERS: dict[str, dict[str, Any]] = {
         "critic_code": "3B",
     },
     "8": {
-        "name": "DeepSeek 按量外援对攻 (Codex/内置 [9B/2A] ⚔ 按量 DeepSeek-R1 [8A] · 需先确认)",
+        "name": "DeepSeek 按量外援对攻 (Codex/内置 [9B/2A] ⚔ 按量 DeepSeek-V4-Pro [8A] · 需先确认)",
         "tier": "payg_ask_first",
         "author_code": "9B",
         "critic_code": "8A",
@@ -317,7 +317,7 @@ def render_lineup_box(cfg: dict[str, Any]) -> str:
 │         [2] 客户端纯内置异构 : [2A] Claude Sonnet 5.5 ⚔ [4A] Gemini 4 Neon High │
 │         [3] 顶级架构统筹对攻 : [9A] Codex GPT-6.2 Astra ⚔ [3B] Opus / [4A] Neon │
 │    • 【按量付费咨询席（🔒永不自动调！仅前两级异常且询问确认后才启用）】:   │
-│         [8] 按量外援对攻     : [9B/2A] 蓝方施工       ⚔ [8A] DeepSeek-R1 按量   │
+│         [8] 按量外援对攻     : [9B/2A] 蓝方施工       ⚔ [8A] DeepSeek-V4-Pro 按量   │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ⌨️ 全局 .前缀零撞车快捷口令（释放裸字母 A/B/C/D 给选择题）:                │
 │    • [1] / [2] / [3]  : 一键锁定周期/内置免费对攻阵容 [1]/[2]/[3]          │

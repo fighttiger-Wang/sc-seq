@@ -1,10 +1,10 @@
 ---
 name: local-agent-delegate
-displayName: E06 · 红蓝对抗闭环 v1.2.1
-description: E06 · 红蓝对抗闭环 v1.2.1：【通用软件/App/工程代码专用】专职双脑红蓝对抗闭环器。日常单任务走 E07-派发，生信科研评审走 E02-生信三方评审；仅当软件/工程开发需要【蓝方施工 ⚔ 红方挑刺】多轮交叉审核与两阶段提交闭环时触发。默认 1 号阵容采用双周期异构王牌（9B Codex GPT-6.2 Sol ⚔ 4A Gemini 4 Neon High），Codex Free/耗尽时自动跨客户端三大内置池接力；按量 DeepSeek 永不自动调用；快捷口令 .?（面板）与 .s（状态）。
+displayName: E06 · 红蓝对抗闭环 v1.2.2
+description: E06 · 红蓝对抗闭环 v1.2.2：【通用软件/App/工程代码专用】专职双脑红蓝对抗闭环器。日常单任务走 E07-派发，生信科研评审走 E02-生信三方评审；仅当软件/工程开发需要【蓝方施工 ⚔ 红方挑刺】多轮交叉审核与两阶段提交闭环时触发。默认 1 号阵容采用双周期异构王牌（9B Codex GPT-6.2 Sol ⚔ 4A Gemini 4 Neon High），Codex Free/耗尽时自动跨客户端两大内置共享池接力；按量 DeepSeek 永不自动调用；快捷口令 .?（面板）与 .s（状态）。
 ---
 
-# E06 · 红蓝对抗闭环 v1.2.1
+# E06 · 红蓝对抗闭环 v1.2.2
 
 > **🎯 三大调度与评审 Skill 职责边界**：
 > - **`E06-红蓝对抗闭环`（本 Skill）**：专用于**通用软件、App Vibe Coding（`C06`）、前后端架构与工程代码**的“蓝方施工 ⚔ 红方挑刺”多轮死磕与两阶段提交落盘。
@@ -17,12 +17,8 @@ description: E06 · 红蓝对抗闭环 v1.2.1：【通用软件/App/工程代码
 ## 一、 全局统一三级阶梯模型代号（与 E07 100% 共用）
 
 - **`[9]` 🥇 Tier 1 · Codex 周期订阅池**：`9A` GPT-6.2 Astra（旗舰架构）│ `9B` GPT-6.2 Sol（主力蓝方）│ `9C` GPT-6.1 Terra（视觉UI）│ `9D` GPT-6 Luna（轻量）
-- **`[1]~[4]` 🥈 Tier 2 · 客户端内置三大独立池（跨池接力）**：
-  - `[1]` ⚡ 极速跑腿：`1A` 3.8 Flash *(Neon)* ➔ `1B` Hydrogen Low *(Neon)* ➔ `1C` Sonnet Low *(Claude)*
-  - `[2]` 💻 写代码：`2A` Sonnet 5.5 *(Claude)* ➔ `2B` Hydrogen *(Neon)* ➔ `3A` Argon *(Argon周池)*
-  - `[3]` 🏗️ 统筹架构：`3A` Argon *(Argon周池)* ➔ `3B` Opus 5.5 *(Claude)* ➔ `3C` Orch(Neon) *(Neon)*
-  - `[4]` 🔍 深度挑刺：`4A` Neon High *(Neon)* ➔ `3B` Opus High *(Claude)* ➔ `3A` Argon High *(Argon)*
-- **`[8]` 🥉 Tier 3 · DeepSeek 按量咨询席（永不自动调用）**：`8A` DeepSeek-R1 │ `8B` DeepSeek-V3（仅前两级异常且先询问用户确认后启用；空闲半价时段为除工作日周一至周五不含法定节假日 `09:00–12:00`、`14:00–18:00` 外的全部时段及周末/节假日全天）
+- **`[1]~[4]` 🥈 Tier 2 · 客户端两大共享池**：`gemini_shared`（含 Carbon、Neon、Hydrogen、Argon、3.8 Flash 与 Orchestrator）和 `claude_shared`（Claude Opus/Sonnet、GPT-OSS 120B）。以实时 `quotas` 为准；同池别名不能互保，耗尽时只跨池接力。
+- **`[8]` 🥉 Tier 3 · DeepSeek 官方 API 按量咨询席**：`8A` DeepSeek-V4-Pro (`deepseek-v4-pro`)，`8B` DeepSeek-V4.1-Flash (`deepseek-flash`)。默认 `deepseek-official`，用 dsh `--patch` 切模，永不自动调用；仅前两级异常时核实费率及当前是否半价，并先取得用户确认。
 
 ## 二、 红蓝对攻阵容速选看板（输入 `.?` 或 `面板` / `lineup` 秒呼出）
 
@@ -37,7 +33,7 @@ description: E06 · 红蓝对抗闭环 v1.2.1：【通用软件/App/工程代码
 │       [2] 客户端纯内置异构 : [2A] Claude Sonnet 5.5 ⚔ [4A] Gemini 4 Neon High │
 │       [3] 顶级架构统筹对攻 : [9A] Codex GPT-6.2 Astra ⚔ [3B] Opus / [4A] Neon │
 │ 💰 按量付费咨询席（🔒永不自动调！仅前两级异常且询问确认后才启用）:         │
-│       [8] 按量外援对攻     : [9B/2A] 蓝方施工       ⚔ [8A] DeepSeek-R1 按量   │
+│       [8] 按量外援对攻     : [9B/2A] 蓝方施工       ⚔ [8A] DeepSeek-V4-Pro 按量   │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ⌨️ 快捷口令: [1/2/3]免费阵容 │ [8]问后按量 │ [0]暂停 │ [.s/状态] │ [.?/面板]  │
 └────────────────────────────────────────────────────────────────────────────┘
