@@ -16,6 +16,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from qualitative_annotation_workbook import validate_workbook_content
+
 
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -181,7 +183,8 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = None
 
-    for col in ws.columns:
+    ws.column_dimensions["A"].width = 10
+    for col in (ws["B"], ws["C"]):
         max_len = 0
         col_letter = get_column_letter(col[0].column)
         for cell in col:
@@ -189,7 +192,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
             val_len = sum(2 if ord(char) > 127 else 1 for char in val_str)
             if val_len > max_len:
                 max_len = val_len
-        ws.column_dimensions[col_letter].width = max(14, max_len + 3)
+        ws.column_dimensions[col_letter].width = min(max(16, max_len + 3), 32)
 
     output_info_path.parent.mkdir(parents=True, exist_ok=True)
     wb_info.save(output_info_path)
@@ -230,6 +233,11 @@ def main() -> None:
     require_inside(source, workspace, "source")
     if source.suffix.lower() != ".xlsx" or not source.is_file():
         raise ValueError(f"source must be an existing .xlsx workbook: {source}")
+    workbook = load_workbook(source, data_only=False)
+    try:
+        validate_workbook_content(workbook)
+    finally:
+        workbook.close()
     if not destination_arg.is_absolute():
         raise ValueError(f"destination must be an absolute E-drive path: {destination_arg}")
     require_e_drive(destination_arg, "destination")

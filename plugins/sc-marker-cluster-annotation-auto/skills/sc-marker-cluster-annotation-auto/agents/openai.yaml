@@ -1,5 +1,5 @@
 interface:
-  display_name: "A03 · 亚群精细注释 v0.12.4"
+  display_name: "A03 · 亚群精细注释 v0.12.5"
   short_description: "在已知父群内完成层级一致的细分亚型注释、证据审计与结果交付"
   default_prompt: "Use $sc-marker-cluster-annotation-auto to 在已知父群内完成层级一致的细分亚型注释、证据审计与结果交付"
 

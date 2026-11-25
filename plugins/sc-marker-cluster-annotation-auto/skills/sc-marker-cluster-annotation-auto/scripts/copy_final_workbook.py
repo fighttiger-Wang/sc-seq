@@ -203,7 +203,8 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = None
 
-    for col in ws.columns:
+    ws.column_dimensions["A"].width = 10
+    for col in (ws["B"], ws["C"]):
         max_len = 0
         col_letter = get_column_letter(col[0].column)
         for cell in col:
@@ -211,7 +212,7 @@ def export_cluster_info_workbook(source_workbook_path: Path, output_info_path: P
             val_len = sum(2 if ord(char) > 127 else 1 for char in val_str)
             if val_len > max_len:
                 max_len = val_len
-        ws.column_dimensions[col_letter].width = max(14, max_len + 3)
+        ws.column_dimensions[col_letter].width = min(max(16, max_len + 3), 32)
 
     output_info_path.parent.mkdir(parents=True, exist_ok=True)
     wb_info.save(output_info_path)
@@ -294,19 +295,7 @@ def validate_formal_workbook(source: Path) -> dict:
                         f"red warning fill is outside allowed summary/audit warning columns or 细胞配色: "
                         f"{name}!{cell.coordinate}"
                     )
-        if name == "细胞类型与文献":
-            for r_idx in range(2, sheet.max_row + 1):
-                for c_idx in range(1, 7):
-                    val = str(sheet.cell(r_idx, c_idx).value or "").strip()
-                    if not val:
-                        h_name = sheet.cell(1, c_idx).value
-                        r_label = sheet.cell(r_idx, 1).value
-                        raise ValueError(
-                            f"formal workbook '细胞类型与文献' cell {r_label} col {c_idx} ('{h_name}') is empty"
-                        )
-                c7_val = str(sheet.cell(r_idx, 7).value or "").strip()
-                if not c7_val:
-                    sheet.cell(r_idx, 7, value="依据样本高变与差异 Marker 特异性富集特征独立确立。")
+    CONTRACT.validate_workbook_content(workbook)
     return qa
 
 

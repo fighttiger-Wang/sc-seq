@@ -68,51 +68,14 @@ filter, merge, or modify cells.
 
 ## Stable workbook contract
 
-The final Excel workbook contains exactly these sheets in this order:
+各技能的文档权威为各自的输出契约：
 
-1. `绘图列表`
-2. `注释结果`
-3. `详细证据`
-4. `细胞类型与文献`
-5. `说明与数据来源`
+- A02：`sc-major-celltype-annotation-auto/references/output-schema.md`
+- A03：`sc-marker-cluster-annotation-auto/references/output-schema.md`
 
-`绘图列表` contains exactly `Cluster` and `Celltype_EN`. `注释结果`,
-`详细证据`, and `绘图列表` contain every cluster, use exact cluster-ID joins,
-and share numeric ascending order followed by natural alphanumeric order.
-Repeated labels are allowed. `Celltype_EN` must match `[A-Za-z0-9_]+` and must
-not be decorated with cluster IDs or marker prefixes. State, program,
-disease-role, and topology qualifiers remain in dedicated fields and must not
-be concatenated into `Celltype_EN`. A shortened professional name is permitted
-only when it is a recognized naming-dictionary abbreviation and receives
-explicit expert naming approval.
+工作表名称、顺序、列、样式与 QA 以对应的 `references/output-schema.md` 为准。
+总览中每个不同的 `Celltype_EN` 在 `细胞类型与文献` 恰好占 1 行，展示 1 篇直接支持最终标签的代表作。
+QC 或无直接文献时保留 1 行如实说明。其余候选文献保留在研究证据包中。
+严禁合并单元格或对同一细胞类型拆分多行。
 
-The result sheet contains no score or confidence field. The evidence sheet has
-one row per cluster and includes the final identity, parent context, primary and
-competing programs, supporting/conflicting/missing markers, qualitative gates,
-off-parent audit, state/development evidence, UMAP audit, mixed/doublet
-interpretation, rationale, gaps, and handling.
-
-Marker evidence is rendered as, for example:
-
-```text
-FGFBP2(mean=4.67, ratio=70.20%, log2FC=1.74, pct.1=70.20%, pct.2=14.30%)
-```
-
-`细胞类型与文献` contains exactly `细胞类型`, `文献`, `经典鉴定 Marker`,
-and `本次鉴定使用的 Marker`. One cell type x one reference is one row, cells
-are not merged, every final type has at least one source, and links are
-clickable. `说明与数据来源` contains `项目 | 内容`, displays filenames only,
-and records context, modes, metric definitions, versions, run time,
-constraints, sorting/red-fill rules, limitations, and the no-auto-modification
-declaration.
-
-Use fixed widths and fixed row heights. Disable wrapping, shrink-to-fit, and
-autofilters so long text stays intact but is visually clipped and remains
-available in the formula bar. Freeze the first row in every sheet; additionally
-freeze the first three columns in `注释结果` and `详细证据`, and the first column
-in `细胞类型与文献`.
-
-Apply a static red background only to the `中文名称` cell when a cluster carries
-a coherent significant state program, `Multi_cell`, suspected doublet,
-low-quality/debris/background interference, or lineage/off-parent boundary.
-One isolated state marker does not trigger red fill.
+正式交付流程为 `build_annotation_workbook.py` → `copy_final_workbook.py`。

@@ -19,6 +19,52 @@ import urllib.parse
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
+MARKER_SEPARATOR = ", "
+_MARKER_DELIMITERS = re.compile(r"[,;；、]+")
+_GENE_SYMBOL = re.compile(r"(?=.*[A-Za-z])[A-Za-z0-9]+(?:[._:-][A-Za-z0-9]+)*")
+_GENERIC_MARKER_TERM = re.compile(r"(?:^|[._:-])(?:genes?|family|markers?|program)(?:$|[._:-])", re.I)
+_NON_CLASSIC_MARKERS = {
+    "MHC-II", "MHC-I", "CD11B", "CD45R", "CD43", "CD172A", "B220", "F4/80", "GR-1",
+    "NA",
+}
+_QC_LABEL = re.compile(
+    r"^qc(?:_|$)|(?:^|_)(?:multi_cell|doublets?|multiplets?|contaminants?|contamination|contaminated|contaminating|debris|low_quality)(?:_|$)",
+    re.IGNORECASE,
+)
+NO_DIRECT_LITERATURE = "待实验验证 (Novel / Experimental)"
+QC_LITERATURE = "质控过滤指标 (QC Contaminant / Doublet)"
+
+
+def marker_names(value):
+    if isinstance(value, dict):
+        value = value.get("gene") or value.get("Gene") or value.get("GeneName")
+    if isinstance(value, (list, tuple)):
+        return [gene for item in value for gene in marker_names(item)]
+    if not isinstance(value, str):
+        return []
+    return [gene.strip() for gene in _MARKER_DELIMITERS.split(value) if gene.strip()]
+
+
+def is_gene_symbol(value):
+    return bool(_GENE_SYMBOL.fullmatch(value))
+
+
+def is_classic_marker(value):
+    return (
+        is_gene_symbol(value)
+        and value.upper() not in _NON_CLASSIC_MARKERS
+        and not _GENERIC_MARKER_TERM.search(value)
+    )
+
+
+def _classic_markers(value):
+    return list(dict.fromkeys(gene for gene in marker_names(value) if is_classic_marker(gene)))
+
+
+def is_qc_label(label):
+    return bool(_QC_LABEL.search(re.sub(r"[-\s]+", "_", str(label))))
+
+
 # Comprehensive, fully verified landmark literature registry
 # All DOIs and PMIDs are physically verified against NCBI / PubMed / Crossref.
 VERIFIED_LANDMARK_REGISTRY: Dict[str, Dict[str, Any]] = {
@@ -495,10 +541,10 @@ def _lookup_kb_panel(celltype_en: str, species: str = "Mammalian") -> Optional[D
     if not best_match:
         return None
 
-    core = [m.strip() for m in (best_match.get("core_markers") or "").split(";") if m.strip()]
-    supp = [m.strip() for m in (best_match.get("supportive_markers") or "").split(";") if m.strip()]
+    core = _classic_markers(best_match.get("core_markers"))
+    supp = _classic_markers(best_match.get("supportive_markers"))
     markers = core or supp
-    markers_str = ", ".join(markers[:8])
+    markers_str = MARKER_SEPARATOR.join(markers[:8])
 
     sources_map = {s.get("source_id"): s for s in kb.get("evidence_sources", [])}
     ev_ids = [e.strip() for e in (best_match.get("evidence_ids") or "").split(";") if e.strip()]
@@ -519,10 +565,16 @@ def _lookup_kb_panel(celltype_en: str, species: str = "Mammalian") -> Optional[D
 
     return {
         "markers": markers_str,
+        "core_markers": core,
         "source": src_obj,
         "cell_id": best_match.get("cell_id"),
         "evidence_ids": ev_ids,
     }
+
+
+def knowledge_base_core_markers(celltype_en):
+    panel = _lookup_kb_panel(celltype_en)
+    return panel["core_markers"] if panel else []
 
 
 def _ensure_reference_url(doi: str = "", pmid: str = "", celltype_en: str = "", tissue: str = "") -> str:
@@ -550,45 +602,40 @@ def resolve_celltype_literature(
     """Resolve authoritative 7-column literature endorsement for a given cell type.
     
     Returns a dict with exact 7-column publication values + url.
-    Guarantees zero hallucinated DOIs or mismatched PMIDs and strictly non-empty classic markers.
+    Uses curated references and an explicit NA when classic markers are unavailable.
     """
     key = normalize_lookup_key(celltype_en)
-    sample_m_str = ", ".join(sample_markers[:8]) if sample_markers else "特征 Marker 群"
+    sample_m_str = MARKER_SEPARATOR.join([
+        gene for gene in marker_names(sample_markers) if is_gene_symbol(gene) and gene.upper() != "NA"
+    ][:8])
 
     # 0. Dedicated QC / Multi-cell / Doublet handling
-    s_clean = celltype_en.lower()
-    if any(q in s_clean for q in ["multi_cell", "doublet", "contaminat", "debris", "low_quality", "multiplet"]) or s_clean.startswith("qc_"):
+    if is_qc_label(celltype_en):
         return {
             "celltype_en": celltype_en,
-            "locator": "质控过滤指标 (QC Contaminant / Doublet)",
+            "locator": QC_LITERATURE,
             "citation": "单细胞转录组质控与细胞异质性判别规范 (Cell Ranger / Seurat QC Guidelines)",
             "study_context": f"{species} / {tissue}",
             "classic_markers": "跨谱系互斥标志共表达 / 极端基因数或高线粒体特征",
-            "sample_evidence": sample_m_str,
+            "sample_evidence": sample_m_str or "质控群暂无可绘图标记",
             "rationale": "检测到跨谱系互斥特征基因共表达或离群质控分布，判定为多细胞微滴或背景污染，不作正常组织亚群定义。",
             "url": "https://doi.org/10.1038/s41592-021-01314-4",
             "is_verified": True
         }
 
-    def _resolve_classic_markers(override_val: Any) -> str:
-        if isinstance(override_val, (list, tuple)):
-            res = ", ".join(str(m).strip() for m in override_val if str(m).strip())
-            if res:
-                return res
-        elif isinstance(override_val, str) and override_val.strip():
-            return override_val.strip()
-
+    def _resolve_classic_markers(*override_values: Any) -> str:
+        for value in override_values:
+            markers = _classic_markers(value)
+            if markers:
+                return MARKER_SEPARATOR.join(markers)
         kb_panel = _lookup_kb_panel(celltype_en, species)
         if kb_panel and kb_panel.get("markers"):
             return kb_panel["markers"]
 
         if key in VERIFIED_LANDMARK_REGISTRY:
-            return ", ".join(VERIFIED_LANDMARK_REGISTRY[key]["classic_markers"])
+            return MARKER_SEPARATOR.join(_classic_markers(VERIFIED_LANDMARK_REGISTRY[key]["classic_markers"])) or "NA"
 
-        if sample_markers:
-            return "公认经典标记暂缺；本例依据样本特异程序验证: " + ", ".join(sample_markers[:8])
-
-        return "建议结合原位杂交(FISH)或空间转录组探索特异标志"
+        return "NA"
 
     # 1. Custom override passed from external verified retrieval or records
     if custom_override and (custom_override.get("doi") or custom_override.get("pmid") or custom_override.get("title")):
@@ -610,12 +657,11 @@ def resolve_celltype_literature(
         if not url:
             url = _ensure_reference_url(doi, pmid, celltype_en, tissue)
 
-        cm_cand = (
-            custom_override.get("classic_markers")
-            or custom_override.get("supported_program")
-            or custom_override.get("core_markers")
+        classic_markers_str = _resolve_classic_markers(
+            custom_override.get("classic_markers"),
+            custom_override.get("supported_program"),
+            custom_override.get("core_markers"),
         )
-        classic_markers_str = _resolve_classic_markers(cm_cand)
 
         return {
             "celltype_en": celltype_en,
@@ -637,7 +683,7 @@ def resolve_celltype_literature(
         locator = f"DOI: {doi} | PMID: {pmid}"
         citation = f"{entry['first_author']} {entry['title']}. {entry['journal']}, {entry['year']}."
         url = f"https://doi.org/{doi}"
-        classic_str = ", ".join(entry["classic_markers"])
+        classic_str = MARKER_SEPARATOR.join(_classic_markers(entry["classic_markers"])) or "NA"
         return {
             "celltype_en": celltype_en,
             "locator": locator,
@@ -683,18 +729,14 @@ def resolve_celltype_literature(
         }
 
     # 4. Defensive scientific fallback: Honest disclosure of unlisted/novel state
-    fallback_classic = (
-        f"公认经典标记暂缺；本例依据样本特异程序验证: {sample_m_str}"
-        if sample_markers else "建议结合原位杂交(FISH)或空间转录组探索特异标志"
-    )
     return {
         "celltype_en": celltype_en,
-        "locator": "待实验验证 (Novel / Experimental)",
-        "citation": "本地基准库与公开顶刊图谱暂无直接同源文献收录",
+        "locator": NO_DIRECT_LITERATURE,
+        "citation": "暂无直接文献",
         "study_context": f"{species} / {tissue}",
-        "classic_markers": fallback_classic,
+        "classic_markers": "NA",
         "sample_evidence": sample_m_str,
-        "rationale": "数据呈现特异多基因富集但未检索到明确国际公认同源亚群；保持数据驱动客观性，避免主观强行归类。",
+        "rationale": "暂无直接同源文献，依据当前样本证据判断，建议结合独立实验验证。",
         "url": _ensure_reference_url("", "", celltype_en, tissue),
         "is_verified": False
     }
@@ -719,9 +761,7 @@ def build_7column_literature_rows(
     grouped: Dict[str, Dict[str, Any]] = {}
     for r in records:
         en = r.get("celltype_en") or r.get("canonical_name") or "Cell"
-        markers = r.get("key_markers") or r.get("supporting_markers") or []
-        if isinstance(markers, str):
-            markers = [m.strip() for m in re.split(r"[,;]+", markers) if m.strip()]
+        markers = marker_names(r.get("key_markers") or r.get("supporting_markers"))
         entry = grouped.setdefault(en, {"markers": [], "override": None})
         for m in markers[:12]:
             if m not in entry["markers"]:
@@ -769,16 +809,13 @@ def build_7column_literature_rows(
             if isinstance(lit, str) and (lit.startswith("10.") or "doi" in lit.lower() or "pmid" in lit.lower()):
                 cand_override = {"title": lit}
 
-        if cand_override:
-            if not entry["override"]:
-                entry["override"] = cand_override
-            elif not (entry["override"].get("doi") or entry["override"].get("pmid")) and (cand_override.get("doi") or cand_override.get("pmid")):
-                entry["override"] = cand_override
+        if not entry["override"] and cand_override and any(cand_override.get(key) for key in ("title", "doi", "pmid")):
+            entry["override"] = cand_override
 
-        if r.get("classic_markers") and entry["override"] and not entry["override"].get("classic_markers"):
-            entry["override"]["classic_markers"] = r.get("classic_markers")
-        if decision.get("research_supported_program") and entry["override"] and not entry["override"].get("classic_markers"):
-            entry["override"]["classic_markers"] = decision.get("research_supported_program")
+        if entry["override"] and not _classic_markers(entry["override"].get("classic_markers")):
+            classic = _classic_markers(r.get("classic_markers")) or _classic_markers(decision.get("research_supported_program"))
+            if classic:
+                entry["override"]["classic_markers"] = classic
 
     rows = []
     for en, info in grouped.items():

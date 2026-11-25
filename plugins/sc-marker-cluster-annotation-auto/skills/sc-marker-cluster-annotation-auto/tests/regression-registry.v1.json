@@ -27,7 +27,7 @@
         "numeric ascending cluster joins",
         "score/confidence columns are absent",
         "per-Marker numeric evidence formatting",
-        "static red fill is restricted to the Chinese annotation cell",
+        "QC verdicts and Chinese annotation warning cells distinguish review from filtering, and exclusion prefixes reflect lineage conflicts",
         "formal subcluster mappings reject co-displayed registered ontology ancestor-descendant identities",
         "weak research-derived contextual identities carry an explicit provisional plotting qualifier",
         "repeated stable identities with distinct states receive identity-plus-state plotting labels without changing stable identity",

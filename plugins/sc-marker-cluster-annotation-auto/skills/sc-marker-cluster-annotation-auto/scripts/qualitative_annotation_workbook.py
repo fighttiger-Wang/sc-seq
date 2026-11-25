@@ -9,6 +9,7 @@ import json
 import os
 import platform
 import re
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -17,6 +18,12 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from literature_resolver import (
+    MARKER_SEPARATOR, NO_DIRECT_LITERATURE, QC_LITERATURE,
+    build_7column_literature_rows, is_classic_marker, is_gene_symbol, is_qc_label,
+    knowledge_base_core_markers, marker_names,
+)
+from qualitative_gate_helpers import load_gene_map
 from qualitative_umap_resolution import apply_identity_resolution, normalize_relation, validate_identity_resolution
 
 
@@ -71,9 +78,16 @@ ZEBRA_FILL_RGB = "FFF7F9FC"
 BORDER_GRAY_RGB = "FFE2E8F0"
 WARN_FILL_RGB = "FFFDE8E8"
 WARN_FONT_RGB = "9C0006"
+REVIEW_FILL_RGB = "FFF3F4F6"
+REVIEW_FONT_RGB = "374151"
 PASS_FILL_RGB = "FFE6F4EA"
 PASS_FONT_RGB = "137333"
 LEGACY_RED_RGBS = {"FFF8696B", "F8696B", "FFFDE8E8", "FDE8E8"}
+SUMMARY_WIDTHS = [10, 22, 26, 16, 18, 11, 30, 40, 28, 44]
+AUDIT_WIDTHS = [10, 22, 26, 11, 32, 28, 42, 28, 18, 24, 36]
+COLOR_WIDTHS = [26, 14]
+LITERATURE_WIDTHS = [26, 32, 40, 22, 32, 42, 44]
+SOURCE_WIDTHS = [30, 58]
 
 # Backward-compatibility aliases
 PLOT_FIELDS = ["cluster_id", "celltype_en"]
@@ -312,10 +326,7 @@ def _gene_list(value):
 def _short_key_markers(value, max_genes=6):
     seen = set()
     out = []
-    for item in _gene_list(value):
-        gene = str(_metric_value(item, "gene", "Gene", "GeneName") or "").strip() if isinstance(item, dict) else str(item).strip()
-        if not gene:
-            continue
+    for gene in marker_names(_gene_list(value)):
         key = gene.upper()
         if key in seen:
             continue
@@ -323,7 +334,71 @@ def _short_key_markers(value, max_genes=6):
         out.append(gene)
         if max_genes and len(out) >= max_genes:
             break
-    return ", ".join(out)
+    return MARKER_SEPARATOR.join(out)
+
+
+def _sanitize_plot_markers(records, classic_by_label, evidence, gene_map=None):
+    """Return the cluster and cell-type plotting lists using the same marker priorities."""
+    matrix_names = set(evidence.get("average_gene_names") or [])
+    matrix_lookup = {gene.upper(): gene for gene in evidence.get("average_gene_names") or []}
+    reverse_map = defaultdict(set)
+    for original, canonical in (gene_map or {}).items():
+        if original in matrix_lookup:
+            reverse_map[canonical].add(matrix_lookup[original])
+
+    def matrix_gene(gene):
+        if not matrix_names:
+            return gene if is_gene_symbol(gene) and gene.upper() != "NA" else None
+        if gene in matrix_names:
+            return gene
+        key = gene.upper()
+        if key in matrix_lookup:
+            return matrix_lookup[key]
+        matches = reverse_map.get(key, ())
+        return next(iter(matches)) if len(matches) == 1 else None
+
+    def matrix_markers(value):
+        return list(dict.fromkeys(match for gene in marker_names(value) if (match := matrix_gene(gene))))
+
+    def format_markers(classic, supporting, top, limit):
+        selected = list(dict.fromkeys(classic + supporting))
+        if len(selected) < 4:
+            selected = list(dict.fromkeys(selected + top))[:4]
+        return MARKER_SEPARATOR.join(selected[:limit])
+
+    cluster_indices = {str(cluster): i for i, cluster in enumerate(evidence.get("clusters", []))}
+    expressed_by_cluster = defaultdict(set)
+    for gene, values in evidence.get("canonical_expression_by_gene", {}).items():
+        match = matrix_gene(gene)
+        if match:
+            for cluster, index in cluster_indices.items():
+                if index < len(values) and values[index] is not None and values[index] > 0:
+                    expressed_by_cluster[cluster].add(match)
+
+    classic_by_identity = {}
+    by_cluster = {}
+    by_label = defaultdict(lambda: ([], [], []))
+    for record in records:
+        cluster = record["cluster_id"]
+        label = record["celltype_en"]
+        stable = record["stable_id"]
+        identity = (label, stable)
+        if identity not in classic_by_identity:
+            literature = [gene for gene in marker_names(classic_by_label[label]) if is_classic_marker(gene)]
+            core = knowledge_base_core_markers(stable) or knowledge_base_core_markers(label)
+            classic_by_identity[identity] = matrix_markers(literature + core)
+
+        profile = evidence.get("cluster_profiles", {}).get(cluster, {})
+        informative = matrix_markers(profile.get("top_informative_markers"))
+        top = informative + matrix_markers(profile.get("top_markers"))
+        supporting = matrix_markers(record["key_markers"])
+        supported = set(supporting + top) | expressed_by_cluster[cluster]
+        classic = [gene for gene in classic_by_identity[identity] if gene in supported]
+        by_cluster[cluster] = format_markers(classic, supporting, top, 6)
+        for group, genes in zip(by_label[label], (classic, supporting, top)):
+            group.extend(genes)
+
+    return by_cluster, {label: format_markers(*groups, 8) for label, groups in by_label.items()}
 
 
 def _profile_markers(evidence, cluster):
@@ -432,8 +507,10 @@ def _qualitative_gates(record, decision, umap):
 
     parent = _merge_gate_monotonic(d_gates.get("parent_lineage", "不适用"), r_gates.get("parent_lineage"), justification)
     siblings = _merge_gate_monotonic(d_gates.get("sibling_competition"), r_gates.get("sibling_competition"), justification)
-    exclusions = _merge_gate_monotonic(d_gates.get("exclusion"), r_gates.get("exclusion"), justification)
+    exclusions = _merge_gate_monotonic(d_gates.get("exclusion", "不适用"), r_gates.get("exclusion"), justification)
+    exclusions = _merge_gate_monotonic(exclusions, record.get("exclusion_gate"))
     off_parent = _merge_gate_monotonic(d_gates.get("off_parent", "不适用"), r_gates.get("off_parent"), justification)
+    off_parent = _merge_gate_monotonic(off_parent, record.get("off_parent_gate"))
     state = _merge_gate_monotonic(d_gates.get("state_program", "不适用"), r_gates.get("state_program"), justification)
 
     umap_gate = _merge_gate_monotonic(d_gates.get("umap", "未确定"), r_gates.get("umap"), justification)
@@ -637,7 +714,11 @@ def normalize_records(records, evidence, umap_audit=None):
         primary_prog = human_value(_first(record, decision, "primary_program", "research_selected_identity", "primary_evidence_label", "stable_id", default=celltype_en))
         comp_text = _top_competing_candidates(record, decision, celltype_en, stable, primary_prog, limit=3)
 
-        raw_key_markers = human_value(_first(record, decision, "key_markers", "supporting_markers"))
+        raw_key_markers = (
+            _gene_list(_first(record, decision, "key_markers"))
+            + _gene_list(_first(record, decision, "supporting_markers"))
+        )
+        key_markers = MARKER_SEPARATOR.join(dict.fromkeys(marker_names(raw_key_markers)))
         raw_support_source = _first(record, decision, "supporting_marker_evidence", "supporting_markers", "key_markers")
         raw_excl_source = _first(record, decision, "exclusion_markers", "conflicting_marker_evidence", "conflicting_markers", "negative_marker_conflict")
         excl_formatted = _marker_evidence(raw_excl_source, evidence, cluster, compact=True)
@@ -653,8 +734,8 @@ def normalize_records(records, evidence, umap_audit=None):
             "developmental_stage": _first(record, decision, "developmental_stage"),
             "state": _first(record, decision, "state", "primary_state"),
             "disease_role": _first(record, decision, "disease_role"),
-            "key_markers": raw_key_markers,
-            "key_markers_short": _short_key_markers(raw_key_markers, max_genes=6),
+            "key_markers": key_markers,
+            "key_markers_short": _short_key_markers(key_markers, max_genes=6),
             "candidate_labels": comp_text,
             "possible_components": human_value(_first(record, decision, "possible_components")),
             "rationale": human_value(_first(record, decision, "rationale", "decision_rationale")),
@@ -703,10 +784,6 @@ def normalize_records(records, evidence, umap_audit=None):
             record["state"] = record.get("state_program") or "常规态"
         if not record.get("disease_role"):
             record["disease_role"] = "常规组织驻留"
-        if not record.get("key_markers"):
-            record["key_markers"] = human_value(record.get("supporting_markers")) or ""
-        if not record.get("key_markers_short"):
-            record["key_markers_short"] = _short_key_markers(record.get("key_markers"), max_genes=6)
         if not record.get("candidate_labels"):
             record["candidate_labels"] = record.get("competing_programs") or "无显著同级竞争"
         if not record.get("boundary_flags"):
@@ -720,22 +797,40 @@ def normalize_records(records, evidence, umap_audit=None):
         record["_decision"] = decision
         record["_umap"] = umap
 
-        is_warn = _warning(record)
+        # The bundled evidence uses off_parent and mixed_doublet for the
+        # cross-lineage and doublet gates when no explicit aliases are supplied.
+        off_parent = record["off_parent_gate"]
+        exclusion = record["exclusion_gate"]
+        cross_lineage = _gate(record.get("cross_lineage_gate"), default=off_parent)
+        doublet = _gate(record.get("doublet_gate"), default=record["mixed_doublet_gate"])
+        failed_or_uncertain = {"不通过", "未确定"}
+        hard_qc_issue = (
+            record["celltype_en"].startswith("Multi_cell")
+            or any(
+                bool(_first(record, decision, key))
+                for key in ("suspected_doublet", "mixed_population", "debris", "low_quality", "off_parent_detected")
+            )
+            or any(
+                flag in record["boundary_flags"].lower()
+                for flag in ("doublet", "debris", "off_parent", "mixed_population")
+            )
+            or "不通过" in (off_parent, exclusion, doublet, record["mixed_doublet_gate"])
+            or (cross_lineage in failed_or_uncertain and doublet in failed_or_uncertain)
+        )
+        is_warn = hard_qc_issue or _warning(record)
         record["_is_warning"] = is_warn
-        if not is_warn:
-            record["qc_verdict"] = "保留"
-        elif (
-            record.get("downstream_eligible") is False
-            or str(record.get("celltype_en", "")).startswith("Multi_cell")
-            or any(bool(_first(record, decision, k)) for k in ("suspected_doublet", "mixed_population", "debris", "low_quality", "off_parent_detected"))
-            or any(k in str(record.get("boundary_flags", "")).lower() for k in ("doublet", "debris", "off_parent", "mixed_population"))
-        ):
+        if hard_qc_issue:
             record["qc_verdict"] = "建议过滤"
+        elif is_warn:
+            record["qc_verdict"] = "复核"
         else:
-            record["qc_verdict"] = "建议复核"
+            record["qc_verdict"] = "保留"
 
         if excl_formatted and excl_formatted != "无":
-            prefix = "跨谱系冲突" if is_warn else "已排除"
+            has_conflict = hard_qc_issue or any(
+                gate in failed_or_uncertain for gate in (exclusion, off_parent, cross_lineage)
+            )
+            prefix = "跨谱系冲突" if has_conflict else "已排除"
             record["exclusion_summary"] = f"{prefix}: {excl_formatted}"
         else:
             record["exclusion_summary"] = "无异常冲突"
@@ -932,52 +1027,6 @@ def _warning(record):
     return False
 
 
-def _citation_text(source):
-    if isinstance(source, str):
-        return source.strip(), ""
-    author = source.get("first_author") or source.get("author") or source.get("authors") or ""
-    year = source.get("year") or ""
-    journal = source.get("journal") or ""
-    title = source.get("title") or ""
-    pmid = source.get("pmid") or ""
-    doi = source.get("doi") or ""
-    locator = pmid or doi
-    text = ", ".join(str(item) for item in (author, year, journal, title, locator) if item)
-    url = source.get("url") or source.get("link") or ""
-    if not url and doi:
-        url = f"https://doi.org/{str(doi).replace('DOI:', '').strip()}"
-    if not url and pmid:
-        digits = re.sub(r"\D", "", str(pmid))
-        if digits:
-            url = f"https://pubmed.ncbi.nlm.nih.gov/{digits}/"
-    return text, url
-
-
-def _literature_rows(records, evidence):
-    grouped = {}
-    for record in records:
-        label = record["celltype_en"]
-        entry = grouped.setdefault(label, {"sources": [], "classic": [], "used": []})
-        entry["classic"].extend(_as_list(record.get("classic_markers")))
-        entry["used"].extend(_as_list(record.get("key_markers")))
-        sources = record.get("literature_details") or record.get("literature_source")
-        entry["sources"].extend(_as_list(sources))
-        if not entry["sources"]:
-            decision = record.get("_decision", {})
-            source_ids = _as_list(decision.get("marker_panel_evidence_ids"))
-            registry = evidence.get("annotation_evidence_policy", {}).get("evidence_source_registry", {})
-            entry["sources"].extend(registry.get(item, item) for item in source_ids)
-    rows = []
-    for label, entry in grouped.items():
-        sources = entry["sources"] or ["未提供结构化文献；正式交付前需补充"]
-        classic = "；".join(dict.fromkeys(str(item) for item in entry["classic"] if str(item).strip()))
-        used = "；".join(dict.fromkeys(str(item) for item in entry["used"] if str(item).strip()))
-        for source in sources:
-            text, url = _citation_text(source)
-            rows.append((label, text, classic, used, url))
-    return rows
-
-
 def _source_rows(evidence, annotation_level, records, skill_name, skill_version):
     metadata = evidence.get("confirmed_metadata", {}) or {}
     policy = evidence.get("annotation_evidence_policy", {}) or {}
@@ -1042,10 +1091,82 @@ def _style_sheet(ws, widths, freeze, row_height=24, center_cols=None):
         ws.column_dimensions[get_column_letter(index)].width = width
 
 
+def validate_workbook_content(workbook, average_gene_names=None, *, evidence=None):
+    """Validate literature coverage, classic symbols and exact plotting features."""
+    if SUMMARY_SHEET not in workbook or LITERATURE_SHEET not in workbook:
+        raise ValueError(f"工作簿必须包含 {SUMMARY_SHEET} 和 {LITERATURE_SHEET}")
+    summary = workbook[SUMMARY_SHEET]
+    literature = workbook[LITERATURE_SHEET]
+
+    summary_headers = [cell.value for cell in summary[1]]
+    literature_headers = [cell.value for cell in literature[1]]
+    literature_key = LITERATURE_HEADERS[0]
+    if "Celltype_EN" not in summary_headers or literature_key not in literature_headers:
+        raise ValueError(f"工作簿必须包含 {SUMMARY_SHEET}.Celltype_EN 和 {LITERATURE_SHEET}.{literature_key}")
+
+    summary_col = summary_headers.index("Celltype_EN") + 1
+    literature_col = literature_headers.index(literature_key) + 1
+    expected = {row[0] for row in summary.iter_rows(min_row=2, min_col=summary_col, max_col=summary_col, values_only=True)}
+    matrix_genes = set(average_gene_names or (evidence or {}).get("average_gene_names") or [])
+
+    def check_plot_markers(sheet_name, cell, label):
+        if matrix_genes and cell.value not in (None, ""):
+            missing = [gene for gene in str(cell.value).split(MARKER_SEPARATOR) if gene not in matrix_genes]
+            if missing:
+                raise ValueError(f"{sheet_name}!{cell.coordinate}（{label}）的绘图 Marker 与矩阵原名不匹配：{missing}")
+
+    if matrix_genes:
+        if "关键 Marker" not in summary_headers:
+            raise ValueError(f"工作簿必须包含 {SUMMARY_SHEET}.关键 Marker")
+        marker_col = summary_headers.index("关键 Marker") + 1
+        for row_index in range(2, summary.max_row + 1):
+            label = summary.cell(row_index, summary_col).value
+            if not is_qc_label(label):
+                check_plot_markers(SUMMARY_SHEET, summary.cell(row_index, marker_col), label)
+
+    labels = Counter()
+    for row in literature.iter_rows(min_row=2, max_col=max(7, literature_col)):
+        label = row[literature_col - 1].value
+        if label is None or not str(label).strip():
+            raise ValueError(f"{LITERATURE_SHEET}!{row[literature_col - 1].coordinate} 的 {literature_key} 为空")
+        labels[label] += 1
+        qc_row = row[1].value == QC_LITERATURE or is_qc_label(label)
+        placeholder = bool(re.match(r"^(?:unresolved|unassigned|unannotated)(?:_|$)", str(label), re.I))
+        allow_empty_classic = qc_row or placeholder or row[1].value == NO_DIRECT_LITERATURE
+        for cell in row[:7]:
+            if cell.column == 6 or (cell.column == 5 and allow_empty_classic):
+                continue
+            if cell.value is None or not str(cell.value).strip():
+                raise ValueError(f"{LITERATURE_SHEET}!{cell.coordinate}（{label}）的第 {cell.column} 列为空")
+        classic = row[4]
+        classic_text = str(classic.value or "").strip()
+        if not (qc_row or placeholder) and classic_text and classic_text.upper() != "NA":
+            invalid = [gene for gene in classic_text.split(MARKER_SEPARATOR) if not is_classic_marker(gene)]
+            if invalid:
+                raise ValueError(
+                    f"{LITERATURE_SHEET}!{classic.coordinate}（{label}）的第 5 列包含非官方经典基因符号：{invalid}"
+                )
+        if not qc_row:
+            check_plot_markers(LITERATURE_SHEET, row[5], label)
+
+    duplicates = sorted((label for label, count in labels.items() if count > 1), key=str)
+    missing = sorted(expected - labels.keys(), key=str)
+    extra = sorted(labels.keys() - expected, key=str)
+    if duplicates or missing or extra:
+        raise ValueError(f"{LITERATURE_SHEET} 标签不匹配：重复 {duplicates}；缺少 {missing}；多余 {extra}")
+
+
 def build_workbook(records, evidence, output, annotation_level, skill_name, skill_version, umap_audit=None):
     clusters = sorted((str(item) for item in evidence.get("clusters", [])), key=cluster_sort_key)
     records = normalize_records(records, evidence, umap_audit)
     validate(records, clusters, evidence, umap_audit, annotation_level)
+    literature_rows = build_7column_literature_rows(records, evidence)
+    classic_by_label = {row[0]: row[4] for row in literature_rows}
+    gene_map = (
+        load_gene_map(evidence.get("source_paths", {}).get("gene_map"))
+        if evidence.get("average_gene_names") else None
+    )
+    cluster_markers, type_markers = _sanitize_plot_markers(records, classic_by_label, evidence, gene_map)
 
     wb = Workbook()
     summary_ws = wb.active
@@ -1062,6 +1183,7 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
     source_ws.append(SOURCE_HEADERS)
 
     for record in records:
+        record["key_markers_short"] = cluster_markers[record["cluster_id"]]
         summary_ws.append([human_value(record.get(field, "")) for field in SUMMARY_FIELDS])
         audit_ws.append([human_value(record.get(field, "")) for field in AUDIT_FIELDS])
 
@@ -1084,42 +1206,23 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         c_hex = palette_pool[idx % len(palette_pool)]
         colors_ws.append([ctype, c_hex])
 
-    try:
-        from literature_resolver import build_7column_literature_rows
-        lit_rows = build_7column_literature_rows(records, evidence)
-        for label, locator, citation, study_context, classic, used, rationale, url in lit_rows:
-            literature_ws.append([label, locator, citation, study_context, classic, used, rationale])
-            if url:
-                literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
-                literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
-    except Exception:
-        for label, citation, classic, used, url in _literature_rows(records, evidence):
-            literature_ws.append([label, citation, "", "", classic, used, ""])
-            if url:
-                literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
-                literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
-
-    for r_idx in range(2, literature_ws.max_row + 1):
-        for c_idx in range(1, 7):
-            cell_val = str(literature_ws.cell(r_idx, c_idx).value or "").strip()
-            if not cell_val:
-                header_name = literature_ws.cell(1, c_idx).value
-                row_label = literature_ws.cell(r_idx, 1).value
-                raise ValueError(
-                    f"Sheet '细胞类型与文献' cell {row_label} col {c_idx} ('{header_name}') must not be empty"
-                )
-        c7_val = str(literature_ws.cell(r_idx, 7).value or "").strip()
-        if not c7_val:
-            literature_ws.cell(r_idx, 7, value="依据样本高变与差异 Marker 特异性富集特征独立确立。")
+    for label, locator, citation, study_context, classic, _, rationale, url in literature_rows:
+        used = type_markers[label]
+        if locator == QC_LITERATURE and not used:
+            used = "质控群暂无可绘图标记"
+        literature_ws.append([label, locator, citation, study_context, classic, used, rationale])
+        if url:
+            literature_ws.cell(literature_ws.max_row, 2).hyperlink = url
+            literature_ws.cell(literature_ws.max_row, 2).style = "Hyperlink"
 
     for row in _source_rows(evidence, annotation_level, records, skill_name, skill_version):
         source_ws.append(row)
 
-    _style_sheet(summary_ws, [10, 26, 28, 16, 22, 12, 34, 58, 36, 64], "D2", 24, center_cols={1, 4, 6})
-    _style_sheet(audit_ws, [10, 26, 28, 12, 44, 34, 64, 32, 18, 34, 48], "D2", 24, center_cols={1, 4, 9})
-    _style_sheet(colors_ws, [28, 18], "A2", 22, center_cols={2})
-    _style_sheet(literature_ws, [26, 36, 55, 22, 38, 50, 68], "B2", 24, center_cols=set())
-    _style_sheet(source_ws, [30, 92], "A2", 24, center_cols=set())
+    _style_sheet(summary_ws, SUMMARY_WIDTHS, "D2", 24, center_cols={1, 4, 6})
+    _style_sheet(audit_ws, AUDIT_WIDTHS, "D2", 24, center_cols={1, 4, 9})
+    _style_sheet(colors_ws, COLOR_WIDTHS, "A2", 22, center_cols={2})
+    _style_sheet(literature_ws, LITERATURE_WIDTHS, "B2", 24, center_cols=set())
+    _style_sheet(source_ws, SOURCE_WIDTHS, "A2", 24, center_cols=set())
 
     link_font = Font(name="Cambria", size=11, color="0563C1", underline="single")
     for r_idx in range(2, literature_ws.max_row + 1):
@@ -1145,23 +1248,29 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
             except Exception:
                 pass
 
-    warn_fill = PatternFill("solid", fgColor=WARN_FILL_RGB)
-    warn_font = Font(name="Cambria", size=11, bold=True, color=WARN_FONT_RGB)
-    pass_fill = PatternFill("solid", fgColor=PASS_FILL_RGB)
-    pass_font = Font(name="Cambria", size=11, bold=True, color=PASS_FONT_RGB)
+    qc_colors = {
+        "建议过滤": (WARN_FILL_RGB, WARN_FONT_RGB),
+        "复核": (REVIEW_FILL_RGB, REVIEW_FONT_RGB),
+        "保留": (PASS_FILL_RGB, PASS_FONT_RGB),
+    }
+    qc_styles = {
+        verdict: (
+            PatternFill("solid", fgColor=fill_rgb),
+            Font(name="Cambria", size=11, bold=True, color=font_rgb),
+        )
+        for verdict, (fill_rgb, font_rgb) in qc_colors.items()
+    }
     for row_index, record in enumerate(records, 2):
-        if record.get("_is_warning", _warning(record)):
-            for ws_target, col_idxs in ((summary_ws, (2, 6)), (audit_ws, (2, 4))):
-                for c_idx in col_idxs:
-                    cell = ws_target.cell(row_index, c_idx)
-                    cell.fill = warn_fill
-                    cell.font = warn_font
-        else:
-            for ws_target, c_idx in ((summary_ws, 6), (audit_ws, 4)):
-                cell = ws_target.cell(row_index, c_idx)
-                cell.fill = pass_fill
-                cell.font = pass_font
+        verdict = record["qc_verdict"]
+        fill, font = qc_styles[verdict]
+        for sheet, qc_column in ((summary_ws, 6), (audit_ws, 4)):
+            columns = (qc_column,) if verdict == "保留" else (2, qc_column)
+            for column in columns:
+                cell = sheet.cell(row_index, column)
+                cell.fill = fill
+                cell.font = font
 
+    validate_workbook_content(wb, evidence=evidence)
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
@@ -1184,6 +1293,7 @@ def build_workbook(records, evidence, output, annotation_level, skill_name, skil
         order = [str(check[sheet].cell(row, 1).value) for row in range(2, len(records) + 2)]
         if order != clusters:
             raise RuntimeError(f"{sheet} cluster order mismatch: {order} != {clusters}")
+    check.close()
     deprecated = sorted({key for record in records for key in record if key in {
         "confidence", "quality_score", "primary_evidence_score", "runner_up_evidence_score",
         "score_margin", "rival_lineage_score", "ranked_identity_evidence"

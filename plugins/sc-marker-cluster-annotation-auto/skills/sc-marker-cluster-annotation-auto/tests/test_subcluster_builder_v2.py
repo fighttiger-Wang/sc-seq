@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
 from PIL import Image, ImageDraw
 
 
@@ -22,11 +23,11 @@ def _core_provenance(evidence):
     }
 
 
-def _umap_facts(work, name, clusters, nearest_k):
+def _umap_facts(work, name, clusters, nearest_k, adjacency_px=0):
     image_path = work / f"{name}.png"
-    image = Image.new("RGB", (80, 80), "white")
+    image = Image.new("RGB", (100, 80), "white")
     draw = ImageDraw.Draw(image)
-    palette = [(230, 112, 112), (72, 145, 210), (86, 177, 132), (241, 174, 56)]
+    palette = [(230, 112, 112), (72, 145, 210), (86, 177, 132), (241, 174, 56), (151, 122, 198)]
     colors = {}
     for index, cluster in enumerate(clusters):
         x = 5 + index * 18
@@ -37,7 +38,7 @@ def _umap_facts(work, name, clusters, nearest_k):
     import sys as _sys
     _sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
     import umap_image_facts
-    facts = umap_image_facts.generate(image_path, colors, (0, 0, 80, 80), nearest_k=nearest_k, adjacency_px=0)
+    facts = umap_image_facts.generate(image_path, colors, (0, 0, 100, 80), nearest_k=nearest_k, adjacency_px=adjacency_px)
     facts_path = work / f"{name}_facts.json"
     facts_path.write_text(json.dumps(facts, ensure_ascii=False, indent=2), encoding="utf-8")
     return image_path, facts_path, facts
@@ -52,6 +53,8 @@ def main():
     bundled_skill = Path(__file__).resolve().parents[1]
     repo = next((parent for parent in Path(__file__).resolve().parents if (parent / "skill-pack.json").is_file()), None)
     skill = repo / "plugins" / "sc-marker-cluster-annotation-auto" / "skills" / "sc-marker-cluster-annotation-auto" if repo else bundled_skill
+    sys.path.insert(0, str(skill / "scripts"))
+    from qualitative_annotation_workbook import validate_workbook_content
     evidence = {
         "clusters": ["3", "0", "1"], "average_shape": [8, 3], "average_reader": "test",
         "confirmed_metadata": {"species": "Human", "tissue": "fetal lung", "annotation_level": "subcluster", "parent_population": "T_NK", "annotation_constraints": {"exclude_labels": [], "conflict_markers": []}},
@@ -68,10 +71,22 @@ def main():
         },
         "annotation_evidence_policy": {"decision_model": "qualitative_biological_gates"},
     }
-    first_image, first_facts_path, first_facts = _umap_facts(work, "umap", ["0", "1", "3"], nearest_k=0)
+    extra_label = "Uncatalogued_T_state_with_long_label_for_width"
+    evidence["clusters"].extend(["4", "5"])
+    decisions = evidence["qualitative_annotation_evidence"]
+    decisions["4"] = dict(decisions["0"])
+    decisions["5"] = {
+        "stable_id": extra_label, "primary_program": extra_label,
+        "candidate_program_audits": [],
+        "qualitative_gates": {"identity_anchor": "通过", "sibling_competition": "通过"},
+    }
+    first_image, first_facts_path, first_facts = _umap_facts(
+        work, "umap", ["0", "4", "1", "3", "5"], nearest_k=0, adjacency_px=14,
+    )
     evidence["source_paths"]["umap"] = str(first_image)
     _core_provenance(evidence)
     rows = [("3", "γδT细胞", "gdT", "TRDC"), ("0", "初始T细胞", "Tn", "CCR7"), ("1", "NK细胞", "NK_cell", "FGFBP2")]
+    rows += [("4", "初始T细胞", "Tn", "CCR7"), ("5", "未收录T细胞状态", extra_label, "CCR7")]
     records = [{
         "cluster_id": cluster, "celltype_cn": cn, "celltype_en": en, "stable_id": en,
         "broad_type": "T_NK", "supporting_markers": marker, "candidate_labels": en,
@@ -93,6 +108,35 @@ def main():
             "display_name_type": "full_name",
             "expert_name_review": "approved",
         })
+    by_cluster = {record["cluster_id"]: record for record in records}
+    evidence["average_gene_names"] = ["CCR7", "FGFBP2", "TRDC", "Lyve1", "Cd14", "RT1-Db1", "mpeg1.1", "RareDeg"]
+    gene_map = work / "gene_map.tsv"
+    gene_map.write_text("source_gene\tcanonical_gene\nmpeg1.1\tZFIN_ALIAS\n", encoding="utf-8")
+    evidence["source_paths"]["gene_map"] = str(gene_map)
+    by_cluster["0"]["supporting_markers"] = [
+        {"gene": "RareDeg", "p_in": 0.6}, {"gene": "LYVE1"}, {"gene": "CD14"},
+        {"gene": "RT1-DB1"}, {"gene": "ZFIN_ALIAS"}, {"gene": "GhostGene"},
+    ]
+    by_cluster["0"]["literature_details"] = [
+        {"title": "Adopted Tn reference", "url": "https://example.org/subcluster/adopted",
+         "supported_program": ["IFIT 家族", "Lyve1; CD11b（分型）", "Cd14、RT1-Db1；mpeg1.1", "mhc-ii"]},
+        {"title": "Other Tn candidate", "pmid": "98765431"},
+    ]
+    by_cluster["5"].pop("literature_details")
+    by_cluster["5"]["supporting_markers"] = [{"gene": "GhostGene"}]
+    by_cluster["5"]["celltype_cn"] = "仅用于紧凑简表宽度测试的未收录细胞类型中文名称"
+    same_label_peer = {"0": ["4"], "4": ["0"]}
+    by_cluster["1"].update(
+        expert_review_status="conditional", downstream_eligible=False,
+        validation_advice="Check reproducibility within the NK lineage.",
+        exclusion_markers=["EPCAM"],
+    )
+    by_cluster["3"].update(
+        expert_review_status="conditional", downstream_eligible=False,
+        validation_advice="Check cross-lineage signals and possible doublets.",
+        qualitative_gates={"off_parent": "未确定", "mixed_doublet": "未确定"},
+        exclusion_markers=["EPCAM"],
+    )
     ep, rp, up, output = work / "evidence.json", work / "records.json", work / "umap_audit.json", work / "subcluster.xlsx"
     ep.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     rp.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -110,8 +154,8 @@ def main():
             "identity_action": "retain",
             "provisional_label": en,
             "resolved_label": en,
-            "same_label_clusters": [],
-            "same_label_topology": "not_applicable",
+            "same_label_clusters": same_label_peer.get(cluster, []),
+            "same_label_topology": "adjacent" if cluster in same_label_peer else "not_applicable",
             "separation_explanation": "none",
             "separation_evidence": "",
         }
@@ -127,6 +171,11 @@ def main():
         raise RuntimeError(completed.stdout + completed.stderr)
     workbook = load_workbook(output)
     assert workbook.sheetnames == ["注释结果总览", "质控与深度审计", "细胞配色", "细胞类型与文献", "说明与数据来源"]
+    for sheet, widths in zip(workbook.worksheets, (
+        [10, 22, 26, 16, 18, 11, 30, 40, 28, 44], [10, 22, 26, 11, 32, 28, 42, 28, 18, 24, 36],
+        [26, 14], [26, 32, 40, 22, 32, 42, 44], [30, 58],
+    )):
+        assert [sheet.column_dimensions[get_column_letter(i)].width for i in range(1, sheet.max_column + 1)] == widths
     assert [workbook["注释结果总览"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
     assert [workbook["质控与深度审计"].cell(row, 1).value for row in range(2, 5)] == ["0", "1", "3"]
     summary_headers = {cell.value: cell.column for cell in workbook["注释结果总览"][1]}
@@ -134,9 +183,19 @@ def main():
     for hdr_map in (summary_headers, audit_headers):
         assert "质量评分" not in hdr_map and "置信度" not in hdr_map
         assert "验证建议" not in hdr_map and "下游处理建议" not in hdr_map
-    assert workbook["注释结果总览"].cell(3, summary_headers["中文名称"]).fill.fgColor.rgb == "FFFDE8E8"
-    assert workbook["注释结果总览"].cell(3, summary_headers["质控结论"]).value == "建议复核"
-    assert workbook["注释结果总览"].cell(3, summary_headers["质控结论"]).fill.fgColor.rgb == "FFFDE8E8"
+    for sheet, headers in ((workbook["注释结果总览"], summary_headers), (workbook["质控与深度审计"], audit_headers)):
+        for row, verdict, fill, font in (
+            (3, "复核", "FFF3F4F6", "374151"),
+            (4, "建议过滤", "FFFDE8E8", "9C0006"),
+        ):
+            assert sheet.cell(row, headers["质控结论"]).value == verdict
+            for field in ("中文名称", "质控结论"):
+                cell = sheet.cell(row, headers[field])
+                assert cell.fill.fgColor.rgb == fill
+                assert cell.font.color.rgb[-6:] == font
+    exclusion_column = audit_headers["阴性排除验证"]
+    assert workbook["质控与深度审计"].cell(3, exclusion_column).value.startswith("已排除: ")
+    assert workbook["质控与深度审计"].cell(4, exclusion_column).value.startswith("跨谱系冲突: ")
     assert workbook["注释结果总览"].cell(2, summary_headers["质控结论"]).value == "保留"
     assert workbook["注释结果总览"].cell(2, summary_headers["质控结论"]).fill.fgColor.rgb == "FFE6F4EA"
     core_text = workbook["注释结果总览"].cell(3, summary_headers["核心定量摘要"]).value
@@ -149,17 +208,83 @@ def main():
     assert all(not cell.alignment.wrap_text for sheet in workbook.worksheets for row in sheet.iter_rows() for cell in row)
     assert workbook["注释结果总览"]["A1"].font.name == "Cambria"
     assert workbook["注释结果总览"]["A1"].font.sz == 11
-    lit_cell = workbook["细胞类型与文献"].cell(2, 2)
-    assert lit_cell.value == "DOI:10.1000/test.subcluster; PMID:12345678"
-    assert lit_cell.hyperlink.target == "https://doi.org/10.1000/test.subcluster"
-    # Enforce non-empty columns 1-7 in 细胞类型与文献
-    for r in range(2, workbook["细胞类型与文献"].max_row + 1):
-        for c in range(1, 8):
-            assert bool(str(workbook["细胞类型与文献"].cell(r, c).value or "").strip()), f"Cell ({r}, {c}) empty"
-    classic_cell = workbook["细胞类型与文献"].cell(2, 5)
-    assert bool(str(classic_cell.value or "").strip()), "Column 5 Classic Markers must not be empty"
+    assert [cell.value for cell in workbook["注释结果总览"]["C"][1:]].count("Tn") == 2
+    literature = workbook["细胞类型与文献"]
+    assert [cell.value for cell in literature["A"][1:]] == ["Tn", "NK_cell", "gdT", extra_label]
+    assert literature["C2"].value == "Adopted Tn reference"
+    assert literature["B2"].hyperlink.target == "https://example.org/subcluster/adopted"
+    assert "暂无直接同源文献" in literature["G5"].value
+    assert literature["E5"].value == "NA" and literature["F5"].value is None
+    assert literature["B3"].value == "DOI:10.1000/test.subcluster; PMID:12345678"
+    assert literature["B3"].hyperlink.target == "https://doi.org/10.1000/test.subcluster"
+    expected_markers = "Lyve1, Cd14, RT1-Db1, mpeg1.1, CCR7, RareDeg"
+    summary = workbook["注释结果总览"]
+    assert summary["G2"].value == literature["F2"].value == expected_markers
+    assert literature["E2"].value == "Lyve1, Cd14, RT1-Db1, mpeg1.1"
+    assert summary["G6"].value is None
+    validate_workbook_content(workbook, evidence=evidence)
+    literature["E5"] = None
+    validate_workbook_content(workbook, evidence=evidence)
+    literature["E5"] = "NA"
+    for cell, bad_values in (
+        (literature["E2"], ("IFIT 家族", "CD11b（分型）", "MHC-II", "DNAH genes")),
+        (literature["F2"], ("GhostGene",)),
+        (summary["G2"], ("GhostGene",)),
+    ):
+        original = cell.value
+        for bad in bad_values:
+            cell.value = bad
+            try:
+                validate_workbook_content(workbook, evidence=evidence)
+            except ValueError as exc:
+                assert cell.coordinate in str(exc) and bad in str(exc), exc
+            else:
+                raise AssertionError(f"Accepted invalid marker content {bad!r} at {cell.coordinate}")
+        cell.value = original
     s5_map = {str(workbook["说明与数据来源"].cell(r, 1).value or "").strip(): str(workbook["说明与数据来源"].cell(r, 2).value or "").strip() for r in range(2, workbook["说明与数据来源"].max_row + 1)}
     assert s5_map.get("项目共性背景与质控说明") == "测试共性质控说明"
+
+    qa = json.loads(output.with_suffix(".qa.json").read_text(encoding="utf-8"))
+    brief_dir = work / "brief_delivery"
+    brief_copy = subprocess.run([
+        sys.executable, str(skill / "scripts" / "copy_final_workbook.py"),
+        "--source", str(output), "--workspace-root", str(work.parents[1]), "--destination", str(brief_dir),
+    ], capture_output=True, encoding="utf-8")
+    assert brief_copy.returncode == 0, brief_copy
+    brief = load_workbook(brief_dir / "cluster注释信息.xlsx")
+    assert [brief.active.column_dimensions[col].width for col in "ABC"] == [10, 32, 32]
+    assert brief.active["B6"].value == extra_label and brief.active["C6"].value == by_cluster["5"]["celltype_cn"]
+    brief.close()
+    duplicate_source = work / "duplicate_literature.xlsx"
+    workbook["细胞类型与文献"].cell(3, 1).value = "Tn"
+    workbook.save(duplicate_source)
+    qa["workbook_sha256"] = hashlib.sha256(duplicate_source.read_bytes()).hexdigest()
+    duplicate_source.with_suffix(".qa.json").write_text(json.dumps(qa), encoding="utf-8")
+    rejected_destination = work / "rejected_literature" / duplicate_source.name
+    duplicate_copy = subprocess.run([
+        sys.executable, str(skill / "scripts" / "copy_final_workbook.py"),
+        "--source", str(duplicate_source), "--workspace-root", str(work.parents[1]),
+        "--destination", str(rejected_destination),
+    ], capture_output=True, encoding="utf-8")
+    assert duplicate_copy.returncode == 2, duplicate_copy
+    error = json.loads(duplicate_copy.stdout)["error"]
+    assert "重复 ['Tn']" in error and "缺少 ['NK_cell']" in error, error
+    assert not rejected_destination.parent.exists()
+
+    literature["A3"] = "NK_cell"
+    literature["G2"] = None
+    empty_source = work / "empty_literature.xlsx"
+    workbook.save(empty_source)
+    qa["workbook_sha256"] = hashlib.sha256(empty_source.read_bytes()).hexdigest()
+    empty_source.with_suffix(".qa.json").write_text(json.dumps(qa), encoding="utf-8")
+    empty_copy = subprocess.run([
+        sys.executable, str(skill / "scripts" / "copy_final_workbook.py"),
+        "--source", str(empty_source), "--workspace-root", str(work.parents[1]),
+        "--destination", str(rejected_destination),
+    ], capture_output=True, encoding="utf-8")
+    assert empty_copy.returncode == 2, empty_copy
+    assert "细胞类型与文献!G2（Tn）的第 7 列为空" in json.loads(empty_copy.stdout)["error"]
+    assert not rejected_destination.parent.exists()
 
     # A label that disagrees with the qualitative core must not be made
     # acceptable by copying the same label into the workbook-facing record.
@@ -322,12 +447,29 @@ def main():
     result_headers = {cell.value: cell.column for cell in myeloid_book["注释结果总览"][1]}
     assert myeloid_book["注释结果总览"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).value == "经典单核细胞"
     assert myeloid_book["注释结果总览"].cell(anno_row_numbers["B2"], result_headers["Celltype_EN"]).value == "DC3"
-    assert myeloid_book["注释结果总览"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).fill.fgColor.rgb == "FFFDE8E8"
+    assert myeloid_book["注释结果总览"].cell(anno_row_numbers["A1"], result_headers["中文名称"]).fill.fgColor.rgb == "FFF3F4F6"
 
     # Mixed-depth ontology labels preserve the evidence-supported leaf instead
     # of hiding it under a co-occurring registered parent.
     sys.path.insert(0, str(skill / "scripts"))
     import qualitative_annotation_workbook as contract  # noqa: WPS433
+    qc_cases = [
+        {"suspected_doublet": True},
+        {"boundary_flags": "off_parent"},
+        {"off_parent_gate": "failed"},
+        {"exclusion_gate": "fail"},
+        {"doublet_gate": "不通过"},
+        {"cross_lineage_gate": "未确定", "doublet_gate": "uncertain"},
+    ]
+    for fields in qc_cases:
+        record = {
+            "cluster_id": "0", "celltype_en": "Tn", "expert_review_status": "passed",
+            "downstream_eligible": True, "exclusion_markers": ["EPCAM"], **fields,
+        }
+        normalized = contract.normalize_records([record], {})[0]
+        assert normalized["qc_verdict"] == "建议过滤", fields
+        assert normalized["exclusion_summary"].startswith("跨谱系冲突: "), fields
+
     mixed_records = [
         {"cluster_id": "2", "stable_id": "Tissue_resident_macrophage", "celltype_en": "Tissue_resident_macrophage", "celltype_cn": "组织驻留巨噬细胞"},
         {"cluster_id": "3", "stable_id": "Macrophage", "celltype_en": "Macrophage", "celltype_cn": "巨噬细胞"},
@@ -472,7 +614,7 @@ def main():
     assert "Mast_cell" not in comp_norm["11"]["candidate_labels"]
     assert "TNNT2(log2FC=2.5, 96.6%/60.2%)" in comp_norm["7"]["exclusion_summary"]
 
-    print(json.dumps({"status": "pass", "checks": 33, "output": str(output)}, ensure_ascii=False))
+    print(json.dumps({"status": "pass", "checks": 36, "output": str(output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

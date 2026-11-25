@@ -10,11 +10,11 @@
     },
     {
       "id": "sc-major-celltype-annotation-auto",
-      "version": "0.9.5+codex.20261124121615"
+      "version": "0.9.6+codex.20261125030246"
     },
     {
       "id": "sc-marker-cluster-annotation-auto",
-      "version": "0.12.4+codex.20261124121616"
+      "version": "0.12.5+codex.20261125030358"
     },
     {
       "id": "annotation-knowledge-release",
@@ -95,7 +95,7 @@
     },
     {
       "id": "local-agent-delegate",
-      "version": "1.2.2+codex.20261124143646"
+      "version": "1.2.3+codex.20261125030317"
     },
     {
       "id": "e07-dispatch",
