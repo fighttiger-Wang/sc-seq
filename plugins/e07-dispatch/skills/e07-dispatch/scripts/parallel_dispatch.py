@@ -14,6 +14,7 @@ E07 · 三级阶梯智能派发与跨池额度接力中心 v1.2.0
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import shutil
@@ -21,11 +22,13 @@ import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
+if __name__ == "__main__":
+    sys.dont_write_bytecode = True
 import model_radar
 
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -261,10 +264,7 @@ def model_matrix() -> dict[str, dict[str, Any]]:
 
 
 POOL_DEFAULTS = {
-    "1": "1A",
-    "2": "2A",
-    "3": "3A",
-    "4": "4A",
+    **model_radar.load_policy()["native_pool_defaults"],
     "8": "8A",
     "9": "9B",
 }
@@ -299,14 +299,63 @@ def expand_exhausted_buckets(raw_exhausted: set[str]) -> set[str]:
     return expanded
 
 
-def is_deepseek_half_price_window(now: datetime | None = None) -> tuple[bool, str]:
-    """判断当前是否处于 DeepSeek 空闲半价时段。
-    规则：北京时间周一至周五（不含中国法定节假日）09:00-12:00、14:00-18:00 为高峰原价时段；
-    其余时段及周末/中国法定节假日全天均为空闲半价时段。
-    """
+def deepseek_pricing(now: datetime | None = None) -> dict[str, Any]:
     bj_now = now.astimezone(BJ_TZ) if now else datetime.now(BJ_TZ)
-    is_peak = bj_now.weekday() < 5 and ((9 <= bj_now.hour < 12) or (14 <= bj_now.hour < 18))
-    return (not is_peak), bj_now.strftime("%H:%M")
+    today = bj_now.date()
+    bj_time = bj_now.strftime("%H:%M")
+    policy = model_radar.load_policy()["dsh_defaults"]
+    calendar = policy.get("china_holiday_calendar", {}).get(str(today.year))
+    verified_at = date.fromisoformat(policy["half_price_rule_verified_at"])
+    reasons = []
+    day_type = None
+    if calendar is None:
+        reasons.append(f"{today.year} 年中国节假日表未覆盖")
+    else:
+        iso_day = today.isoformat()
+        if any(start <= iso_day <= end for start, end in calendar["holiday_ranges"]):
+            day_type = "holiday"
+        elif iso_day in calendar["makeup_workdays"]:
+            day_type = "makeup_workday"
+        else:
+            day_type = "weekend" if today.weekday() >= 5 else "weekday"
+    if (today - verified_at).days > policy["half_price_review_days"]:
+        reasons.append("DeepSeek 半价规则已超期未复核")
+    if reasons:
+        half_price = None
+        status = "unverified"
+        label = "待核实/unverified：" + "；".join(reasons)
+    else:
+        peak_hours = 9 <= bj_now.hour < 12 or 14 <= bj_now.hour < 18
+        half_price = not (today.weekday() < 5 and day_type != "holiday" and peak_hours)
+        status = "off_peak" if half_price else "peak"
+        label = "空闲半价" if half_price else "高峰原价"
+        if day_type == "makeup_workday":
+            label += "（周末调休补班；按官方周末时段规则）"
+    return {
+        "deepseek_half_price_window": half_price,
+        "deepseek_pricing_status": status,
+        "china_calendar_day_type": day_type,
+        "beijing_time": bj_time,
+        "half_price_note": f"DeepSeek {label}（北京时间 {bj_time}）",
+    }
+
+
+def is_deepseek_half_price_window(now: datetime | None = None) -> tuple[bool | None, str]:
+    pricing = deepseek_pricing(now)
+    return pricing["deepseek_half_price_window"], pricing["beijing_time"]
+
+
+def retirement_warnings(slugs: list[str], today: date | None = None) -> list[dict[str, Any]]:
+    today = today or datetime.now(BJ_TZ).date()
+    warnings = []
+    for notice in model_radar.load_policy().get("retirement_notices", []):
+        pattern = notice["pattern"]
+        if not any(slug == pattern or slug.startswith(pattern + "-") for slug in slugs):
+            continue
+        days = (date.fromisoformat(notice["retires_on"]) - today).days
+        if days <= 14:
+            warnings.append({**notice, "status": "past" if days < 0 else "upcoming", "days_remaining": days})
+    return warnings
 
 
 def load_env_config() -> dict[str, Any]:
@@ -326,13 +375,14 @@ def load_env_config() -> dict[str, Any]:
     }
 
 
-def get_tasks_dir() -> Path:
+def get_tasks_dir(*, create: bool = False) -> Path:
     cfg = load_env_config()
     td = model_radar.tasks_dir()
     if not os.environ.get("E07_TASKS_DIR") and cfg.get("tasks_dir"):
         td = Path(cfg["tasks_dir"])
-    td.mkdir(parents=True, exist_ok=True)
-    return td
+    if create:
+        td.mkdir(parents=True, exist_ok=True)
+    return td.resolve()
 
 
 def get_cooldown_file() -> Path:
@@ -370,7 +420,9 @@ def set_codex_cooldown(minutes: int, reason: str) -> dict[str, Any]:
         "reason": reason,
         "updated_at": datetime.now(BJ_TZ).isoformat(),
     }
-    get_cooldown_file().write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (get_tasks_dir(create=True) / "codex_cooldown.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return {"status": "COOLDOWN_SET", **payload}
 
 
@@ -543,7 +595,6 @@ def _build_native_payload(
     dispatch_mode: str = "native",
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    half_price, bj_time = is_deepseek_half_price_window()
     all_exhausted = model_exhausted(resolved["selected_model_slug"].lower(), exhausted_set)
     payload: dict[str, Any] = {
         "status": status,
@@ -559,8 +610,8 @@ def _build_native_payload(
         "fallback_chain": resolved["fallback_chain"],
         "all_native_exhausted": all_exhausted,
         "deepseek_consult_recommended": all_exhausted,
-        "deepseek_half_price_window": half_price,
-        "beijing_time": bj_time,
+        **deepseek_pricing(),
+        "retirement_warnings": retirement_warnings([resolved["primary_model_slug"], resolved["selected_model_slug"]]),
         "workspace": workspace,
         "invoke_subagent_args": {
             "TypeName": "self",
@@ -608,12 +659,6 @@ def dispatch_task(
     raw_exhausted = {s.strip() for s in exhausted_csv.split(",") if s.strip()}
     exhausted_set = expand_exhausted_buckets(raw_exhausted)
     cfg = load_env_config()
-    half_price, bj_time = is_deepseek_half_price_window()
-    half_price_note = (
-        f"当前处于 DeepSeek 空闲半价时段（北京时间 {bj_time}；除工作日 09:00–12:00、14:00–18:00 外及周末/中国法定节假日全天均为半价）"
-        if half_price
-        else f"当前处于工作日高峰原价时段（北京时间 {bj_time}；周一至周五 09:00–12:00、14:00–18:00 为高峰，若当天为中国法定节假日则全天半价）"
-    )
 
     # Tier 2: 客户端内置两大共享池
     if item["tier"] == "native_free":
@@ -637,7 +682,7 @@ def dispatch_task(
             fallback_reason = "codex_binary_not_found"
 
         if fallback_reason:
-            fb_code = item.get("native_fallback_code", "2A")
+            fb_code = item.get("native_fallback_code", POOL_DEFAULTS["2"])
             fb_item = resolve_choice(fb_code)
             fb_resolved = resolve_with_quota_fallback(fb_item, exhausted_set)
             fb_resolved["fallback_triggered"] = True
@@ -658,7 +703,7 @@ def dispatch_task(
         sub_env = _build_subprocess_env(cfg, codex_bin=codex_bin)
     else:
         # Tier 3: 按量付费 DeepSeek 咨询席（永不自动调用，必须询问用户）
-        if not dry_run and not user_confirmed:
+        if not user_confirmed:
             return {
                 "status": "ASK_USER_CONFIRMATION_REQUIRED",
                 "dispatch_mode": "payg_ask_first",
@@ -667,9 +712,7 @@ def dispatch_task(
                 "choice_code": item["code"],
                 "runner": item["runner"],
                 "selected_model": item["slug"],
-                "deepseek_half_price_window": half_price,
-                "beijing_time": bj_time,
-                "half_price_note": half_price_note,
+                **deepseek_pricing(),
                 "message": "DeepSeek 为即时按量付费模型，请先向用户确认（附半价时段提示）并加 --user-confirmed 再启动。",
             }
         sub_env = _build_subprocess_env(cfg)
@@ -693,7 +736,7 @@ def dispatch_task(
         model_slug,
     ]
     if runner == "dsh":
-        cmd.extend(["--dsh-provider", item["provider"]])
+        cmd.extend(["--dsh-provider", item["provider"], "--user-confirmed"])
     if role:
         cmd.extend(["--role", role])
     if refresh:
@@ -723,10 +766,12 @@ def dispatch_task(
             if proc.returncode == 0 else "DELEGATE_DRY_RUN_FAILED",
             "dispatch_mode": "payg_ask_first" if is_payg else "codex_subscription",
             "paid_external_triggered": False,
-            "ask_user_required": (is_payg and not user_confirmed),
-            "deepseek_half_price_window": half_price if is_payg else None,
-            "beijing_time": bj_time,
-            "half_price_note": half_price_note if is_payg else None,
+            "ask_user_required": False,
+            **(deepseek_pricing() if is_payg else {
+                "deepseek_half_price_window": None,
+                "beijing_time": datetime.now(BJ_TZ).strftime("%H:%M"),
+                "half_price_note": None,
+            }),
             "choice_code": item["code"],
             "runner": runner,
             "selected_model": model_slug,
@@ -734,7 +779,7 @@ def dispatch_task(
             "delegate_dry_run": delegate_payload,
         }
 
-    tasks_dir = get_tasks_dir()
+    tasks_dir = get_tasks_dir(create=True)
     task_id = f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
     task_dir = tasks_dir / task_id
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -747,12 +792,13 @@ def dispatch_task(
 
     with open(log_file, "w", encoding="utf-8") as out_fp:
         proc = subprocess.Popen(
-            cmd,
+            [sys.executable, str(Path(__file__).resolve()), "--_run-task", str(task_dir), *cmd],
             stdout=out_fp,
             stderr=subprocess.STDOUT,
             cwd=workspace,
             env=sub_env,
             creationflags=creationflags,
+            start_new_session=os.name != "nt",
         )
 
     is_payg = item["tier"] == "payg_ask_first"
@@ -776,11 +822,24 @@ def dispatch_task(
     return meta
 
 
+def run_background_task(task_dir: Path, command: list[str]) -> int:
+    try:
+        exit_code = subprocess.run(command, check=False).returncode
+    except OSError as exc:
+        print(f"Cannot launch delegate: {exc}", file=sys.stderr)
+        exit_code = 1
+    result_file = task_dir / "exit.tmp"
+    result_file.write_text(json.dumps({"exit_code": exit_code, "end_time": time.time()}), encoding="utf-8")
+    result_file.replace(task_dir / "exit.json")
+    return exit_code
+
+
 def check_pid_alive(pid: int) -> bool:
     if os.name == "nt":
         try:
-            out = subprocess.check_output(f'tasklist /FI "PID eq {pid}" /NH', shell=True).decode("gbk", errors="ignore")
-            return str(pid) in out
+            out = subprocess.check_output(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"])
+            rows = csv.reader(out.decode("ascii", errors="replace").splitlines())
+            return any(len(row) > 1 and row[1] == str(pid) for row in rows)
         except Exception:
             return False
     try:
@@ -788,6 +847,23 @@ def check_pid_alive(pid: int) -> bool:
         return True
     except OSError:
         return False
+
+
+def read_task_state(task_dir: Path) -> dict[str, Any]:
+    meta = model_radar.read_json(task_dir / "meta.json")
+    try:
+        result = model_radar.read_json(task_dir / "exit.json")
+        if type(result["exit_code"]) is int:
+            meta.update(exit_code=result["exit_code"], end_time=result["end_time"])
+            meta["task_status"] = "COMPLETED" if result["exit_code"] == 0 else "FAILED"
+            return meta
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    status = meta.get("task_status", meta.get("status", "UNKNOWN"))
+    pid = meta.get("pid")
+    if status in {"COMPLETED", "FAILED"} or (status == "RUNNING" and pid and not check_pid_alive(pid)):
+        meta["task_status"] = "EXITED_UNKNOWN"
+    return meta
 
 
 def list_active_tasks() -> list[dict[str, Any]]:
@@ -799,17 +875,9 @@ def list_active_tasks() -> list[dict[str, Any]]:
         if not meta_file.exists():
             continue
         try:
-            meta = json.loads(meta_file.read_text(encoding="utf-8"))
-            pid = meta.get("pid")
-            status = meta.get("task_status", meta.get("status", "UNKNOWN"))
-            if pid and status == "RUNNING":
-                if not check_pid_alive(pid):
-                    status = "COMPLETED"
-                    meta["task_status"] = "COMPLETED"
-                    meta["end_time"] = now
-                    meta_file.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+            meta = read_task_state(task_folder)
             meta["duration"] = int(now - meta.get("start_time", now))
-            if status == "RUNNING":
+            if meta.get("task_status", meta.get("status")) == "RUNNING":
                 results.append(meta)
         except Exception:
             continue
@@ -822,12 +890,7 @@ def get_task_status(task_id: str) -> dict[str, Any]:
     log_file = task_dir / "output.log"
     if not meta_file.exists():
         return {"error": f"Task {task_id} not found"}
-    meta = json.loads(meta_file.read_text(encoding="utf-8"))
-    pid = meta.get("pid")
-    if pid and meta.get("task_status") == "RUNNING" and not check_pid_alive(pid):
-        meta["task_status"] = "COMPLETED"
-        meta["end_time"] = time.time()
-        meta_file.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    meta = read_task_state(task_dir)
     if log_file.exists():
         lines = log_file.read_text(encoding="utf-8", errors="ignore").splitlines()
         meta["log_tail"] = "\n".join(lines[-30:])
@@ -838,7 +901,6 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
     probe = probe_local_models(force=force_refresh)
     if running_tasks is None:
         running_tasks = list_active_tasks()
-    half_price, bj_time = is_deepseek_half_price_window()
     cd = probe.get("codex_cooldown", {})
     matrix = probe["matrix"]
     codex_ok = bool(probe.get("codex_binary")) and not cd.get("active") and any(matrix[code]["slug"] for code in ("9A", "9B", "9C", "9D"))
@@ -847,10 +909,11 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
         if codex_ok
         else f"🟡 冷却/受限 ({cd.get('reason', '未就绪')}) ➔ 自动走 Tier 2"
     )
-    ds_window_tag = (
-        f"🟢 空闲半价中({bj_time}, 工作日非09-12/14-18及周末节假日均半价)"
-        if half_price
-        else f"⚪ 高峰原价({bj_time}, 工作日09-12/14-18高峰, 若法定节假日全天半价)"
+    ds_window_tag = deepseek_pricing()["half_price_note"]
+    retirement_lines = "\n".join(
+        f"│      下线提醒：{warning['pattern']} · {warning['retires_on']}"
+        f"（{'已过计划下线日' if warning['status'] == 'past' else '计划下线'}；替代：{warning['replacement_hint']}）"
+        for warning in retirement_warnings([item["slug"] for item in NATIVE_MODELS.values()])
     )
 
     task_lines = []
@@ -872,10 +935,11 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
 │      [9B] {matrix['9B']['name']}（主力） │ [9A] {matrix['9A']['name']}（旗舰）
 │      [9C] {matrix['9C']['name']}（视觉） │ [9D] {matrix['9D']['name']}（批量）
 │    • 🥈 Tier 2 · 客户端内置两大共享池（Codex Free/耗尽自动接力 · 跨池顺延）:│
-│      [1] 跑腿：Gemini [1A/1B] ↔ Claude [1C]
-│      [2] 编码：Claude [2A] ↔ Gemini [2B]
-│      [3] 架构：Gemini [3A/3C] ↔ Claude [3B]
-│      [4] 审查：Gemini [4A] ↔ Claude [3B]
+│      [1] 跑腿：默认 [{POOL_DEFAULTS['1']}] · 备选 [1A/1C]
+│      [2] 编码：默认 [{POOL_DEFAULTS['2']}] · 备选 [2A]
+│      [3] 架构：默认 [{POOL_DEFAULTS['3']}] · 备选 [3A/3B]
+│      [4] 审查：默认 [{POOL_DEFAULTS['4']}] · 备选 [3B]
+{retirement_lines}
 │    • 🥉 Tier 3 · DeepSeek 按量咨询席（🔒永不自动调，异常先问 · {ds_window_tag}）:
 │      [8A] {matrix['8A']['name']} │ [8B] {matrix['8B']['name']}
 ├────────────────────────────────────────────────────────────────────────────┤
@@ -887,6 +951,8 @@ def print_hud(running_tasks: list[dict[str, Any]] | None = None, new_request: st
 
 
 def main() -> None:
+    if sys.argv[1:2] == ["--_run-task"]:
+        raise SystemExit(run_background_task(Path(sys.argv[2]), sys.argv[3:]))
     if sys.argv[1:2] == ["radar"]:
         raise SystemExit(model_radar.main(sys.argv[2:]))
     parser = argparse.ArgumentParser(description="E07 三级阶梯派发与跨池接力中心 v1.2.0")

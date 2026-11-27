@@ -1,6 +1,6 @@
 {
   "name": "e07-dispatch",
-  "version": "1.2.2+codex.20261124143554",
+  "version": "1.2.3+codex.20261127142936",
   "description": "E07 · 日常单轨/多轨智能工种派发与额度接力中心 v1.1.0（默认 100% 优先客户端内置免费模型池 1A~4A，额度耗尽自动顺延接力，付费外援 8A/8B/9A/9B 显式锁定，支持 .? 选模与 .s 状态口令）",
   "author": {
     "name": "fight"
@@ -15,7 +15,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "E07 · 派发 v1.2.2",
+    "displayName": "E07 · 派发 v1.2.3",
     "shortDescription": "日常单轨/多轨智能工种派发与额度接力中心",
     "developerName": "fight",
     "category": "Productivity",

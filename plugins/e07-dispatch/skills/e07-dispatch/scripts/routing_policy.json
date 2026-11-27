@@ -20,7 +20,7 @@
       "spot_audit_role": "complex_flagship",
       "spot_audit_effort": "medium",
       "touch_annotation_skill": false,
-      "rule": "不修改 A03；默认用主力高档跑全场（1x 成本 + 500K 窗口），仅在验收发现少数争议亚群时摘出小切片交旗舰点穴终审。"
+      "rule": "不修改 A03；主会话不读原始大表，直接传文件路径；默认用主力高档跑全场（1x 成本 + 500K 窗口），仅在验收发现少数争议亚群时摘出小切片交旗舰点穴终审。"
     },
     "skill_maintenance": {
       "role": "coding_workhorse",
@@ -48,11 +48,32 @@
     "red_below_percent": 15,
     "note": "真实配额归属以客户端实时 quotas 为准，禁止将同池不同别名伪装为跨池替补。"
   },
+  "native_pool_defaults": {
+    "1": "1B",
+    "2": "2B",
+    "3": "3C",
+    "4": "4A"
+  },
   "dsh_defaults": {
     "provider": "deepseek-official",
     "payg_ask_first": true,
     "half_price_rule_verified_at": "2026-11-24",
     "half_price_review_days": 30,
+    "china_holiday_calendar": {
+      "2026": {
+        "source": "国办发明电〔2025〕7号",
+        "holiday_ranges": [
+          ["2026-01-01", "2026-01-03"],
+          ["2026-02-15", "2026-02-23"],
+          ["2026-04-04", "2026-04-06"],
+          ["2026-05-01", "2026-05-05"],
+          ["2026-06-19", "2026-06-21"],
+          ["2026-09-25", "2026-09-27"],
+          ["2026-10-01", "2026-10-07"]
+        ],
+        "makeup_workdays": ["2026-01-04", "2026-02-14", "2026-02-28", "2026-05-09", "2026-09-20", "2026-10-10"]
+      }
+    },
     "models": {
       "8A": {
         "id": "deepseek-v4-pro",

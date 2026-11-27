@@ -1031,6 +1031,11 @@ def execute_run(
     require_enabled: bool = True,
 ) -> int:
     runner = canonical_runner(args.runner)
+    model = getattr(args, "model", None)
+    provider = getattr(args, "dsh_provider", "deepseek-official")
+    if runner == "dsh" and (provider == "deepseek-official" or not model):
+        if not getattr(args, "user_confirmed", False):
+            raise DelegateError("DSH may use the metered DeepSeek official API; obtain user consent and pass --user-confirmed.")
     if require_enabled and runner not in config.get("enabled_runners", []):
         raise DelegateError(f"Runner '{runner}' is not enabled; enable it with onboard or config")
     workspace = resolve_workspace(args.workspace)
@@ -1041,16 +1046,14 @@ def execute_run(
     if not binary_info["installed"]:
         raise DelegateError(binary_info["error"] or f"Runner not installed: {runner}")
     capabilities = (
-        probe_dsh_capabilities(binary_info["path"], force_refresh=bool(getattr(args, "refresh", False)))
+        probe_dsh_capabilities(binary_info["path"], force_refresh=not args.dry_run and bool(getattr(args, "refresh", False)))
         if runner == "dsh"
         else None
     )
-    model = getattr(args, "model", None)
     patch_path = None
     patch_preview = None
     try:
         if runner == "dsh" and model:
-            provider = getattr(args, "dsh_provider", "deepseek-official")
             patch_preview = (
                 "- id: agent-default-model\n"
                 '  name: "@deepseek-ai/dsh-agent-default-model"\n'
@@ -1058,15 +1061,18 @@ def execute_run(
                 f"    provider: {provider}\n"
                 f"    model: {json.dumps(model)}\n"
             )
-            state_dir.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".yml",
-                                             dir=state_dir, delete=False) as handle:
-                patch_path = Path(handle.name)
-                handle.write(patch_preview)
+            if args.dry_run:
+                patch_path = Path("<dry-run-temp.yml>")
+            else:
+                state_dir.mkdir(parents=True, exist_ok=True)
+                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".yml",
+                                                 dir=state_dir, delete=False) as handle:
+                    patch_path = Path(handle.name)
+                    handle.write(patch_preview)
         return execute_invocation(args, state_dir, runner, workspace, prompt, binary_info,
                                   capabilities, model, patch_path, patch_preview)
     finally:
-        if patch_path is not None:
+        if not args.dry_run and patch_path is not None:
             patch_path.unlink(missing_ok=True)
 
 
@@ -1271,6 +1277,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--session")
     run.add_argument("--dsh-provider", choices=("deepseek-official", "deepseek-account"),
                      default="deepseek-official", help="Provider for DSH model selection")
+    run.add_argument("--user-confirmed", action="store_true", help="User explicitly approved metered DSH usage")
     run.add_argument("--model", help="Specific model name (e.g. o3-mini, gpt-4o)")
     run.add_argument("--refresh", action="store_true", help="Force re-probing CLI capabilities instead of using fast cache")
     run.add_argument("--timeout", type=int, default=DEFAULT_RUN_TIMEOUT)
